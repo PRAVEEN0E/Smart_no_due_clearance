@@ -1,0 +1,136 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Shield, CheckCircle2 } from 'lucide-react';
+import useAuth from '../../hooks/useAuth';
+import api from '../../lib/api';
+
+export default function Register() {
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
+    const { setAuth, logout, navigate } = useAuth();
+
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        try {
+            // Step 1: Register the new mentor account
+            await api.post('/auth/register-mentor', { name, email, password });
+
+            // Step 2: Clear any stale session (old admin token) from localStorage
+            logout();
+
+            // Step 3: Auto-login as the newly created mentor so the correct JWT is set
+            const { data } = await api.post('/auth/login', { email, password });
+            setAuth(data.user, data.token);
+
+            setSuccess(true);
+            // Step 4: Go directly to the mentor dashboard — already authenticated as new mentor
+            setTimeout(() => navigate('/mentor'), 1500);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Registration failed. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#020c0c]">
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-900/10 rounded-full blur-[120px] animate-pulse" />
+
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-md glass p-8 rounded-[2rem] relative z-10 shadow-2xl border border-white/5"
+            >
+                <div className="text-center mb-10">
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-primary/10 mb-6 border border-primary/20">
+                        <Shield className="w-10 h-10 text-primary" />
+                    </div>
+                    <h1 className="text-4xl font-black tracking-tight bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent italic">JOIN US</h1>
+                    <p className="text-emerald-500/60 font-medium tracking-widest text-[10px] uppercase mt-1">Mentor Registration</p>
+                </div>
+
+
+                {success ? (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-center p-8 bg-green-500/10 rounded-2xl border border-green-500/20 text-green-400 space-y-3"
+                    >
+                        <CheckCircle2 className="w-12 h-12 mx-auto" />
+                        <h3 className="font-bold text-xl">Account Created!</h3>
+                        <p className="text-sm text-green-400/70">Logging you in automatically...</p>
+                    </motion.div>
+                ) : (
+                    <form onSubmit={handleRegister} className="space-y-5">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium ml-1">Full Name</label>
+                            <input
+                                required
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                placeholder="Dr. John Doe"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium ml-1">College Email</label>
+                            <input
+                                required
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                placeholder="mentor@college.edu"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium ml-1">Password</label>
+                            <input
+                                required
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                placeholder="••••••••"
+                            />
+                        </div>
+
+                        {error && (
+                            <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
+                                {error}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full premium-gradient text-white font-semibold py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                        >
+                            {loading
+                                ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                : <><Shield className="w-4 h-4" /> Create Mentor Account</>
+                            }
+                        </button>
+                    </form>
+                )}
+
+                <div className="mt-6 text-center">
+                    <button
+                        onClick={() => navigate('/login')}
+                        className="text-sm text-muted-foreground hover:text-white transition-colors"
+                    >
+                        Already have an account? <span className="text-primary font-bold">Sign In</span>
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}

@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MENTOR
+  STAFF
+  STUDENT
+}
+
+enum SubjectType {
+  FULL_THEORY
+  FULL_LAB
+  THEORY_WITH_LAB
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  signatureUrl String?  // For digital signatures (Staff/Mentor)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  staffSubjects   StaffSubject[]   @relation("StaffToSubjects")
+  studentSubjects StudentSubject[] @relation("StudentToSubjects")
+  evaluations     Evaluation[]     @relation("EvaluationStudent")
+  staffEvaluations Evaluation[]    @relation("EvaluationStaff")
+  feeRecord       FeeRecord?
+  assignments     Assignment[]
+  hallTicket      HallTicket?
+  notifications   Notification[]
+  materials       Material[] @relation("UploadedMaterials")
+
+  createdById     String?
+  createdBy       User?            @relation("UserCreator", fields: [createdById], references: [id])
+  createdUsers    User[]           @relation("UserCreator")
+  createdSubjects Subject[]        @relation("SubjectCreator")
+  department     String?          // e.g., 'CSE', 'ECE', 'MECH'
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String   // e.g., 'MARK_UPDATE', 'APPROVAL', 'USER_MANAGEMENT'
+  details   String   @db.Text
+  userId    String
+  userEmail String
+  createdAt DateTime @default(now())
+}
+
+model Subject {
+  id          String      @id @default(uuid())
+  name        String
+  code        String      @unique
+  type        SubjectType
+  createdAt   DateTime    @default(now())
+  createdById String?
+  createdBy   User?       @relation("SubjectCreator", fields: [createdById], references: [id])
+
+  // Relations
+  staffAssignments   StaffSubject[]
+  studentAssignments StudentSubject[]
+  evaluations        Evaluation[]
+  assignments        Assignment[]
+  materials          Material[]
+  syllabusText       String?     @db.Text
+}
+
+model StaffSubject {
+  id        String @id @default(uuid())
+  staffId   String
+  subjectId String
+
+  staff   User    @relation("StaffToSubjects", fields: [staffId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, subjectId])
+}
+
+model StudentSubject {
+  id        String @id @default(uuid())
+  studentId String
+  subjectId String
+
+  student User    @relation("StudentToSubjects", fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId])
+}
+
+model Evaluation {
+  id                String    @id @default(uuid())
+  studentId        String
+  subjectId        String
+  staffId          String?
+  
+  // Marks components
+  cat1              Int?      // Max 50
+  cat2              Int?      // Max 50
+  cat3              Int?      // Max 50
+  
+  assignment1       Int?      // Max 10
+  assignment2       Int?      // Max 10
+  assignment3       Int?      // Max 10
+  assignment4       Int?      // Max 10
+  assignment5       Int?      // Max 10
+  
+  activity1         Int?      @default(0) // Max 10
+  activity2         Int?      @default(0) // Max 10
+  
+  modelLabMarks     Int?      // Nullable, only for Lab subjects
+  remedial1         Int?      // Max 50, if CAT1 < 25
+  remedial2         Int?      // Max 50, if CAT2 < 25
+  remedial3         Int?      // Max 50, if CAT3 < 25
+  
+  attendancePercent Float     @default(0)
+  internalMarksTotal Float    @default(0)
+  
+  staffApproved     Boolean   @default(false)
+  approvedAt        DateTime?
+
+  // AI Success Link
+  aiPrediction      String?   @db.Text  // Success prediction/risk factor
+
+  student User    @relation("EvaluationStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  staff   User?   @relation("EvaluationStaff", fields: [staffId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId])
+}
+
+model FeeRecord {
+  id               String    @id @default(uuid())
+  studentId        String    @unique
+  feeBalance       Float     @default(0)
+  feeClearedAuto   Boolean   @default(false)
+  feeClearedManual Boolean   @default(false)
+  clearedAt        DateTime?
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model Assignment {
+  id          String   @id @default(uuid())
+  studentId   String
+  subjectId   String
+  fileUrl     String
+  aiFeedback  String?  @db.Text
+  submittedAt DateTime @default(now())
+
+  student User    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+}
+
+model HallTicket {
+  id          String    @id @default(uuid())
+  studentId   String    @unique
+  isUnlocked  Boolean   @default(false)
+  pdfUrl      String?
+  qrCodeData  String?   @db.Text  // For verification
+  verificationCode String? @unique // Human readable short code
+  generatedAt DateTime?
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // 'INFO', 'SUCCESS', 'WARNING', 'URGENT'
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Announcement {
+  id          String   @id @default(uuid())
+  title       String
+  content     String   @db.Text
+  type        String   // 'CAMPUS', 'DEPARTMENT', 'EXAM'
+  priority    Int      @default(1) // 1: Low, 2: Medium, 3: High
+  createdById String
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+}
+
+model Material {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?  @db.Text
+  fileUrl      String
+  fileType     String   // 'PDF', 'DOC', 'IMAGE'
+  category     String   // 'NOTES', 'SYLLABUS', 'QUESTION_PAPER'
+  subjectId    String
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  subject    Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  uploadedBy User    @relation("UploadedMaterials", fields: [uploadedById], references: [id])
+}
