@@ -32,8 +32,26 @@ subDirs.forEach(dir => {
 
 fastify.register(require('@fastify/static'), {
     root: uploadsDir,
-    prefix: '/uploads/', // files will be available at http://localhost:3000/uploads/...
+    prefix: '/uploads/',
 });
+
+// Serve frontend static files
+const distPath = path.join(__dirname, '../client/dist');
+if (fs.existsSync(distPath)) {
+    fastify.register(require('@fastify/static'), {
+        root: distPath,
+        prefix: '/',
+        decorateReply: false // Important: avoid conflicts with the first static plugin
+    });
+
+    // SPA Catch-all: Send all non-API/non-upload requests to index.html
+    fastify.setNotFoundHandler(async (request, reply) => {
+        if (!request.url.startsWith('/api') && !request.url.startsWith('/uploads')) {
+            return reply.sendFile('index.html', distPath);
+        }
+        reply.status(404).send({ error: 'Not Found', message: `Route ${request.url} not found` });
+    });
+}
 
 fastify.register(require('./plugins/prisma'));
 fastify.register(require('./plugins/auth'));
