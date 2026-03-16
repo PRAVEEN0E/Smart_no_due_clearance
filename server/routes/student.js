@@ -81,15 +81,23 @@ async function studentRoutes(fastify, opts) {
             const subjectId = data.fields.subjectId ? data.fields.subjectId.value : null;
             if (!subjectId) return reply.status(400).send({ message: 'subjectId is required and must be sent before the file' });
 
-            const { uploadStream } = require('../services/cloudinaryService');
+            const fs = require('fs');
+            const path = require('path');
+            const util = require('util');
+            const pipeline = util.promisify(require('stream').pipeline);
             
             let fileUrl;
             try {
-                const result = await uploadStream(data.file, 'assignments', data.filename);
-                fileUrl = result.secure_url;
+                // Save locally to bypass Cloudinary PDF restrictions
+                const ext = data.filename.split('.').pop() || 'pdf';
+                const fileName = `asgn_${request.user.id}_${subjectId}_${Date.now()}.${ext}`;
+                const filePath = path.join(__dirname, '../uploads/assignments', fileName);
+                
+                await pipeline(data.file, fs.createWriteStream(filePath));
+                fileUrl = `/uploads/assignments/${fileName}`;
             } catch (err) {
-                fastify.log.error(err);
-                return reply.status(500).send({ message: 'Failed to upload assignment file' });
+                fastify.log.error(`Local Assignment Save Error: ${err.message}`);
+                return reply.status(500).send({ message: 'Failed to save assignment file locally' });
             }
 
             // Get AI feedback — pass the uploaded file URL
