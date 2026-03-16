@@ -745,9 +745,14 @@ export default function StaffDashboard() {
                                                                 <FileText className="w-6 h-6" />
                                                             </div>
                                                             <div>
-                                                                <div className="font-bold text-lg">Assignment Submission</div>
+                                                                <div className="font-bold text-lg flex items-center gap-2">
+                                                                    Assignment Submission
+                                                                    <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] font-black uppercase tracking-tighter text-muted-foreground border border-white/5">
+                                                                        {asgn.fileUrl?.split('.').pop()?.toUpperCase() || 'FILE'}
+                                                                    </span>
+                                                                </div>
                                                                 <div className="text-xs text-muted-foreground flex items-center gap-2">
-                                                                    {new Date(asgn.submittedAt).toLocaleDateString()}
+                                                                    {new Date(asgn.submittedAt).toLocaleDateString()} • {asgn.fileUrl?.split('/').pop()?.split('_')[0] || 'View Document'}
                                                                 </div>
                                                             </div>
                                                         </div>

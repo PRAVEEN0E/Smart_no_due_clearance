@@ -14,7 +14,10 @@ cloudinary.config({
  */
 const uploadStream = (fileStream, folder, originalFilename) => {
     return new Promise((resolve, reject) => {
-        const publicId = originalFilename ? `${originalFilename.replace(/\.[^/.]+$/, "")}_${Date.now()}` : `upload_${Date.now()}`;
+        // Extract extension and filename
+        const ext = originalFilename ? originalFilename.split('.').pop() : '';
+        const nameWithoutExt = originalFilename ? originalFilename.replace(/\.[^/.]+$/, "") : 'upload';
+        const publicId = `${nameWithoutExt}_${Date.now()}${ext ? '.' + ext : ''}`;
         
         const stream = cloudinary.uploader.upload_stream(
             { 
@@ -36,7 +39,9 @@ const uploadStream = (fileStream, folder, originalFilename) => {
  */
 const uploadBuffer = (buffer, folder, originalFilename) => {
     return new Promise((resolve, reject) => {
-        const publicId = originalFilename ? `${originalFilename.replace(/\.[^/.]+$/, "")}_${Date.now()}` : `upload_${Date.now()}`;
+        const ext = originalFilename ? originalFilename.split('.').pop() : '';
+        const nameWithoutExt = originalFilename ? originalFilename.replace(/\.[^/.]+$/, "") : 'upload';
+        const publicId = `${nameWithoutExt}_${Date.now()}${ext ? '.' + ext : ''}`;
 
         const stream = cloudinary.uploader.upload_stream(
             { 
