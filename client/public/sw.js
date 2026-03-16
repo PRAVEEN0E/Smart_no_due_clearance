@@ -26,6 +26,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     
+    // ONLY intercept requests to our own origin
+    if (url.origin !== self.location.origin) {
+        return; // Let browser handle external requests (Cloudinary, Google, etc.)
+    }
+
     // Network First strategy for the root/index to prevent old hash issues
     if (url.pathname === '/' || url.pathname === '/index.html') {
         event.respondWith(
@@ -40,7 +45,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Cache First for other assets
+    // Cache First for other local assets (JS, CSS, Images in /assets)
     event.respondWith(
         caches.match(event.request).then((response) => {
             return response || fetch(event.request);

@@ -65,6 +65,14 @@ fastify.decorate('auth', (guards) => {
     };
 });
 
+// Debug hook for 401s
+fastify.addHook('onSend', async (request, reply, payload) => {
+    if (reply.statusCode === 401) {
+        fastify.log.warn(`401 Unauthorized: ${request.method} ${request.url}`);
+    }
+    return payload;
+});
+
 // Register Routes
 fastify.register(async (instance) => {
     instance.get('/health', async () => ({ status: 'ok' }));
