@@ -831,8 +831,11 @@ export default function StaffDashboard() {
                                                     </div>
                                                 ) : (
                                                     <iframe 
-                                                        src={`https://docs.google.com/gview?url=${encodeURIComponent(previewUrl)}&embedded=true`} 
-                                                        className="w-full h-full border-none"
+                                                        src={previewUrl.includes('localhost') || previewUrl.startsWith('/') 
+                                                            ? previewUrl 
+                                                            : `https://docs.google.com/gview?url=${encodeURIComponent(previewUrl)}&embedded=true`
+                                                        } 
+                                                        className="w-full h-full border-none bg-white"
                                                         title="Assignment Preview"
                                                     />
                                                 )}
