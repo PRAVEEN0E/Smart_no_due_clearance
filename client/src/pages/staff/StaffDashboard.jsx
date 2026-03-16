@@ -57,6 +57,18 @@ export default function StaffDashboard() {
     const [activeStudent, setActiveStudent] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
 
+    const getFullUrl = (url) => {
+        if (!url) return '';
+        if (url.startsWith('http')) return url;
+        const backendBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+        return `${backendBase}${url}`;
+    };
+
+    const isImage = (url) => {
+        if (!url) return false;
+        return /\.(jpg|jpeg|png|webp|gif|avif|svg)$/i.test(url) || url.includes('image/upload');
+    };
+
     useEffect(() => {
         fetchSubjects();
     }, []);
@@ -741,12 +753,20 @@ export default function StaffDashboard() {
                                                         </div>
                                                         <div className="flex gap-2">
                                                             <button
-                                                                onClick={() => setPreviewUrl(asgn.fileUrl?.startsWith('http') ? asgn.fileUrl : `http://localhost:3000${asgn.fileUrl}`)}
-                                                                className="flex items-center gap-2 px-4 py-2.5 bg-blue-500/10 text-blue-400 rounded-xl text-sm font-bold border border-blue-500/20"
+                                                                onClick={() => setPreviewUrl(getFullUrl(asgn.fileUrl))}
+                                                                className="flex items-center gap-2 px-4 py-2.5 bg-blue-500/10 text-blue-400 rounded-xl text-sm font-bold border border-blue-500/20 hover:bg-blue-500/20 transition-all"
                                                             >
                                                                 <Eye className="w-4 h-4" />
                                                                 Preview
                                                             </button>
+                                                            <a
+                                                                href={getFullUrl(asgn.fileUrl)}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex items-center gap-2 px-4 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-bold border border-primary/20 hover:bg-primary/20 transition-all"
+                                                            >
+                                                                <ExternalLink className="w-4 h-4" />
+                                                            </a>
                                                         </div>
                                                     </div>
 
@@ -773,20 +793,44 @@ export default function StaffDashboard() {
                                             className="w-full md:w-1/2 border-l border-white/10 bg-black/40 backdrop-blur-md flex flex-col"
                                         >
                                             <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-                                                <span className="text-xs font-black uppercase tracking-widest text-primary">Document Preview</span>
-                                                <button 
-                                                    onClick={() => setPreviewUrl(null)}
-                                                    className="p-1 hover:bg-white/10 rounded-lg transition-all"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
+                                                <span className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                                    Document Preview
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <a 
+                                                        href={previewUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="p-1.5 hover:bg-white/10 rounded-lg transition-all text-muted-foreground hover:text-white"
+                                                        title="Open in new tab"
+                                                    >
+                                                        <ExternalLink className="w-4 h-4" />
+                                                    </a>
+                                                    <button 
+                                                        onClick={() => setPreviewUrl(null)}
+                                                        className="p-1.5 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-all"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="flex-1">
-                                                <iframe 
-                                                    src={previewUrl} 
-                                                    className="w-full h-full border-none bg-white"
-                                                    title="Assignment Preview"
-                                                />
+                                            <div className="flex-1 bg-[#1a1a1a] relative overflow-hidden">
+                                                {isImage(previewUrl) ? (
+                                                    <div className="w-full h-full flex items-center justify-center p-8">
+                                                        <img 
+                                                            src={previewUrl} 
+                                                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" 
+                                                            alt="Preview" 
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <iframe 
+                                                        src={`https://docs.google.com/gview?url=${encodeURIComponent(previewUrl)}&embedded=true`} 
+                                                        className="w-full h-full border-none"
+                                                        title="Assignment Preview"
+                                                    />
+                                                )}
                                             </div>
                                         </motion.div>
                                     )}
