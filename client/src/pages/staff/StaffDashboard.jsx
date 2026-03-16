@@ -9,6 +9,9 @@ import {
     TrendingUp,
     AlertCircle,
     Save,
+    FileDown,
+    Eye,
+    ChevronDown,
     FileText,
     ExternalLink,
     X,
@@ -19,8 +22,7 @@ import {
     ShieldCheck,
     TrendingUp as TrendingUpIcon,
     LineChart as LineChartIcon,
-    FileSpreadsheet,
-    FileDown
+    FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -53,6 +55,7 @@ export default function StaffDashboard() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [activeStudent, setActiveStudent] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
 
     useEffect(() => {
         fetchSubjects();
@@ -98,10 +101,8 @@ export default function StaffDashboard() {
     };
 
     const handleUpdateMark = async (evalId, field, value) => {
-        // If the value is an empty string, we treat it as null (not entered)
         const numericValue = value === '' ? null : (field === 'attendancePercent' ? parseFloat(value) : parseInt(value));
 
-        // Optimistic update in UI
         const updated = evaluations.map(ev => {
             if (ev.id === evalId) return { ...ev, [field]: numericValue };
             return ev;
@@ -110,7 +111,6 @@ export default function StaffDashboard() {
 
         try {
             await api.put(`/staff/marks/${evalId}`, { [field]: numericValue });
-            // Re-fetch to get updated total and analytics
             fetchData();
         } catch (err) {
             toast.error(err.response?.data?.message || "Failed to update mark");
@@ -147,12 +147,11 @@ export default function StaffDashboard() {
     const handleRegenerateFeedback = async (assignmentId) => {
         try {
             const res = await api.post(`/staff/regenerate-feedback/${assignmentId}`);
-            // Update local state
             const updatedEvaluations = evaluations.map(ev => ({
                 ...ev,
                 student: {
                     ...ev.student,
-                    assignments: ev.student.assignments.map(asgn =>
+                    assignments: ev.student.assignments?.map(asgn =>
                         asgn.id === assignmentId ? { ...asgn, aiFeedback: res.data.aiFeedback } : asgn
                     )
                 }
@@ -204,7 +203,6 @@ export default function StaffDashboard() {
         </div>
     );
 
-    // Calculate quick stats for the current subject
     const avgMarks = evaluations.length > 0
         ? evaluations.reduce((acc, curr) => acc + (curr.internalMarksTotal || 0), 0) / evaluations.length
         : 0;
@@ -285,9 +283,7 @@ export default function StaffDashboard() {
                 </motion.div>
             </div>
 
-            {/* Refined Analytics & Performance Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Trend Chart - Large Span */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -351,7 +347,6 @@ export default function StaffDashboard() {
                     </div>
                 </motion.div>
 
-                {/* Top Performers - Small Span */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -400,19 +395,12 @@ export default function StaffDashboard() {
                                 </div>
                             ))
                         }
-                        {evaluations.length === 0 && (
-                            <div className="h-full flex items-center justify-center text-muted-foreground italic text-sm text-center">
-                                Data pending...
-                            </div>
-                        )}
                     </div>
                 </motion.div>
             </div>
 
-            {/* Main Application Area */}
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 items-start">
                 <div className="xl:col-span-3 space-y-8">
-                    {/* Subject Tabs */}
                     <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar">
                         {subjects.map((subAssignment) => (
                             <button
@@ -432,18 +420,12 @@ export default function StaffDashboard() {
                         ))}
                     </div>
 
-
-                    {/* Marks Table */}
                     <div className="glass rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
                         <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
                             <h3 className="font-semibold flex items-center gap-2">
                                 <Users className="w-5 h-5 text-primary" />
                                 Enrolled Students
                             </h3>
-                            <div className="text-xs text-muted-foreground flex gap-4">
-                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500" /> Approved</span>
-                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500" /> Pending</span>
-                            </div>
                         </div>
 
                         <div className="overflow-x-auto">
@@ -452,7 +434,6 @@ export default function StaffDashboard() {
                                     <tr className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.25em] bg-white/[0.03] backdrop-blur-md">
                                         <th className="px-8 py-8 min-w-[240px] border-b border-white/5 rounded-tl-3xl">Student Information</th>
                                         <th className="px-4 py-8 text-center text-primary/80 w-[90px] border-b border-white/5">Files</th>
-                                        
                                         {selectedSubject?.subject.type === 'FULL_LAB' ? (
                                             <>
                                                 <th className="px-6 py-8 text-center w-[160px] border-l border-b border-white/5 bg-white/[0.01]">Model Lab</th>
@@ -461,13 +442,12 @@ export default function StaffDashboard() {
                                         ) : (
                                             <>
                                                 <th className="px-6 py-8 text-center w-[180px] border-l border-b border-white/5 bg-white/[0.01]">CAT Assessments</th>
-                                                <th className="px-6 py-8 text-center w-[240px] border-l border-b border-white/5 bg-white/[0.01]">Record Assignments</th>
+                                                <th className="px-6 py-8 text-center w-[240px] border-l border-b border-white/5 bg-white/[0.01]">Assignments</th>
                                                 <th className="px-6 py-8 text-center w-[140px] border-l border-b border-white/5 bg-white/[0.01]">Activities</th>
                                             </>
                                         )}
-                                        
                                         <th className="px-4 py-8 text-center w-[110px] border-l border-b border-white/5 bg-emerald-500/[0.02]">Attend %</th>
-                                        <th className="px-6 py-8 text-center w-[180px] border-l border-b border-white/5 bg-orange-500/[0.02]">Remedial Tests</th>
+                                        <th className="px-6 py-8 text-center w-[180px] border-l border-b border-white/5 bg-orange-500/[0.02]">Remedial</th>
                                         <th className="px-4 py-8 text-center w-[100px] font-black text-white border-l border-b border-white/5 bg-primary/10">Final</th>
                                         <th className="px-8 py-8 text-right min-w-[180px] border-b border-white/5 rounded-tr-3xl">Verification</th>
                                     </tr>
@@ -520,7 +500,7 @@ export default function StaffDashboard() {
                                                                      type="number"
                                                                      value={ev.modelLabMarks ?? ''}
                                                                      onChange={(e) => handleUpdateMark(ev.id, 'modelLabMarks', e.target.value)}
-                                                                     className="w-24 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-sm font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 focus:border-primary/30 outline-none transition-all hover:bg-white/[0.05] hover:border-white/20 tabular-nums shadow-inner input-focus-glow"
+                                                                     className="w-24 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-sm font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all hover:bg-white/[0.05] hover:border-white/20"
                                                                      placeholder="00"
                                                                  />
                                                              </div>
@@ -533,7 +513,7 @@ export default function StaffDashboard() {
                                                                          type="number"
                                                                          value={ev[`activity${n}`] ?? ''}
                                                                          onChange={(e) => handleUpdateMark(ev.id, `activity${n}`, e.target.value)}
-                                                                         className="w-12 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-emerald-500/5 outline-none transition-all hover:bg-white/[0.05] hover:border-white/20 tabular-nums shadow-inner"
+                                                                         className="w-12 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-emerald-500/5 outline-none transition-all"
                                                                          placeholder="0"
                                                                      />
                                                                  ))}
@@ -550,13 +530,12 @@ export default function StaffDashboard() {
                                                                          type="number"
                                                                          value={ev[`cat${n}`] ?? ''}
                                                                          onChange={(e) => handleUpdateMark(ev.id, `cat${n}`, e.target.value)}
-                                                                         className="w-14 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all hover:bg-white/[0.05] hover:border-white/20 tabular-nums shadow-inner"
+                                                                         className="w-14 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all"
                                                                          placeholder={`#${n}`}
                                                                      />
                                                                  ))}
                                                              </div>
                                                          </td>
-
                                                          <td className="px-6 py-6 border-l border-white/5">
                                                              <div className="flex gap-1.5 justify-center">
                                                                  {[1, 2, 3, 4, 5].map(n => (
@@ -565,13 +544,12 @@ export default function StaffDashboard() {
                                                                          type="number"
                                                                          value={ev[`assignment${n}`] ?? ''}
                                                                          onChange={(e) => handleUpdateMark(ev.id, `assignment${n}`, e.target.value)}
-                                                                         className="w-10 h-10 bg-white/[0.02] border border-white/5 rounded-xl text-center text-[10px] focus:ring-2 focus:ring-blue-500 focus:bg-blue-500/5 outline-none transition-all hover:bg-white/[0.05] hover:border-white/10 tabular-nums shadow-inner"
+                                                                         className="w-10 h-10 bg-white/[0.02] border border-white/5 rounded-xl text-center text-[10px] focus:ring-2 focus:ring-blue-500 focus:bg-blue-500/5 outline-none transition-all"
                                                                          placeholder={n}
                                                                      />
                                                                  ))}
                                                              </div>
                                                          </td>
-
                                                          <td className="px-6 py-6 border-l border-white/5">
                                                              <div className="flex gap-2 justify-center">
                                                                  {[1, 2].map(n => (
@@ -580,7 +558,7 @@ export default function StaffDashboard() {
                                                                          type="number"
                                                                          value={ev[`activity${n}`] ?? ''}
                                                                          onChange={(e) => handleUpdateMark(ev.id, `activity${n}`, e.target.value)}
-                                                                         className="w-12 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-emerald-500/5 outline-none transition-all hover:bg-white/[0.05] hover:border-white/20 tabular-nums shadow-inner"
+                                                                         className="w-12 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-emerald-500/5 outline-none transition-all"
                                                                          placeholder="0"
                                                                      />
                                                                  ))}
@@ -595,8 +573,7 @@ export default function StaffDashboard() {
                                                               type="number"
                                                               value={ev.attendancePercent ?? ''}
                                                               onChange={(e) => handleUpdateMark(ev.id, 'attendancePercent', e.target.value)}
-                                                              className={`w-20 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all hover:bg-white/[0.05] hover:border-white/20 tabular-nums shadow-inner ${ev.attendancePercent < 75 ? 'text-red-400 font-bold border-red-500/30' : 'text-emerald-400 font-bold'
-                                                                  }`}
+                                                              className={`w-20 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all ${ev.attendancePercent < 75 ? 'text-red-400 font-bold' : 'text-emerald-400 font-bold'}`}
                                                               placeholder="%"
                                                           />
                                                       </div>
@@ -612,8 +589,8 @@ export default function StaffDashboard() {
                                                                   value={ev[`remedial${n}`] ?? ''}
                                                                   onChange={(e) => handleUpdateMark(ev.id, `remedial${n}`, e.target.value)}
                                                                   className={`w-12 h-12 rounded-2xl text-center text-xs font-bold outline-none transition-all ${(ev.attendancePercent < 75 || (ev[`cat${n}`] !== null && ev[`cat${n}`] < 25)) 
-                                                                    ? 'glass border-orange-500/50 border-2 bg-orange-500/10 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.1)]' 
-                                                                    : 'bg-white/5 border-white/5 text-white/5 opacity-10 cursor-not-allowed'
+                                                                    ? 'glass border-orange-500/50 border-2 bg-orange-500/10 text-orange-400' 
+                                                                    : 'bg-white/5 border-white/5 opacity-10'
                                                                   }`}
                                                                   placeholder={`R${n}`}
                                                               />
@@ -621,86 +598,42 @@ export default function StaffDashboard() {
                                                       </div>
                                                   </td>
 
-                                                  <td className="px-6 py-6 text-center border-l border-white/5 bg-primary/20 backdrop-blur-sm relative group overflow-hidden">
-                                                      <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                                                      <div className="text-xl font-black text-white drop-shadow-[0_0_10px_rgba(59,130,246,0.3)] tabular-nums relative z-10 transition-transform group-hover:scale-110 duration-500">
+                                                  <td className="px-6 py-6 text-center border-l border-white/5 bg-primary/20 backdrop-blur-sm">
+                                                      <div className="text-xl font-black text-white">
                                                           {Math.round(ev.internalMarksTotal)}
                                                       </div>
-                                                      <div className="text-[8px] font-bold text-primary/40 uppercase tracking-[0.2em] mt-1 relative z-10">MARKS</div>
                                                   </td>
 
-                                                 <td className="px-8 py-6 text-right whitespace-nowrap border-b border-white/5">
+                                                 <td className="px-8 py-6 text-right whitespace-nowrap">
                                                      {ev.staffApproved ? (
-                                                         <div className="flex items-center justify-end gap-3">
-                                                             <div className="flex flex-col items-end">
-                                                                 <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
-                                                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" /> Finalized
-                                                                 </div>
-                                                                 <div className="text-[8px] text-muted-foreground/40 mt-1 uppercase tracking-tighter font-bold">Verified & Locked</div>
-                                                             </div>
-                                                             <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/5">
-                                                                 <ShieldCheck className="w-5 h-5" />
-                                                             </div>
+                                                         <div className="flex items-center justify-end gap-3 text-emerald-400">
+                                                             <ShieldCheck className="w-5 h-5" />
+                                                             <span className="text-[10px] font-black uppercase tracking-widest">Finalized</span>
                                                          </div>
                                                      ) : (
                                                          <button
                                                              onClick={() => handleApprove(ev.id)}
-                                                             disabled={
-                                                                 selectedSubject?.subject.type === 'FULL_LAB'
-                                                                     ? (ev.modelLabMarks === null || ev.attendancePercent === null || ev.activity1 === null || ev.activity2 === null)
-                                                                     : (ev.cat1 === null || ev.cat2 === null || ev.cat3 === null ||
-                                                                         ev.assignment1 === null || ev.assignment2 === null || ev.assignment3 === null ||
-                                                                         ev.assignment4 === null || ev.assignment5 === null || ev.attendancePercent === null ||
-                                                                         ev.activity1 === null || ev.activity2 === null ||
-                                                                         // Require remedials if failed
-                                                                         (ev.cat1 < 25 && ev.remedial1 === null && ev.attendancePercent >= 75) ||
-                                                                         (ev.cat2 < 25 && ev.remedial2 === null && ev.attendancePercent >= 75) ||
-                                                                         (ev.cat3 < 25 && ev.remedial3 === null && ev.attendancePercent >= 75))
-                                                             }
-                                                             className={`flex items-center gap-3 px-8 py-3.5 rounded-2xl border text-[10px] font-black transition-all uppercase tracking-widest ml-auto group/btn ${(selectedSubject?.subject.type === 'FULL_LAB'
-                                                                 ? (ev.modelLabMarks === null || ev.attendancePercent === null || ev.activity1 === null || ev.activity2 === null)
-                                                                 : (ev.cat1 === null || ev.cat2 === null || ev.cat3 === null ||
-                                                                     ev.assignment1 === null || ev.assignment2 === null || ev.assignment3 === null ||
-                                                                     ev.assignment4 === null || ev.assignment5 === null || ev.attendancePercent === null ||
-                                                                     ev.activity1 === null || ev.activity2 === null))
-                                                                 ? 'bg-white/5 border-white/5 text-white/10 cursor-not-allowed grayscale opacity-40'
-                                                                 : 'premium-gradient text-white border-transparent shadow-xl hover:shadow-primary/40 hover:-translate-y-1 active:translate-y-0 active:scale-95'
-                                                                 }`}
+                                                             className="px-6 py-2.5 rounded-xl border border-primary/20 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
                                                          >
-                                                             <CheckCircle2 className={`w-4 h-4 transition-transform group-hover/btn:scale-110`} />
-                                                             {(selectedSubject?.subject.type === 'FULL_LAB'
-                                                                 ? (ev.modelLabMarks === null || ev.attendancePercent === null)
-                                                                 : (ev.cat1 === null || ev.cat2 === null || ev.cat3 === null ||
-                                                                     ev.assignment1 === null || ev.assignment2 === null || ev.assignment3 === null ||
-                                                                     ev.assignment4 === null || ev.assignment5 === null || ev.attendancePercent === null))
-                                                                 ? 'Incomplete' : 'Post Marks'}
+                                                             Approve
                                                          </button>
                                                      )}
                                                  </td>
-                                            </motion.tr>
+                                             </motion.tr>
                                         ))}
                                     </AnimatePresence>
                                 </tbody>
                             </table>
-                            {evaluations.length === 0 && (
-                                <div className="py-20 text-center text-muted-foreground italic flex flex-col items-center gap-3">
-                                    <AlertCircle className="w-8 h-8 opacity-20" />
-                                    No students enrolled in this subject yet.
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* Sidebar: Course Materials */}
                 <div className="space-y-6">
                     <div className="glass p-6 rounded-[2.5rem] border border-white/10 h-full">
                         <CourseMaterials subjectId={selectedSubject?.subjectId} role="STAFF" />
                     </div>
                 </div>
             </div>
-
-            {/* Assignments Modal */}
 
             <AnimatePresence>
                 {activeStudent && (
@@ -709,14 +642,14 @@ export default function StaffDashboard() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setActiveStudent(null)}
+                            onClick={() => { setActiveStudent(null); setPreviewUrl(null); }}
                             className="absolute inset-0 bg-black/80 backdrop-blur-xl"
                         />
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="glass w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-[40px] border border-white/10 relative z-10 shadow-2xl flex flex-col"
+                            className="glass w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-[40px] border border-white/10 relative z-10 shadow-2xl flex flex-col"
                         >
                             <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
                                 <div className="flex items-center gap-4">
@@ -728,127 +661,136 @@ export default function StaffDashboard() {
                                         <p className="text-muted-foreground text-sm font-mono opacity-60">{activeStudent.email}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setActiveStudent(null)} className="p-3 hover:bg-white/5 rounded-2xl border border-white/5 transition-all">
+                                <button onClick={() => { setActiveStudent(null); setPreviewUrl(null); }} className="p-3 hover:bg-white/5 rounded-2xl border border-white/5 transition-all">
                                     <X className="w-6 h-6" />
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-                                {/* Performance Snapshot for this student */}
-                                {(() => {
-                                    const studentEval = evaluations.find(e => e.studentId === activeStudent.id);
-                                    if (!studentEval) return null;
+                            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                                <div className={`flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar transition-all duration-500 ${previewUrl ? 'md:w-1/2' : 'w-full'}`}>
+                                    {(() => {
+                                        const studentEval = evaluations.find(e => e.studentId === activeStudent.id);
+                                        if (!studentEval) return null;
 
-                                    const radarData = [
-                                        { subject: 'CAT 1', value: studentEval.cat1 || 0, full: 50 },
-                                        { subject: 'CAT 2', value: studentEval.cat2 || 0, full: 50 },
-                                        { subject: 'CAT 3', value: studentEval.cat3 || 0, full: 50 },
-                                        { subject: 'Assign.', value: ((studentEval.assignment1 + studentEval.assignment2 + studentEval.assignment3 + studentEval.assignment4 + studentEval.assignment5) / 5) * 5 || 0, full: 50 },
-                                        { subject: 'Attend.', value: (studentEval.attendancePercent / 100) * 50 || 0, full: 50 },
-                                    ];
+                                        const radarData = [
+                                            { subject: 'CAT 1', value: studentEval.cat1 || 0, full: 50 },
+                                            { subject: 'CAT 2', value: studentEval.cat2 || 0, full: 50 },
+                                            { subject: 'CAT 3', value: studentEval.cat3 || 0, full: 50 },
+                                            { subject: 'Assign.', value: ((studentEval.assignment1 + studentEval.assignment2 + studentEval.assignment3 + studentEval.assignment4 + studentEval.assignment5) / 5) * 5 || 0, full: 50 },
+                                            { subject: 'Attend.', value: (studentEval.attendancePercent / 100) * 50 || 0, full: 50 },
+                                        ];
 
-                                    return (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                                            <div className="glass p-6 rounded-[2rem] border border-white/10 flex flex-col justify-center items-center">
-                                                <h4 className="text-sm font-black uppercase tracking-widest text-primary mb-4">Performance Radar</h4>
-                                                <div className="h-[200px] w-full">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                                                            <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                                                            <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} />
-                                                            <Radar
-                                                                name="Performance"
-                                                                dataKey="value"
-                                                                stroke="#3b82f6"
-                                                                fill="#3b82f6"
-                                                                fillOpacity={0.6}
-                                                            />
-                                                        </RadarChart>
-                                                    </ResponsiveContainer>
-                                                </div>
-                                            </div>
-                                            <div className="glass p-8 rounded-[2rem] border border-white/10 flex flex-col justify-center">
-                                                <div className="text-[10px] text-primary font-black uppercase tracking-widest mb-2">Total Internal Marks</div>
-                                                <div className="text-6xl font-black tracking-tighter text-white">
-                                                    {studentEval.internalMarksTotal.toFixed(1)}
-                                                    <span className="text-xl text-muted-foreground ml-2 font-medium">/ 40</span>
-                                                </div>
-                                                <div className="mt-4 flex items-center gap-2">
-                                                    <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${studentEval.internalMarksTotal > 30 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>
-                                                        {studentEval.internalMarksTotal > 30 ? 'High Performer' : 'Needs Focus'}
+                                        return (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                                                <div className="glass p-6 rounded-[2rem] border border-white/10 flex flex-col justify-center items-center">
+                                                    <h4 className="text-sm font-black uppercase tracking-widest text-primary mb-4">Performance Radar</h4>
+                                                    <div className="h-[200px] w-full">
+                                                        <ResponsiveContainer width="100%" height="100%">
+                                                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                                                                <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                                                                <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} />
+                                                                <Radar
+                                                                    name="Performance"
+                                                                    dataKey="value"
+                                                                    stroke="#3b82f6"
+                                                                    fill="#3b82f6"
+                                                                    fillOpacity={0.6}
+                                                                />
+                                                            </RadarChart>
+                                                        </ResponsiveContainer>
                                                     </div>
-                                                    <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                                                        Rank: #{evaluations.sort((a, b) => b.internalMarksTotal - a.internalMarksTotal).findIndex(e => e.studentId === activeStudent.id) + 1}
+                                                </div>
+                                                <div className="glass p-8 rounded-[2rem] border border-white/10 flex flex-col justify-center">
+                                                    <div className="text-[10px] text-primary font-black uppercase tracking-widest mb-2">Total Internal Marks</div>
+                                                    <div className="text-6xl font-black tracking-tighter text-white">
+                                                        {studentEval.internalMarksTotal.toFixed(1)}
+                                                        <span className="text-xl text-muted-foreground ml-2 font-medium">/ 40</span>
                                                     </div>
                                                 </div>
                                             </div>
+                                        );
+                                    })()}
+
+                                    {(!activeStudent.assignments || activeStudent.assignments.length === 0) ? (
+                                        <div className="h-64 flex flex-col items-center justify-center text-muted-foreground gap-4 opacity-40">
+                                            <FileText className="w-12 h-12" />
+                                            <p className="font-medium italic">No assignments submitted yet.</p>
                                         </div>
-                                    );
-                                })()}
-
-                                {(!activeStudent.assignments || activeStudent.assignments.length === 0) ? (
-                                    <div className="h-64 flex flex-col items-center justify-center text-muted-foreground gap-4 opacity-40">
-                                        <FileText className="w-12 h-12" />
-                                        <p className="font-medium italic">No assignments submitted yet.</p>
-                                    </div>
-                                ) : (
-                                    activeStudent.assignments
-                                        .filter(a => a.subjectId === selectedSubject.subjectId)
-                                        .map((asgn, i) => (
-                                            <motion.div
-                                                key={asgn.id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: i * 0.1 }}
-                                                className="glass p-6 rounded-3xl border border-white/5 hover:border-white/20 transition-all flex flex-col gap-6"
-                                            >
-                                                <div className="flex justify-between items-start">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                                                            <FileText className="w-6 h-6" />
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-bold text-lg">Assignment Submission</div>
-                                                            <div className="text-xs text-muted-foreground flex items-center gap-2">
-                                                                {new Date(asgn.submittedAt).toLocaleDateString()} at {new Date(asgn.submittedAt).toLocaleTimeString()}
+                                    ) : (
+                                        activeStudent.assignments
+                                            .filter(a => a.subjectId === selectedSubject.subjectId)
+                                            .map((asgn, i) => (
+                                                <motion.div
+                                                    key={asgn.id}
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: i * 0.1 }}
+                                                    className="glass p-6 rounded-3xl border border-white/5 hover:border-white/20 transition-all flex flex-col gap-6"
+                                                >
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+                                                                <FileText className="w-6 h-6" />
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-bold text-lg">Assignment Submission</div>
+                                                                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                                                    {new Date(asgn.submittedAt).toLocaleDateString()}
+                                                                </div>
                                                             </div>
                                                         </div>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => setPreviewUrl(asgn.fileUrl?.startsWith('http') ? asgn.fileUrl : `http://localhost:3000${asgn.fileUrl}`)}
+                                                                className="flex items-center gap-2 px-4 py-2.5 bg-blue-500/10 text-blue-400 rounded-xl text-sm font-bold border border-blue-500/20"
+                                                            >
+                                                                <Eye className="w-4 h-4" />
+                                                                Preview
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                    <a
-                                                        href={asgn.fileUrl?.startsWith('http') ? asgn.fileUrl : `http://localhost:3000${asgn.fileUrl}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all w-fit h-fit"
-                                                    >
-                                                        <ExternalLink className="w-4 h-4" />
-                                                        View Document
-                                                    </a>
-                                                </div>
 
-                                                <div className="p-6 bg-blue-500/5 rounded-2xl border border-blue-500/10 space-y-3 relative group/ai">
-                                                    <div className="flex items-center gap-2 text-blue-400">
-                                                        <Sparkles className="w-4 h-4" />
-                                                        <span className="text-xs font-bold uppercase tracking-widest">AI Academic Review</span>
-                                                        <button
-                                                            onClick={() => handleRegenerateFeedback(asgn.id)}
-                                                            className="ml-auto opacity-0 group-hover/ai:opacity-100 flex items-center gap-1 text-[10px] bg-blue-500/20 hover:bg-blue-500 hover:text-white px-2 py-1 rounded-lg transition-all"
-                                                        >
-                                                            Regenerate Analysis
-                                                        </button>
+                                                    <div className="p-6 bg-blue-500/5 rounded-2xl border border-blue-500/10 space-y-3 relative group/ai">
+                                                        <div className="flex items-center gap-2 text-blue-400">
+                                                            <Sparkles className="w-4 h-4" />
+                                                            <span className="text-xs font-bold uppercase tracking-widest">AI Academic Review</span>
+                                                        </div>
+                                                        <div className="text-sm leading-relaxed text-white/80 whitespace-pre-wrap font-medium">
+                                                            {asgn.aiFeedback || "No AI feedback yet."}
+                                                        </div>
                                                     </div>
-                                                    <div className="text-sm leading-relaxed text-white/80 whitespace-pre-wrap font-medium">
-                                                        {asgn.aiFeedback || "Processing feedback..."}
-                                                    </div>
-                                                </div>
-                                            </motion.div>
-                                        ))
-                                )}
-                                {activeStudent.assignments && activeStudent.assignments.filter(a => a.subjectId === selectedSubject.subjectId).length === 0 && (
-                                    <div className="h-64 flex flex-col items-center justify-center text-muted-foreground gap-4 opacity-40">
-                                        <FileText className="w-12 h-12" />
-                                        <p className="font-medium italic">No submissions for {selectedSubject.subject.name}.</p>
-                                    </div>
-                                )}
+                                                </motion.div>
+                                            ))
+                                    )}
+                                </div>
+
+                                <AnimatePresence>
+                                    {previewUrl && (
+                                        <motion.div
+                                            initial={{ opacity: 0, x: 100 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: 100 }}
+                                            className="w-full md:w-1/2 border-l border-white/10 bg-black/40 backdrop-blur-md flex flex-col"
+                                        >
+                                            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                                                <span className="text-xs font-black uppercase tracking-widest text-primary">Document Preview</span>
+                                                <button 
+                                                    onClick={() => setPreviewUrl(null)}
+                                                    className="p-1 hover:bg-white/10 rounded-lg transition-all"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="flex-1">
+                                                <iframe 
+                                                    src={previewUrl} 
+                                                    className="w-full h-full border-none bg-white"
+                                                    title="Assignment Preview"
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </motion.div>
                     </div>
