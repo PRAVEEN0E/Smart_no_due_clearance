@@ -18,32 +18,6 @@ async function staffRoutes(fastify, opts) {
         });
     });
 
-    // Proxy for assignments to bypass 401/CORS issues
-    fastify.get('/proxy-assignment', async (request, reply) => {
-        const { url } = request.query;
-        if (!url) return reply.status(400).send({ message: 'URL is required' });
-
-        try {
-            const axios = require('axios');
-            const response = await axios({
-                method: 'get',
-                url: url,
-                responseType: 'stream',
-                timeout: 5000 // 5s timeout
-            });
-
-            reply.header('Content-Type', response.headers['content-type'] || 'application/pdf');
-            reply.header('Content-Disposition', 'inline'); // Ensure it opens in browser
-            reply.header('Cache-Control', 'public, max-age=3600');
-            
-            return reply.send(response.data); // Explicitly send the stream
-        } catch (err) {
-            fastify.log.error(`Proxy Error: ${err.message}`);
-            // If proxy fails, try to redirect as fallback
-            return reply.redirect(url);
-        }
-    });
-
     fastify.get('/students', async (request) => {
         // Get all subjects assigned to this staff
         const assignedSubjects = await prisma.staffSubject.findMany({

@@ -32,8 +32,10 @@ import {
 import api from '../../lib/api';
 import CourseMaterials from '../../components/CourseMaterials';
 import AIChatBubble from '../../components/AIChatBubble';
+import useAuthStore from '../../store/authStore';
 
 export default function StudentDashboard() {
+    const { token: authToken } = useAuthStore();
     const [data, setData] = useState({ evaluations: [], feeRecord: null, hallTicket: null });
     const [subjects, setSubjects] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -41,6 +43,21 @@ export default function StudentDashboard() {
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [showTicketModal, setShowTicketModal] = useState(false);
     const [ticketUrl, setTicketUrl] = useState('');
+
+    const getFullUrl = (url) => {
+        if (!url) return '';
+        
+        let backendBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+        if (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1);
+
+        // If it's a Cloudinary URL, wrap it with our proxy to bypass 401/CORS
+        if (url.startsWith('https://res.cloudinary.com')) {
+            return `${backendBase}/api/proxy?url=${encodeURIComponent(url)}&token=${authToken}`;
+        }
+
+        if (url.startsWith('http')) return url;
+        return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
+    };
 
     useEffect(() => {
         fetchDashboard();
@@ -95,7 +112,7 @@ export default function StudentDashboard() {
         try {
             const res = await api.get('/student/hallticket');
             if (res.data.pdfUrl) {
-                setTicketUrl(res.data.pdfUrl);
+                setTicketUrl(getFullUrl(res.data.pdfUrl));
                 setShowTicketModal(true);
             } else {
                 toast.error("Hall ticket generated but URL not found. Please try again.");

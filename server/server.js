@@ -76,6 +76,31 @@ fastify.addHook('onSend', async (request, reply, payload) => {
 // Register Routes
 fastify.register(async (instance) => {
     instance.get('/health', async () => ({ status: 'ok' }));
+
+    // Global Media Proxy for Cloudinary (bypasses 401/CORS in iframes)
+    instance.get('/proxy', { preHandler: instance.authenticate }, async (request, reply) => {
+        const { url } = request.query;
+        if (!url) return reply.status(400).send({ message: 'URL is required' });
+
+        try {
+            const axios = require('axios');
+            const response = await axios({
+                method: 'get',
+                url: url,
+                responseType: 'stream',
+                timeout: 5000 
+            });
+
+            reply.header('Content-Type', response.headers['content-type'] || 'application/pdf');
+            reply.header('Content-Disposition', 'inline');
+            reply.header('Cache-Control', 'public, max-age=3600');
+            
+            return reply.send(response.data);
+        } catch (err) {
+            instance.log.error(`Global Proxy Error: ${err.message}`);
+            return reply.redirect(url);
+        }
+    });
 }, { prefix: '/api' });
 
 fastify.register(require('./routes/mentor'), { prefix: '/api/mentor' });

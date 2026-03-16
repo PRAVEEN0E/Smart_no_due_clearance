@@ -68,7 +68,7 @@ export default function StaffDashboard() {
         // If it's a Cloudinary URL, wrap it with our proxy to bypass 401/CORS
         if (url.startsWith('https://res.cloudinary.com')) {
             // Append token as query param so the proxy route can authenticate (iframes don't send headers)
-            return `${backendBase}/api/staff/proxy-assignment?url=${encodeURIComponent(url)}&token=${authToken}`;
+            return `${backendBase}/api/proxy?url=${encodeURIComponent(url)}&token=${authToken}`;
         }
 
         if (url.startsWith('http')) return url;
