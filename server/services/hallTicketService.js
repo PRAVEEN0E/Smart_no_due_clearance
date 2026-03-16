@@ -435,16 +435,12 @@ body {
         const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
         await browser.close();
 
-        const { uploadBuffer } = require('./cloudinaryService');
+        // Save PDF locally instead of Cloudinary to bypass strict PDF delivery restrictions
+        const fileName = `ticket_${studentId}_${Date.now()}.pdf`;
+        const filePath = path.join(__dirname, '../uploads/halltickets', fileName);
+        fs.writeFileSync(filePath, pdfBuffer);
         
-        let pdfUrl;
-        try {
-            const result = await uploadBuffer(pdfBuffer, 'halltickets', `ticket_${studentId}`);
-            pdfUrl = result.secure_url;
-        } catch (err) {
-            console.error("Failed to upload Hall Ticket to Cloudinary", err);
-            return null; // Gracefully fail if upload fails
-        }
+        const pdfUrl = `/uploads/halltickets/${fileName}`;
 
         const { sendNotification } = require('./notificationService');
         await sendNotification(prisma, {
