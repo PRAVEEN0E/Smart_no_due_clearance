@@ -19,6 +19,7 @@
     "@fastify/static": "^9.0.0",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.19.2",
+    "@sparticuz/chromium": "^143.0.4",
     "axios": "^1.13.6",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.9.0",
@@ -27,6 +28,7 @@
     "groq-sdk": "^1.1.1",
     "nodemailer": "^8.0.1",
     "puppeteer": "^24.37.5",
+    "puppeteer-core": "^24.39.1",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
     "xlsx": "^0.18.5"
