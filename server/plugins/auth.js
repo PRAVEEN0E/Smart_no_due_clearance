@@ -8,9 +8,14 @@ async function authPlugin(fastify, opts) {
 
     fastify.decorate('authenticate', async (request, reply) => {
         try {
+            // Check for token in Header or Query (for iframes/links)
+            const token = request.headers.authorization || request.query.token;
+            if (request.query.token && !request.headers.authorization) {
+                request.headers.authorization = `Bearer ${request.query.token}`;
+            }
             await request.jwtVerify();
         } catch (err) {
-            reply.send(err);
+            reply.status(401).send({ message: 'Unauthorized: Invalid or missing token' });
         }
     });
 

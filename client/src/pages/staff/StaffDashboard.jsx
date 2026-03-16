@@ -46,8 +46,10 @@ import {
 } from 'recharts';
 import api from '../../lib/api';
 import CourseMaterials from '../../components/CourseMaterials';
+import useAuthStore from '../../store/authStore';
 
 export default function StaffDashboard() {
+    const { token: authToken } = useAuthStore();
     const [subjects, setSubjects] = useState([]);
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [evaluations, setEvaluations] = useState([]);
@@ -59,10 +61,17 @@ export default function StaffDashboard() {
 
     const getFullUrl = (url) => {
         if (!url) return '';
-        if (url.startsWith('http')) return url;
         
         let backendBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
         if (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1);
+
+        // If it's a Cloudinary URL, wrap it with our proxy to bypass 401/CORS
+        if (url.startsWith('https://res.cloudinary.com')) {
+            // Append token as query param so the proxy route can authenticate (iframes don't send headers)
+            return `${backendBase}/api/staff/proxy-assignment?url=${encodeURIComponent(url)}&token=${authToken}`;
+        }
+
+        if (url.startsWith('http')) return url;
         
         let path = url;
         if (!path.startsWith('/') && !path.startsWith('uploads/')) {
@@ -76,16 +85,18 @@ export default function StaffDashboard() {
 
     const isImage = (url) => {
         if (!url) return false;
+        const decodedUrl = decodeURIComponent(url);
         // Check extension first
-        const path = url.split('?')[0].toLowerCase();
+        const path = decodedUrl.split('?')[0].toLowerCase();
         if (path.endsWith('.pdf')) return false;
         
-        return /\.(jpg|jpeg|png|webp|gif|avif|svg)$/i.test(path) || url.includes('image/upload');
+        return /\.(jpg|jpeg|png|webp|gif|avif|svg)$/i.test(path) || decodedUrl.includes('image/upload');
     };
 
     const isPDF = (url) => {
         if (!url) return false;
-        return url.split('?')[0].toLowerCase().endsWith('.pdf');
+        const decodedUrl = decodeURIComponent(url);
+        return decodedUrl.split('?')[0].toLowerCase().endsWith('.pdf');
     };
 
     useEffect(() => {
