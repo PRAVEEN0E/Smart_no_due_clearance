@@ -78,8 +78,35 @@ const uploadBuffer = (buffer, folder, originalFilename) => {
     });
 };
 
+const getSignedUrl = (url) => {
+    if (!url || !url.includes('cloudinary.com')) return url;
+    
+    try {
+        // Extract public_id and resource_type from URL
+        // Example: https://res.cloudinary.com/cloud_name/image/upload/v123/folder/id.jpg
+        const parts = url.split('/');
+        const uploadIndex = parts.indexOf('upload');
+        if (uploadIndex === -1) return url;
+        
+        const resourceType = parts[uploadIndex - 1]; // e.g., 'image' or 'raw'
+        const publicIdWithExt = parts.slice(uploadIndex + 2).join('/'); // skip version
+        const publicId = publicIdWithExt.split('.')[0];
+        
+        return cloudinary.url(publicId, {
+            resource_type: resourceType,
+            type: 'upload',
+            sign_url: true,
+            secure: true
+        });
+    } catch (e) {
+        console.error("Failed to sign URL", e);
+        return url;
+    }
+};
+
 module.exports = {
     cloudinary,
     uploadStream,
-    uploadBuffer
+    uploadBuffer,
+    getSignedUrl
 };

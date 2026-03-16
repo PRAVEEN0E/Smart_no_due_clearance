@@ -64,7 +64,7 @@ async function staffRoutes(fastify, opts) {
         });
 
         // Now fetch all evaluations for this staff's subjects
-        return prisma.evaluation.findMany({
+        const evaluations = await prisma.evaluation.findMany({
             where: {
                 subjectId: { in: assignedSubjectIds },
                 staffId: request.user.id
@@ -80,6 +80,19 @@ async function staffRoutes(fastify, opts) {
                 subject: true
             }
         });
+
+        // Sign Cloudinary URLs for assignments
+        const { getSignedUrl } = require('../services/cloudinaryService');
+        evaluations.forEach(ev => {
+            if (ev.student?.assignments) {
+                ev.student.assignments = ev.student.assignments.map(asgn => ({
+                    ...asgn,
+                    fileUrl: getSignedUrl(asgn.fileUrl)
+                }));
+            }
+        });
+
+        return evaluations;
     });
 
     fastify.put('/marks/:evalId', { schema: staffSchema.updateMarks }, async (request, reply) => {
