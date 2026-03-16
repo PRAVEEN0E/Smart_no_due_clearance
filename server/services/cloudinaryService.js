@@ -23,7 +23,21 @@ const uploadStream = (fileStream, folder, originalFilename) => {
             },
             (error, result) => {
                 if (error) reject(error);
-                else resolve(result);
+                else {
+                    let secure_url = result.secure_url;
+                    const lastPart = secure_url.split('/').pop();
+                    
+                    // If no dot in the filename part of the URL, append the format
+                    if (!lastPart.includes('.')) {
+                        if (result.format) {
+                            secure_url = `${secure_url}.${result.format}`;
+                        } else if (originalFilename && originalFilename.includes('.')) {
+                            const ext = originalFilename.split('.').pop();
+                            secure_url = `${secure_url}.${ext}`;
+                        }
+                    }
+                    resolve({ ...result, secure_url });
+                }
             }
         );
         fileStream.pipe(stream);
@@ -44,7 +58,20 @@ const uploadBuffer = (buffer, folder, originalFilename) => {
             },
             (error, result) => {
                 if (error) reject(error);
-                else resolve(result);
+                else {
+                    let secure_url = result.secure_url;
+                    const lastPart = secure_url.split('/').pop();
+                    
+                    if (!lastPart.includes('.')) {
+                        if (result.format) {
+                            secure_url = `${secure_url}.${result.format}`;
+                        } else if (originalFilename && originalFilename.includes('.')) {
+                            const ext = originalFilename.split('.').pop();
+                            secure_url = `${secure_url}.${ext}`;
+                        }
+                    }
+                    resolve({ ...result, secure_url });
+                }
             }
         );
         stream.end(buffer);

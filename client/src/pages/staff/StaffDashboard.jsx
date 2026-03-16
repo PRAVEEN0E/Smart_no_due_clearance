@@ -60,8 +60,18 @@ export default function StaffDashboard() {
     const getFullUrl = (url) => {
         if (!url) return '';
         if (url.startsWith('http')) return url;
-        const backendBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
-        return `${backendBase}${url}`;
+        
+        let backendBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+        if (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1);
+        
+        let path = url;
+        if (!path.startsWith('/') && !path.startsWith('uploads/')) {
+            path = `/uploads/${path}`;
+        } else if (!path.startsWith('/')) {
+            path = `/${path}`;
+        }
+        
+        return `${backendBase}${path}`;
     };
 
     const isImage = (url) => {
@@ -747,9 +757,15 @@ export default function StaffDashboard() {
                                                             <div>
                                                                 <div className="font-bold text-lg flex items-center gap-2">
                                                                     Assignment Submission
-                                                                    <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] font-black uppercase tracking-tighter text-muted-foreground border border-white/5">
-                                                                        {asgn.fileUrl?.split('.').pop()?.toUpperCase() || 'FILE'}
-                                                                    </span>
+                                                                    {(() => {
+                                                                        const ext = asgn.fileUrl?.split('.').pop()?.toLowerCase();
+                                                                        const isRealExt = ext && ext.length < 5 && !ext.includes('/');
+                                                                        return (
+                                                                            <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] font-black uppercase tracking-tighter text-muted-foreground border border-white/5">
+                                                                                {isRealExt ? ext.toUpperCase() : 'FILE'}
+                                                                            </span>
+                                                                        );
+                                                                    })()}
                                                                 </div>
                                                                 <div className="text-xs text-muted-foreground flex items-center gap-2">
                                                                     {new Date(asgn.submittedAt).toLocaleDateString()} • {asgn.fileUrl?.split('/').pop()?.split('_')[0] || 'View Document'}
