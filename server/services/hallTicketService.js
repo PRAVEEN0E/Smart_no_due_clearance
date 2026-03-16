@@ -1,5 +1,4 @@
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
+// pdfService handles browser/chromium
 const fs = require('fs');
 const path = require('path');
 const { generateVerificationQR } = require('./qrService');
@@ -429,21 +428,8 @@ body {
 </html>
 `;
 
-        // Use cloud-compatible Chromium on Render, fallback to local puppeteer for dev
-        const isLocal = !process.env.RENDER;
-        let browser;
-        if (isLocal) {
-            const puppeteerLocal = require('puppeteer');
-            browser = await puppeteerLocal.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-        } else {
-            browser = await puppeteer.launch({
-                args: chromium.args,
-                defaultViewport: chromium.defaultViewport,
-                executablePath: await chromium.executablePath(),
-                headless: chromium.headless
-            });
-        }
-
+        const { getBrowser } = require('./pdfService');
+        const browser = await getBrowser();
         const page = await browser.newPage();
         await page.setContent(htmlContent);
         const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });

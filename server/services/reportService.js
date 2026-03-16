@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+// pdfService handles browser launching
 
 async function generateMarksPDF(subjectName, evaluations, staffName) {
     const htmlContent = `
@@ -70,7 +70,8 @@ async function generateMarksPDF(subjectName, evaluations, staffName) {
     </html>
     `;
 
-    const browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox'] });
+    const { getBrowser } = require('./pdfService');
+    const browser = await getBrowser();
     const page = await browser.newPage();
     await page.setContent(htmlContent);
     const pdfBuffer = await page.pdf({
