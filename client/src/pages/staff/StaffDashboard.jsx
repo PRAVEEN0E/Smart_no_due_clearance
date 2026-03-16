@@ -76,7 +76,16 @@ export default function StaffDashboard() {
 
     const isImage = (url) => {
         if (!url) return false;
-        return /\.(jpg|jpeg|png|webp|gif|avif|svg)$/i.test(url) || url.includes('image/upload');
+        // Check extension first
+        const path = url.split('?')[0].toLowerCase();
+        if (path.endsWith('.pdf')) return false;
+        
+        return /\.(jpg|jpeg|png|webp|gif|avif|svg)$/i.test(path) || url.includes('image/upload');
+    };
+
+    const isPDF = (url) => {
+        if (!url) return false;
+        return url.split('?')[0].toLowerCase().endsWith('.pdf');
     };
 
     useEffect(() => {
@@ -845,14 +854,17 @@ export default function StaffDashboard() {
                                                             alt="Preview" 
                                                         />
                                                     </div>
+                                                ) : isPDF(previewUrl) ? (
+                                                    <iframe 
+                                                        src={previewUrl} 
+                                                        className="w-full h-full border-none bg-white"
+                                                        title="PDF Preview"
+                                                    />
                                                 ) : (
                                                     <iframe 
-                                                        src={previewUrl.includes('localhost') || previewUrl.startsWith('/') 
-                                                            ? previewUrl 
-                                                            : `https://docs.google.com/gview?url=${encodeURIComponent(previewUrl)}&embedded=true`
-                                                        } 
+                                                        src={`https://docs.google.com/gview?url=${encodeURIComponent(previewUrl)}&embedded=true`} 
                                                         className="w-full h-full border-none bg-white"
-                                                        title="Assignment Preview"
+                                                        title="Document Preview"
                                                     />
                                                 )}
                                             </div>
