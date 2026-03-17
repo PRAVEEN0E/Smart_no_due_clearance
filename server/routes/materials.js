@@ -29,14 +29,16 @@ async function materialRoutes(fastify, opts) {
         for await (const part of parts) {
             if (part.file) {
                 try {
-                    const result = await uploadStream(part.file, 'materials', part.filename);
-                    fileUrl = result.secure_url;
+                    const ext = path.extname(part.filename).slice(1).toUpperCase() || 'PDF';
+                    fileType = ext;
+                    const fileName = `mat_${request.user.id}_${Date.now()}.${ext.toLowerCase()}`;
+                    const filePath = path.join(__dirname, '../uploads/materials', fileName);
                     
-                    const path = require('path');
-                    fileType = path.extname(part.filename).slice(1).toUpperCase() || 'PDF';
+                    await pipeline(part.file, fs.createWriteStream(filePath));
+                    fileUrl = `/uploads/materials/${fileName}`;
                 } catch (error) {
-                    fastify.log.error(error);
-                    return reply.status(500).send({ message: 'Failed to upload material' });
+                    fastify.log.error(`Local Material Save Error: ${error.message}`);
+                    return reply.status(500).send({ message: 'Failed to save material locally' });
                 }
             } else {
                 if (part.fieldname === 'title') title = part.value;
