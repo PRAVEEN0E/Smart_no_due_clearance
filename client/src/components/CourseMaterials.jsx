@@ -148,9 +148,23 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
                                         <span className="text-[8px] text-muted-foreground font-medium truncate opacity-60">• {m.fileType}</span>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-0.5 ml-2">
+                                 <div className="flex items-center gap-0.5 ml-2">
                                     <a
-                                        href={m.fileUrl?.startsWith('http') ? m.fileUrl : `http://localhost:3000${m.fileUrl}`}
+                                        href={(() => {
+                                            const url = m.fileUrl;
+                                            if (!url) return '#';
+                                            
+                                            let backendBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+                                            if (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1);
+
+                                            if (url.startsWith('https://res.cloudinary.com')) {
+                                                const token = localStorage.getItem('token');
+                                                return `${backendBase}/api/proxy?url=${encodeURIComponent(url)}&token=${token}`;
+                                            }
+
+                                            if (url.startsWith('http')) return url;
+                                            return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
+                                        })()}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="p-1.5 hover:bg-primary/20 text-muted-foreground hover:text-primary rounded-lg transition-all"
