@@ -1,18 +1,40 @@
 const nodemailer = require('nodemailer');
 
-// Initialize transporter
-// Using common environment variables for flexibility
-const transporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+let transporter;
+
+async function initTransporter() {
+    if (transporter) return;
+
+    if (process.env.EMAIL_USER && process.env.EMAIL_USER !== 'your-email@gmail.com') {
+        transporter = nodemailer.createTransport({
+            service: process.env.EMAIL_SERVICE || 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+    } else {
+        console.log('⚠️ No real email configured. Setting up Ethereal test account...');
+        const testAccount = await nodemailer.createTestAccount();
+        transporter = nodemailer.createTransport({
+            host: "smtp.ethereal.email",
+            port: 587,
+            secure: false,
+            auth: {
+                user: testAccount.user,
+                pass: testAccount.pass,
+            },
+        });
     }
-});
+}
+
 async function sendEmail(to, subject, html, attachments = []) {
     try {
+        await initTransporter();
+        const senderInfo = transporter.options.auth?.user || 'notifications@instisync.com';
+        
         const mailOptions = {
-            from: `"InstiSync Notifications" <${process.env.EMAIL_USER}>`,
+            from: `"InstiSync Notifications" <${senderInfo}>`,
             to,
             subject,
             html,
@@ -21,6 +43,12 @@ async function sendEmail(to, subject, html, attachments = []) {
 
         const info = await transporter.sendMail(mailOptions);
         console.log(`📧 Email sent to ${to}: ${info.messageId}`);
+        
+        // Expose preview link if it's a test email
+        if (transporter.options.host === 'smtp.ethereal.email') {
+            console.log(`💡 Preview your Email here: ${nodemailer.getTestMessageUrl(info)}`);
+        }
+        
         return info;
     } catch (error) {
         console.error('❌ Email Error:', error);
