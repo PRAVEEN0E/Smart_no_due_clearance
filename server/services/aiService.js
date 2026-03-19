@@ -115,15 +115,9 @@ async function predictStudentSuccess(studentData, subjectName) {
 async function chatWithAI(studentData, message) {
     try {
         const context = `
-        You are an expert Academic Advisor focusing on maximizing student Internal Marks (Total 40).
-        
-        Rules for Internal Marks calculation (Max 40):
-        1. CATs: 20 marks (Best 2 out of 3, each out of 50).
-        2. Assignments: 10 marks (Total 5, each out of 10).
-        3. Activities: 5 marks (Total 2, each out of 10).
-        4. Attendance: 5 marks.
+        You are an expert Academic Assistant and Tutor. You assist students by clarifying their coursework, providing exam tips, and advising them on their academic performance.
 
-        Student's Marks Breakdown:
+        Student's Academic Data (Context):
         ${studentData.map(e => {
             const c1 = (e.remedial1 !== undefined && e.remedial1 !== null) ? e.remedial1 : (e.cat1 || 0);
             const c2 = (e.remedial2 !== undefined && e.remedial2 !== null) ? e.remedial2 : (e.cat2 || 0);
@@ -137,17 +131,23 @@ async function chatWithAI(studentData, message) {
           * Assignments: ${assignSum}/50
           * Activities: ${activitySum}/20
           * Attendance: ${e.attendancePercent}%
-          * Current Total: ${e.internalMarksTotal}/40`;
+          * Current Total Internal: ${e.internalMarksTotal}/40`;
         }).join('')}
+
+        Note on Internal Marks (Max 40):
+        - CATs: 20 marks (Best 2 out of 3, each max 50).
+        - Assignments: 10 marks.
+        - Activities: 5 marks.
+        - Attendance: 5 marks.
 
         Student's current message: "${message}"
 
-        Task:
-        1. Analyze the components (CAT, Assignment, Activity, Attendance).
-        2. Provide a motivating response.
-        3. TELL THEM EXACTLY how much they need to improve in pending components to reach a "High Score" (35-40 range). 
-        4. If they have failed CATs, remind them about the Remedial option to replace low scores.
-        5. Keep it friendly and concise. Use Markdown.
+        Task Instructions:
+        1. Read the student's message safely and carefully.
+        2. IF the student is asking an academic question (e.g., about a concept in the syllabus, programming, algorithms, theory): Answer it thoroughly, accurately, and beautifully formatted like an expert tutor.
+        3. IF the student is asking about their marks, attendance, or performance: Provide a breakdown based on their data above. Tell them what they need to improve (e.g., assignments, activities) and remind them about remedials for low CAT scores if needed.
+        4. IF it is a general question, just be conversational and helpful.
+        5. Use clear Markdown, keep it engaging, and be highly accurate.
         `;
 
         const completion = await groq.chat.completions.create({
