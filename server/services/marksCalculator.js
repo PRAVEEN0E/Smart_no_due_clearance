@@ -10,9 +10,11 @@ function calculateInternalMarks(evalData, subjectType) {
     // 1. CATs (Max 20 Marks)
     // - Logic: Best 2 out of 3 (each out of 50).
     // - Improvement: If a remedial mark is present for a CAT, it replaces that CAT score.
-    const effectiveCat1 = (evalData.remedial1 !== undefined && evalData.remedial1 !== null) ? evalData.remedial1 : (cat1 || 0);
-    const effectiveCat2 = (evalData.remedial2 !== undefined && evalData.remedial2 !== null) ? evalData.remedial2 : (cat2 || 0);
-    const effectiveCat3 = (evalData.remedial3 !== undefined && evalData.remedial3 !== null) ? evalData.remedial3 : (cat3 || 0);
+    // - For Labs: Remedials are not applicable.
+    const isLab = subjectType === 'FULL_LAB';
+    const effectiveCat1 = (!isLab && evalData.remedial1 !== undefined && evalData.remedial1 !== null) ? evalData.remedial1 : (cat1 || 0);
+    const effectiveCat2 = (!isLab && evalData.remedial2 !== undefined && evalData.remedial2 !== null) ? evalData.remedial2 : (cat2 || 0);
+    const effectiveCat3 = (!isLab && evalData.remedial3 !== undefined && evalData.remedial3 !== null) ? evalData.remedial3 : (cat3 || 0);
 
     let rawCats = [effectiveCat1, effectiveCat2, effectiveCat3];
 
@@ -48,9 +50,12 @@ function calculateInternalMarks(evalData, subjectType) {
         // For Labs: Sum available components and cap at 40
         // Model (assumed ~20) + Activities (assumed ~20) + Assignments/Record (assumed ~10) + Attendance (5)
         total = (modelLabMarks || 0) + (activitySum) + (assignSum / 5) + attendanceMarks;
+    } else if (subjectType === 'THEORY_WITH_LAB') {
+        // For Hybrid: CATs (20) + Assignments (10) + Activities (5) + Attendance (5) + Model Lab (e.g. 10)
+        // Scaled and capped at 40
+        total = catMarks + assignMarks + activityMarks + attendanceMarks + (modelLabMarks / 10);
     } else {
-        // Full Theory or Theory+Lab
-        // Standard 40 marks breakdown
+        // Full Theory
         total = catMarks + assignMarks + activityMarks + attendanceMarks;
     }
 

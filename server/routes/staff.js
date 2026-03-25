@@ -108,6 +108,14 @@ async function staffRoutes(fastify, opts) {
 
         // Validate each remedial field
         const remedials = ['remedial1', 'remedial2', 'remedial3'];
+        
+        if (evaluation.subject.type === 'FULL_LAB') {
+            const hasRemedials = remedials.some(r => (updateData[r] !== undefined && updateData[r] !== null));
+            if (hasRemedials) {
+                return reply.status(400).send({ message: 'Remedial marks are not applicable for Practical/Lab subjects.' });
+            }
+        }
+
         for (let i = 0; i < remedials.length; i++) {
             const field = remedials[i];
             const catField = `cat${i + 1}`;

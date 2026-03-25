@@ -238,6 +238,35 @@ export default function StaffDashboard() {
         }
     };
 
+    const isReadyToApprove = (ev) => {
+        const type = selectedSubject?.subject.type;
+        const isLab = type === 'FULL_LAB';
+        const isHybrid = type === 'THEORY_WITH_LAB';
+        
+        if (isLab) {
+            return ev.modelLabMarks !== null && 
+                   ev.activity1 !== null && 
+                   ev.activity2 !== null && 
+                   ev.attendancePercent !== null;
+        } else if (isHybrid) {
+            return ev.cat1 !== null && 
+                   ev.cat2 !== null && 
+                   ev.cat3 !== null && 
+                   ev.activity1 !== null && 
+                   ev.activity2 !== null && 
+                   ev.attendancePercent !== null &&
+                   ev.modelLabMarks !== null &&
+                   [1, 2, 3, 4, 5].every(n => ev[`assignment${n}`] !== null);
+        } else {
+            return ev.cat1 !== null && 
+                   ev.cat2 !== null && 
+                   ev.cat3 !== null && 
+                   ev.activity1 !== null && 
+                   ev.activity2 !== null && 
+                   ev.attendancePercent !== null &&
+                   [1, 2, 3, 4, 5].every(n => ev[`assignment${n}`] !== null);
+        }
+    };
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -481,6 +510,13 @@ export default function StaffDashboard() {
                                                 <th className="px-6 py-8 text-center w-[160px] border-l border-b border-white/5 bg-white/[0.01]">Model Lab</th>
                                                 <th className="px-6 py-8 text-center w-[200px] border-l border-b border-white/5 bg-white/[0.01]">Lab Activities</th>
                                             </>
+                                        ) : selectedSubject?.subject.type === 'THEORY_WITH_LAB' ? (
+                                            <>
+                                                <th className="px-6 py-8 text-center w-[180px] border-l border-b border-white/5 bg-white/[0.01]">CAT Assessments</th>
+                                                <th className="px-6 py-8 text-center w-[240px] border-l border-b border-white/5 bg-white/[0.01]">Assignments</th>
+                                                <th className="px-6 py-8 text-center w-[140px] border-l border-b border-white/5 bg-white/[0.01]">Activities</th>
+                                                <th className="px-6 py-8 text-center w-[160px] border-l border-b border-white/5 bg-white/[0.01]">Model Lab</th>
+                                            </>
                                         ) : (
                                             <>
                                                 <th className="px-6 py-8 text-center w-[180px] border-l border-b border-white/5 bg-white/[0.01]">CAT Assessments</th>
@@ -489,7 +525,9 @@ export default function StaffDashboard() {
                                             </>
                                         )}
                                         <th className="px-4 py-8 text-center w-[110px] border-l border-b border-white/5 bg-emerald-500/[0.02]">Attend %</th>
-                                        <th className="px-6 py-8 text-center w-[180px] border-l border-b border-white/5 bg-orange-500/[0.02]">Remedial</th>
+                                        {selectedSubject?.subject.type !== 'FULL_LAB' && (
+                                            <th className="px-6 py-8 text-center w-[180px] border-l border-b border-white/5 bg-orange-500/[0.02]">Remedial</th>
+                                        )}
                                         <th className="px-4 py-8 text-center w-[100px] font-black text-white border-l border-b border-white/5 bg-primary/10">Final</th>
                                         <th className="px-8 py-8 text-right min-w-[180px] border-b border-white/5 rounded-tr-3xl">Verification</th>
                                     </tr>
@@ -519,18 +557,22 @@ export default function StaffDashboard() {
 
                                                 <td className="px-4 py-4">
                                                     <div className="flex justify-center">
-                                                        <button
-                                                            onClick={() => setActiveStudent(ev.student)}
-                                                            className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-all relative group/btn"
-                                                        >
-                                                            <FileText className="w-5 h-5" />
-                                                            {ev.student.assignments?.length > 0 && (
-                                                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-[#0a0a0a]" />
-                                                            )}
-                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-white text-black text-[9px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none font-bold">
-                                                                View Assignments
-                                                            </div>
-                                                        </button>
+                                                        {selectedSubject?.subject.type !== 'FULL_LAB' ? (
+                                                            <button
+                                                                onClick={() => setActiveStudent(ev.student)}
+                                                                className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-all relative group/btn"
+                                                            >
+                                                                <FileText className="w-5 h-5" />
+                                                                {ev.student.assignments?.length > 0 && (
+                                                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-[#0a0a0a]" />
+                                                                )}
+                                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-white text-black text-[9px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none font-bold">
+                                                                    View Assignments
+                                                                </div>
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-muted-foreground/30 text-[10px] font-bold">N/A</span>
+                                                        )}
                                                     </div>
                                                 </td>
 
@@ -559,6 +601,62 @@ export default function StaffDashboard() {
                                                                          placeholder="0"
                                                                      />
                                                                  ))}
+                                                             </div>
+                                                         </td>
+                                                     </>
+                                                 ) : selectedSubject?.subject.type === 'THEORY_WITH_LAB' ? (
+                                                     <>
+                                                         <td className="px-6 py-6 border-l border-white/5">
+                                                             <div className="flex gap-2 justify-center">
+                                                                 {[1, 2, 3].map(n => (
+                                                                     <input
+                                                                         key={n}
+                                                                         type="number"
+                                                                         value={ev[`cat${n}`] ?? ''}
+                                                                         onChange={(e) => handleUpdateMark(ev.id, `cat${n}`, e.target.value)}
+                                                                         className="w-14 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all"
+                                                                         placeholder={`#${n}`}
+                                                                     />
+                                                                 ))}
+                                                             </div>
+                                                         </td>
+                                                         <td className="px-6 py-6 border-l border-white/5">
+                                                             <div className="flex gap-1.5 justify-center">
+                                                                 {[1, 2, 3, 4, 5].map(n => (
+                                                                     <input
+                                                                         key={n}
+                                                                         type="number"
+                                                                         value={ev[`assignment${n}`] ?? ''}
+                                                                         onChange={(e) => handleUpdateMark(ev.id, `assignment${n}`, e.target.value)}
+                                                                         className="w-10 h-10 bg-white/[0.02] border border-white/5 rounded-xl text-center text-[10px] focus:ring-2 focus:ring-blue-500 focus:bg-blue-500/5 outline-none transition-all"
+                                                                         placeholder={n}
+                                                                     />
+                                                                 ))}
+                                                             </div>
+                                                         </td>
+                                                         <td className="px-6 py-6 border-l border-white/5">
+                                                             <div className="flex gap-2 justify-center">
+                                                                 {[1, 2].map(n => (
+                                                                     <input
+                                                                         key={n}
+                                                                         type="number"
+                                                                         value={ev[`activity${n}`] ?? ''}
+                                                                         onChange={(e) => handleUpdateMark(ev.id, `activity${n}`, e.target.value)}
+                                                                         className="w-12 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-emerald-500/5 outline-none transition-all"
+                                                                         placeholder="0"
+                                                                     />
+                                                                 ))}
+                                                             </div>
+                                                         </td>
+                                                         <td className="px-6 py-6 border-l border-white/5">
+                                                             <div className="flex justify-center">
+                                                                 <input
+                                                                     type="number"
+                                                                     value={ev.modelLabMarks ?? ''}
+                                                                     onChange={(e) => handleUpdateMark(ev.id, 'modelLabMarks', e.target.value)}
+                                                                     className="w-24 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-sm font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all hover:bg-white/[0.05] hover:border-white/20"
+                                                                     placeholder="00"
+                                                                 />
                                                              </div>
                                                          </td>
                                                      </>
@@ -621,6 +719,7 @@ export default function StaffDashboard() {
                                                       </div>
                                                   </td>
 
+                                                  {selectedSubject?.subject.type !== 'FULL_LAB' && (
                                                   <td className="px-6 py-6 border-l border-white/5 bg-orange-500/[0.01]">
                                                       <div className="flex gap-2 justify-center">
                                                           {[1, 2, 3].map(n => (
@@ -639,6 +738,7 @@ export default function StaffDashboard() {
                                                           ))}
                                                       </div>
                                                   </td>
+                                                      )}
 
                                                   <td className="px-6 py-6 text-center border-l border-white/5 bg-primary/20 backdrop-blur-sm">
                                                       <div className="text-xl font-black text-white">
@@ -654,8 +754,9 @@ export default function StaffDashboard() {
                                                          </div>
                                                      ) : (
                                                          <button
+                                                             disabled={!isReadyToApprove(ev)}
                                                              onClick={() => handleApprove(ev.id)}
-                                                             className="px-6 py-2.5 rounded-xl border border-primary/20 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+                                                             className={`px-6 py-2.5 rounded-xl border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest transition-all ${!isReadyToApprove(ev) ? 'opacity-30 cursor-not-allowed grayscale' : 'bg-primary/10 hover:bg-primary hover:text-white shadow-lg shadow-primary/10'}`}
                                                          >
                                                              Approve
                                                          </button>

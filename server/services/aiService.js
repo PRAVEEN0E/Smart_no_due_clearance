@@ -8,16 +8,23 @@ async function generateFeedback(fileUrl, subjectContext) {
     try {
         let fileContent = "";
         try {
-            // Basic check to see if we can parse it
             const ext = fileUrl.split('.').pop().toLowerCase();
-            if (['txt', 'md', 'csv'].includes(ext) || fileUrl.includes('raw')) {
-                const axios = require('axios');
-                const response = await axios.get(fileUrl);
-                fileContent = String(response.data).substring(0, 3000);
+            if (['txt', 'md', 'csv'].includes(ext)) {
+                let absolutePath;
+                if (fileUrl.startsWith('http')) {
+                    const axios = require('axios');
+                    const response = await axios.get(fileUrl);
+                    fileContent = String(response.data).substring(0, 3000);
+                } else {
+                    // It's a local relative path
+                    absolutePath = path.resolve(__dirname, '..', fileUrl.replace(/^\//, ''));
+                    if (fs.existsSync(absolutePath)) {
+                        fileContent = fs.readFileSync(absolutePath, 'utf8').substring(0, 3000);
+                    }
+                }
             }
         } catch (e) {
-            console.log("Could not parse file from URL directly:", e.message);
-            // Binary file (PDF/image) — can't extract text directly, use subject context
+            console.log("Could not parse file:", e.message);
         }
 
         const prompt = `You are an experienced academic evaluator. A student has submitted an assignment for the subject: "${subjectContext}".

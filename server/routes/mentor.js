@@ -122,15 +122,20 @@ async function mentorRoutes(fastify, opts) {
         const { name, email, password } = request.body;
         const passwordHash = await bcrypt.hash(password, 12);
 
-        return prisma.$transaction(async (tx) => {
-            const student = await tx.user.create({
+        const student = await prisma.$transaction(async (tx) => {
+            const newUser = await tx.user.create({
                 data: { name, email, passwordHash, role: 'STUDENT', createdById: request.user.id }
             });
             await tx.feeRecord.create({
-                data: { studentId: student.id, feeBalance: 0, feeClearedAuto: true }
+                data: { studentId: newUser.id, feeBalance: 0, feeClearedAuto: true }
             });
-            return student;
+            return newUser;
         });
+
+        // Send Welcome Email after successful creation
+        sendWelcomeEmail(email, name, password);
+
+        return student;
     });
 
     fastify.put('/students/:id', async (request, reply) => {
@@ -200,6 +205,9 @@ async function mentorRoutes(fastify, opts) {
                 }
             });
             results.push(student);
+
+            // Send Welcome Email
+            sendWelcomeEmail(s.email, s.name, s.password);
         }
         return { count: results.length, students: results };
     });

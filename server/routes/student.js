@@ -81,6 +81,13 @@ async function studentRoutes(fastify, opts) {
             const subjectId = data.fields.subjectId ? data.fields.subjectId.value : null;
             if (!subjectId) return reply.status(400).send({ message: 'subjectId is required and must be sent before the file' });
 
+            const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
+            if (!subject) return reply.status(404).send({ message: 'Subject not found' });
+            
+            if (subject.type === 'FULL_LAB') {
+                return reply.status(400).send({ message: 'Assignment submission is not required for Practical/Lab subjects.' });
+            }
+
             const fs = require('fs');
             const path = require('path');
             const util = require('util');
@@ -100,26 +107,44 @@ async function studentRoutes(fastify, opts) {
                 return reply.status(500).send({ message: 'Failed to save assignment file locally' });
             }
 
-            // Get AI feedback — pass the uploaded file URL
-            const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
-            const aiFeedback = await generateFeedback(fileUrl, subject?.name || 'General');
-
+            // Create assignment record immediately with pending feedback
             const assignment = await prisma.assignment.create({
                 data: {
                     studentId: request.user.id,
                     subjectId: subjectId,
                     fileUrl: fileUrl,
-                    aiFeedback: aiFeedback
+                    aiFeedback: "_AI Feedback is being generated... Please check back in a moment._"
                 }
             });
 
             const { sendNotification } = require('../services/notificationService');
+
+            // 1. Send immediate upload confirmation
             sendNotification(prisma, {
                 userId: request.user.id,
-                title: 'Assignment Submitted',
-                message: `Your assignment for ${subject?.name || 'Subject'} has been uploaded and AI feedback is ready.`,
-                type: 'INFO'
+                title: 'Assignment Uploaded',
+                message: `Your assignment for ${subject?.name || 'Subject'} was received. AI is analyzing it now!`,
+                type: 'SUCCESS'
             }).catch(console.error);
+
+            // 2. Trigger AI Feedback in the background
+            const { generateFeedback } = require('../services/aiService');
+            generateFeedback(fileUrl, subject?.name || 'General').then(async (aiFeedback) => {
+                await prisma.assignment.update({
+                    where: { id: assignment.id },
+                    data: { aiFeedback }
+                });
+
+                // 3. Notify student when feedback is ready
+                sendNotification(prisma, {
+                    userId: request.user.id,
+                    title: 'AI Feedback Ready',
+                    message: `Detailed feedback for your ${subject?.name || 'Subject'} assignment has been generated!`,
+                    type: 'INFO'
+                }).catch(console.error);
+            }).catch(err => {
+                fastify.log.error(`Background AI Analysis Error: ${err.message}`);
+            });
 
             return assignment;
         } catch (err) {
