@@ -9,6 +9,7 @@ import useAuth from './hooks/useAuth';
 import NotificationBell from './components/NotificationBell';
 import AnnouncementTicker from './components/AnnouncementTicker';
 import { Toaster } from 'react-hot-toast';
+import { Analytics } from '@vercel/analytics/react';
 
 // Shared Layout for Dashboards
 import Verification from './pages/Verification';
@@ -91,6 +92,7 @@ function App() {
                 <Route path="/student/*" element={<ProtectedRoute role="STUDENT"><StudentDashboard /></ProtectedRoute>} />
                 <Route path="/" element={<Navigate to="/login" />} />
             </Routes>
+            <Analytics />
         </>
     );
 }
