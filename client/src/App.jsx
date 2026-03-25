@@ -13,6 +13,7 @@ import { Toaster } from 'react-hot-toast';
 // Shared Layout for Dashboards
 import Verification from './pages/Verification';
 import AIChatBubble from './components/AIChatBubble';
+import { Analytics } from '@vercel/analytics/react';
 
 const DashboardLayout = ({ children, title }) => {
     const { logout, user } = useAuth();
@@ -91,6 +92,7 @@ function App() {
                 <Route path="/student/*" element={<ProtectedRoute role="STUDENT"><StudentDashboard /></ProtectedRoute>} />
                 <Route path="/" element={<Navigate to="/login" />} />
             </Routes>
+            <Analytics />
         </>
     );
 }
