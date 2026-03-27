@@ -181,56 +181,56 @@ export default function StudentDashboard() {
                             }))}>
                                 <defs>
                                     <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.8} />
-                                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.1} />
+                                        <stop offset="0%" stopColor="#2563eb" stopOpacity={0.8} />
+                                        <stop offset="100%" stopColor="#2563eb" stopOpacity={0.1} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
                                 <XAxis
                                     dataKey="name"
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700 }}
+                                    tick={{ fill: 'rgba(0,0,0,0.4)', fontSize: 10, fontWeight: 700 }}
                                     dy={10}
                                 />
                                 <YAxis
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }}
+                                    tick={{ fill: 'rgba(0,0,0,0.4)', fontSize: 10 }}
                                     domain={[0, 50]}
                                 />
                                 <Tooltip
-                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                    cursor={{ fill: 'rgba(0,0,0,0.02)' }}
                                     contentStyle={{
-                                        backgroundColor: '#0a1919',
-                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        backgroundColor: '#ffffff',
+                                        border: '1px solid rgba(0,0,0,0.05)',
                                         borderRadius: '16px',
                                         fontSize: '12px',
-                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                                     }}
                                     itemStyle={{ fontWeight: 'bold' }}
                                 />
                                 <Bar dataKey="CAT1" fill="url(#barGradient)" radius={[4, 4, 0, 0]} barSize={20} />
                                 <Bar dataKey="CAT2" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} opacity={0.6} />
-                                <Bar dataKey="CAT3" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={20} opacity={0.6} />
+                                <Bar dataKey="CAT3" fill="#60a5fa" radius={[4, 4, 0, 0]} barSize={20} opacity={0.6} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="glass p-8 rounded-3xl border border-white/10 flex flex-col justify-center items-center text-center">
-                    <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-6">
-                        <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+                <div className="glass p-8 rounded-3xl border border-border flex flex-col justify-center items-center text-center shadow-sm">
+                    <div className="w-20 h-20 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mb-6">
+                        <CheckCircle2 className="w-10 h-10 text-primary" />
                     </div>
                     <h3 className="text-xl font-bold">Clearance Progress</h3>
-                    <div className="mt-4 text-5xl font-black text-white">
+                    <div className="mt-4 text-5xl font-black text-foreground">
                         {data.evaluations.filter(e => e.staffApproved).length}/{data.evaluations.length}
                     </div>
                     <p className="text-xs text-muted-foreground mt-2 uppercase tracking-widest font-bold">Subjects Cleared</p>
 
-                    <div className="w-full h-2 bg-white/5 rounded-full mt-8 overflow-hidden">
+                    <div className="w-full h-2 bg-slate-200 rounded-full mt-8 overflow-hidden">
                         <div
-                            className="h-full bg-emerald-500 transition-all duration-1000"
+                            className="h-full bg-primary transition-all duration-1000"
                             style={{ width: `${(data.evaluations.filter(e => e.staffApproved).length / data.evaluations.length) * 100}%` }}
                         />
                     </div>
@@ -255,26 +255,26 @@ export default function StudentDashboard() {
                                         <div key={i} className="flex flex-col p-4 hover:bg-white/[0.01] transition-all rounded-2xl group border-l-4 border-transparent hover:border-l-primary/40">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-mono text-[10px] font-black ${ev.staffApproved ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-mono text-[10px] font-black ${ev.staffApproved ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-orange-500/10 text-orange-600 border border-orange-200'
                                                         }`}>
                                                         {ev.subject.code}
                                                     </div>
                                                     <div>
-                                                        <div className="font-bold text-white group-hover:text-primary transition-colors">{ev.subject.name}</div>
+                                                        <div className="font-bold text-foreground group-hover:text-primary transition-colors">{ev.subject.name}</div>
                                                         <div className="flex items-center gap-4 text-[10px] text-muted-foreground uppercase tracking-widest font-bold mt-1">
-                                                            <span>Attendance: <span className={ev.attendancePercent < 75 ? 'text-red-400' : 'text-emerald-400'}>{ev.attendancePercent}%</span></span>
+                                                            <span>Attendance: <span className={ev.attendancePercent < 75 ? 'text-red-500' : 'text-primary'}>{ev.attendancePercent}%</span></span>
                                                             <span className="hidden md:inline">•</span>
                                                             <span>Activities: {((ev.activity1 || 0) + (ev.activity2 || 0))} </span>
                                                             <span className="hidden md:inline">•</span>
-                                                            <span>Internal: <span className="text-white">{ev.internalMarksTotal?.toFixed(1) || '0.0'}/40</span></span>
+                                                            <span>Internal: <span className="text-foreground">{ev.internalMarksTotal?.toFixed(1) || '0.0'}/40</span></span>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     {ev.staffApproved ? (
-                                                        <div className="text-[10px] bg-emerald-500/10 text-emerald-400 py-1 px-2.5 rounded-lg border border-emerald-500/10 font-black uppercase tracking-tighter">Cleared</div>
+                                                        <div className="text-[10px] bg-primary/10 text-primary py-1 px-2.5 rounded-lg border border-primary/20 font-black uppercase tracking-tighter">Cleared</div>
                                                     ) : (
-                                                        <div className="text-[10px] bg-orange-500/10 text-orange-400 py-1 px-2.5 rounded-lg border border-orange-500/10 font-black uppercase tracking-tighter animate-pulse">In Review</div>
+                                                        <div className="text-[10px] bg-orange-500/10 text-orange-600 py-1 px-2.5 rounded-lg border border-orange-200 font-black uppercase tracking-tighter animate-pulse">In Review</div>
                                                     )}
                                                 </div>
                                             </div>
@@ -305,15 +305,15 @@ export default function StudentDashboard() {
                                                             </button>
                                                         </div>
                                                     </div>
-                                                    <p className="text-xs text-muted-foreground italic leading-relaxed">
-                                                        "Predicted Grade: <span className="text-white font-bold">{prediction.predictedFinalGrade}</span>. {prediction.recommendation}"
+                                                    <p className="text-xs text-slate-600 italic leading-relaxed">
+                                                        "Predicted Grade: <span className="text-slate-800 font-bold">{prediction.predictedFinalGrade}</span>. {prediction.recommendation}"
                                                     </p>
                                                 </motion.div>
                                             ) : (
                                                 <div className="mt-3 ml-14">
                                                     <button
                                                         onClick={() => handleGeneratePrediction(ev.subjectId)}
-                                                        className="text-[9px] font-black uppercase tracking-widest text-primary hover:text-white flex items-center gap-2 border border-primary/20 px-3 py-1 rounded-lg hover:bg-primary/20 transition-all"
+                                                        className="text-[9px] font-black uppercase tracking-widest text-primary hover:text-white flex items-center gap-2 border border-primary/20 px-3 py-1 rounded-lg hover:bg-primary transition-all"
                                                     >
                                                         <Sparkles className="w-3 h-3" /> Generate Success Prediction
                                                     </button>
@@ -334,7 +334,7 @@ export default function StudentDashboard() {
                                 <h3 className="text-xl font-bold mb-2">Assignment Hub</h3>
                                 <p className="text-muted-foreground text-sm max-w-md">Submit your work to receive real-time constructive feedback powered by Google Gemini AI.</p>
                             </div>
-                            <UploadCloud className="w-10 h-10 text-white/10 group-hover:text-primary transition-colors" />
+                            <UploadCloud className="w-10 h-10 text-slate-200 group-hover:text-primary transition-colors" />
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
@@ -409,10 +409,10 @@ export default function StudentDashboard() {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: i * 0.05 }}
                                         key={i}
-                                        className={`p-4 rounded-[1.25rem] border transition-all hover:scale-[1.02] ${isCritical ? 'bg-red-500/5 border-red-500/20 text-red-100' :
-                                            isWarning ? 'bg-amber-500/5 border-amber-500/20 text-amber-100' :
-                                                isSuccess ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-100' :
-                                                    'bg-blue-500/5 border-blue-500/20 text-blue-100'
+                                        className={`p-4 rounded-[1.25rem] border transition-all hover:scale-[1.02] ${isCritical ? 'bg-red-50 border-red-200 text-red-700' :
+                                            isWarning ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                                                isSuccess ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                                                    'bg-blue-50 border-blue-200 text-blue-700'
                                             }`}
                                     >
                                         <div className="flex items-start gap-3">
@@ -428,7 +428,7 @@ export default function StudentDashboard() {
                                                 }
                                             </div>
                                             <div className="flex-1">
-                                                <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">
+                                                <div className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">
                                                     {sug.subject}
                                                 </div>
                                                 <div className="text-xs leading-relaxed font-medium">
@@ -492,14 +492,14 @@ export default function StudentDashboard() {
                                     <a
                                         href={ticketUrl}
                                         download
-                                        className="p-2 hover:bg-white/5 rounded-full transition-colors text-muted-foreground hover:text-white"
+                                        className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500 hover:text-primary"
                                         title="Download PDF"
                                     >
                                         <Download className="w-5 h-5" />
                                     </a>
                                     <button
                                         onClick={() => setShowTicketModal(false)}
-                                        className="p-2 hover:bg-white/5 rounded-full transition-colors text-muted-foreground hover:text-white"
+                                        className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500 hover:text-primary"
                                     >
                                         <X className="w-6 h-6" />
                                     </button>

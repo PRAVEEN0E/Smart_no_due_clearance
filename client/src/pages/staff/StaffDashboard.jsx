@@ -285,69 +285,69 @@ export default function StaffDashboard() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+                    <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent italic uppercase">
                         Faculty Portal
                     </h1>
-                    <p className="text-muted-foreground mt-1">Review student performance and manage academic records.</p>
+                    <p className="text-muted-foreground mt-1 font-medium italic">Review performance & finalize records.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4">
                     <button
                         onClick={handleExportExcel}
-                        className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-5 py-3 rounded-2xl border border-emerald-500/20 transition-all group"
+                        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-900 px-5 py-3 rounded-2xl border border-slate-200 transition-all group shadow-sm"
                     >
-                        <FileSpreadsheet className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        <FileSpreadsheet className="w-5 h-5 group-hover:scale-110 transition-transform text-primary" />
                         <span className="text-sm font-bold">Export Excel</span>
                     </button>
 
                     <button
                         onClick={handleExportPDF}
-                        className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-5 py-3 rounded-2xl border border-blue-500/20 transition-all group"
+                        className="flex items-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary px-5 py-3 rounded-2xl border border-primary/20 transition-all group shadow-sm"
                     >
                         <FileDown className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         <span className="text-sm font-bold">Export PDF</span>
                     </button>
 
-                    <label className="flex items-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl border border-white/10 cursor-pointer transition-all">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        <span className="text-sm font-medium">Capture Signature</span>
+                    <label className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl border border-slate-200 cursor-pointer transition-all shadow-sm">
+                        <ShieldCheck className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-bold">Capture Signature</span>
                         <input type="file" className="hidden" onChange={(e) => handleSignatureUpload(e)} accept="image/*" />
                     </label>
-                    <div className="glass px-6 py-3 rounded-2xl border border-white/10 flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-sm font-medium">Session Active</span>
+                    <div className="glass px-6 py-3 rounded-2xl border border-border flex items-center gap-3 shadow-sm">
+                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        <span className="text-sm font-bold">Session Active</span>
                     </div>
                 </div>
             </div>
 
             {/* Top Analytics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass p-8 rounded-[2.5rem] border border-white/5 flex items-center gap-6">
-                    <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass p-8 rounded-[2.5rem] border border-border flex items-center gap-6 shadow-sm">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                         <TrendingUp className="w-8 h-8" />
                     </div>
                     <div>
-                        <div className="text-[10px] text-emerald-500/60 font-bold uppercase tracking-[0.2em]">Class Average</div>
-                        <div className="text-4xl font-black tracking-tight">{avgMarks.toFixed(1)}</div>
+                        <div className="text-[10px] text-primary/60 font-bold uppercase tracking-[0.2em]">Class Average</div>
+                        <div className="text-4xl font-black tracking-tight text-foreground">{avgMarks.toFixed(1)}</div>
                     </div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass p-8 rounded-[2.5rem] border border-white/5 flex items-center gap-6">
-                    <div className="w-16 h-16 rounded-2xl bg-teal-500/20 flex items-center justify-center text-teal-400">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass p-8 rounded-[2.5rem] border border-border flex items-center gap-6 shadow-sm">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-primary">
                         <CheckCircle2 className="w-8 h-8" />
                     </div>
                     <div>
-                        <div className="text-[10px] text-teal-500/60 font-bold uppercase tracking-[0.2em]">Approved</div>
-                        <div className="text-4xl font-black tracking-tight">{approvedCount} <span className="text-lg text-muted-foreground font-medium">/ {evaluations.length}</span></div>
+                        <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">Approved</div>
+                        <div className="text-4xl font-black tracking-tight text-foreground">{approvedCount} <span className="text-lg text-muted-foreground font-medium">/ {evaluations.length}</span></div>
                     </div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass p-8 rounded-[2.5rem] border border-white/5 flex items-center gap-6">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass p-8 rounded-[2.5rem] border border-border flex items-center gap-6 shadow-sm">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                         <GraduationCap className="w-8 h-8" />
                     </div>
                     <div>
                         <div className="text-[10px] text-primary/60 font-bold uppercase tracking-[0.2em]">Top Score</div>
-                        <div className="text-4xl font-black tracking-tight">
+                        <div className="text-4xl font-black tracking-tight text-foreground">
                             {evaluations.length > 0 ? Math.max(...evaluations.map(e => e.internalMarksTotal || 0)).toFixed(1) : '0.0'}
                         </div>
                     </div>
@@ -384,32 +384,32 @@ export default function StaffDashboard() {
                                             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
                                     <XAxis
                                         dataKey="name"
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 'bold' }}
+                                        tick={{ fill: 'rgba(0,0,0,0.4)', fontSize: 10, fontWeight: 'bold' }}
                                         dy={10}
                                     />
                                     <YAxis
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                                        tick={{ fill: 'rgba(0,0,0,0.4)', fontSize: 10 }}
                                         domain={[0, 50]}
                                     />
                                     <Tooltip
-                                        contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', backdropFilter: 'blur(10px)' }}
-                                        itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                                        contentStyle={{ backgroundColor: '#ffffff', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '16px', backdropFilter: 'blur(10px)' }}
+                                        itemStyle={{ color: '#000', fontSize: '12px', fontWeight: 'bold' }}
                                     />
                                     <Area
                                         type="monotone"
                                         dataKey="avg"
-                                        stroke="#3b82f6"
+                                        stroke="#2563eb"
                                         strokeWidth={4}
                                         fillOpacity={1}
                                         fill="url(#lineGradient)"
-                                        dot={{ r: 6, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                                        dot={{ r: 6, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }}
                                         activeDot={{ r: 8, strokeWidth: 0 }}
                                     />
                                 </AreaChart>
@@ -442,17 +442,17 @@ export default function StaffDashboard() {
                                 <div key={ev.id} className="group/item">
                                     <div className="flex justify-between items-center mb-2">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[10px] font-black text-white/30 group-hover/item:bg-primary/20 group-hover/item:text-primary transition-all">
+                                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 group-hover/item:bg-primary/20 group-hover/item:text-primary transition-all">
                                                 0{i + 1}
                                             </div>
                                             <div>
-                                                <div className="text-sm font-bold truncate max-w-[120px]">{ev.student.name}</div>
+                                                <div className="text-sm font-bold truncate max-w-[120px] text-foreground">{ev.student.name}</div>
                                                 <div className="text-[9px] text-muted-foreground font-mono">{ev.student?.email?.split('@')[0] || 'student'}</div>
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <div className="text-sm font-black text-primary">{ev.internalMarksTotal.toFixed(1)}</div>
-                                            <div className="text-[9px] text-white/20 font-bold uppercase tracking-widest">Marks</div>
+                                            <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Marks</div>
                                         </div>
                                     </div>
                                     <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
@@ -503,33 +503,33 @@ export default function StaffDashboard() {
                             <table className="w-full text-left border-separate border-spacing-0">
                                 <thead>
                                     <tr className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.25em] bg-white/[0.03] backdrop-blur-md">
-                                        <th className="px-8 py-8 min-w-[240px] border-b border-white/5 rounded-tl-3xl">Student Information</th>
-                                        <th className="px-4 py-8 text-center text-primary/80 w-[90px] border-b border-white/5">Files</th>
+                                        <th className="px-8 py-8 min-w-[240px] border-b border-border rounded-tl-3xl">Student Information</th>
+                                        <th className="px-4 py-8 text-center text-primary/80 w-[90px] border-b border-border">Files</th>
                                         {selectedSubject?.subject.type === 'FULL_LAB' ? (
                                             <>
-                                                <th className="px-6 py-8 text-center w-[160px] border-l border-b border-white/5 bg-white/[0.01]">Model Lab</th>
-                                                <th className="px-6 py-8 text-center w-[200px] border-l border-b border-white/5 bg-white/[0.01]">Lab Activities</th>
+                                                <th className="px-6 py-8 text-center w-[160px] border-l border-b border-border bg-slate-50">Model Lab</th>
+                                                <th className="px-6 py-8 text-center w-[200px] border-l border-b border-border bg-slate-50">Lab Activities</th>
                                             </>
                                         ) : selectedSubject?.subject.type === 'THEORY_WITH_LAB' ? (
                                             <>
-                                                <th className="px-6 py-8 text-center w-[180px] border-l border-b border-white/5 bg-white/[0.01]">CAT Assessments</th>
-                                                <th className="px-6 py-8 text-center w-[240px] border-l border-b border-white/5 bg-white/[0.01]">Assignments</th>
-                                                <th className="px-6 py-8 text-center w-[140px] border-l border-b border-white/5 bg-white/[0.01]">Activities</th>
-                                                <th className="px-6 py-8 text-center w-[160px] border-l border-b border-white/5 bg-white/[0.01]">Model Lab</th>
+                                                <th className="px-6 py-8 text-center w-[180px] border-l border-b border-border bg-slate-50">CAT Assessments</th>
+                                                <th className="px-6 py-8 text-center w-[240px] border-l border-b border-border bg-slate-50">Assignments</th>
+                                                <th className="px-6 py-8 text-center w-[140px] border-l border-b border-border bg-slate-50">Activities</th>
+                                                <th className="px-6 py-8 text-center w-[160px] border-l border-b border-border bg-slate-50">Model Lab</th>
                                             </>
                                         ) : (
                                             <>
-                                                <th className="px-6 py-8 text-center w-[180px] border-l border-b border-white/5 bg-white/[0.01]">CAT Assessments</th>
-                                                <th className="px-6 py-8 text-center w-[240px] border-l border-b border-white/5 bg-white/[0.01]">Assignments</th>
-                                                <th className="px-6 py-8 text-center w-[140px] border-l border-b border-white/5 bg-white/[0.01]">Activities</th>
+                                                <th className="px-6 py-8 text-center w-[180px] border-l border-b border-border bg-slate-50">CAT Assessments</th>
+                                                <th className="px-6 py-8 text-center w-[240px] border-l border-b border-border bg-slate-50">Assignments</th>
+                                                <th className="px-6 py-8 text-center w-[140px] border-l border-b border-border bg-slate-50">Activities</th>
                                             </>
                                         )}
-                                        <th className="px-4 py-8 text-center w-[110px] border-l border-b border-white/5 bg-emerald-500/[0.02]">Attend %</th>
+                                        <th className="px-4 py-8 text-center w-[110px] border-l border-b border-border bg-primary/5">Attend %</th>
                                         {selectedSubject?.subject.type !== 'FULL_LAB' && (
-                                            <th className="px-6 py-8 text-center w-[180px] border-l border-b border-white/5 bg-orange-500/[0.02]">Remedial</th>
+                                            <th className="px-6 py-8 text-center w-[180px] border-l border-b border-border bg-orange-50">Remedial</th>
                                         )}
-                                        <th className="px-4 py-8 text-center w-[100px] font-black text-white border-l border-b border-white/5 bg-primary/10">Final</th>
-                                        <th className="px-8 py-8 text-right min-w-[180px] border-b border-white/5 rounded-tr-3xl">Verification</th>
+                                        <th className="px-4 py-8 text-center w-[100px] font-black text-foreground border-l border-b border-border bg-primary/10">Final</th>
+                                        <th className="px-8 py-8 text-right min-w-[180px] border-b border-border rounded-tr-3xl">Verification</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
@@ -549,8 +549,8 @@ export default function StaffDashboard() {
                                                             {ev.student.name.charAt(0)}
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold text-white text-sm group-hover:text-primary transition-all duration-300 tracking-tight">{ev.student.name}</div>
-                                                            <div className="text-[10px] text-muted-foreground/50 font-mono mt-0.5">{ev.student.email}</div>
+                                                            <div className="font-bold text-foreground text-sm group-hover:text-primary transition-all duration-300 tracking-tight">{ev.student.name}</div>
+                                                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">{ev.student.email}</div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -564,32 +564,32 @@ export default function StaffDashboard() {
                                                             >
                                                                 <FileText className="w-5 h-5" />
                                                                 {ev.student.assignments?.length > 0 && (
-                                                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-[#0a0a0a]" />
+                                                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white" />
                                                                 )}
-                                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-white text-black text-[9px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none font-bold">
+                                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-white border border-slate-200 text-black text-[9px] rounded shadow-lg opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none font-bold">
                                                                     View Assignments
                                                                 </div>
                                                             </button>
                                                         ) : (
-                                                            <span className="text-muted-foreground/30 text-[10px] font-bold">N/A</span>
+                                                            <span className="text-slate-300 text-[10px] font-bold">N/A</span>
                                                         )}
                                                     </div>
                                                 </td>
 
                                                 {selectedSubject?.subject.type === 'FULL_LAB' ? (
                                                      <>
-                                                         <td className="px-6 py-6 border-l border-white/5">
+                                                         <td className="px-6 py-6 border-l border-slate-100">
                                                              <div className="flex justify-center">
                                                                  <input
                                                                      type="number"
                                                                      value={ev.modelLabMarks ?? ''}
                                                                      onChange={(e) => handleUpdateMark(ev.id, 'modelLabMarks', e.target.value)}
-                                                                     className="w-24 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-sm font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all hover:bg-white/[0.05] hover:border-white/20"
+                                                                     className="w-24 h-12 bg-slate-100 border border-slate-200 rounded-2xl text-center text-sm font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all hover:bg-slate-200 hover:border-slate-300 text-foreground"
                                                                      placeholder="00"
                                                                  />
                                                              </div>
                                                          </td>
-                                                         <td className="px-6 py-6 border-l border-white/5">
+                                                         <td className="px-6 py-6 border-l border-slate-100">
                                                              <div className="flex gap-2.5 justify-center">
                                                                  {[1, 2].map(n => (
                                                                      <input
@@ -597,7 +597,7 @@ export default function StaffDashboard() {
                                                                          type="number"
                                                                          value={ev[`activity${n}`] ?? ''}
                                                                          onChange={(e) => handleUpdateMark(ev.id, `activity${n}`, e.target.value)}
-                                                                         className="w-12 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-emerald-500/5 outline-none transition-all"
+                                                                         className="w-12 h-12 bg-slate-100 border border-slate-200 rounded-2xl text-center text-xs focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all text-foreground"
                                                                          placeholder="0"
                                                                      />
                                                                  ))}
@@ -605,143 +605,143 @@ export default function StaffDashboard() {
                                                          </td>
                                                      </>
                                                  ) : selectedSubject?.subject.type === 'THEORY_WITH_LAB' ? (
-                                                     <>
-                                                         <td className="px-6 py-6 border-l border-white/5">
-                                                             <div className="flex gap-2 justify-center">
-                                                                 {[1, 2, 3].map(n => (
-                                                                     <input
-                                                                         key={n}
-                                                                         type="number"
-                                                                         value={ev[`cat${n}`] ?? ''}
-                                                                         onChange={(e) => handleUpdateMark(ev.id, `cat${n}`, e.target.value)}
-                                                                         className="w-14 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all"
-                                                                         placeholder={`#${n}`}
-                                                                     />
-                                                                 ))}
-                                                             </div>
-                                                         </td>
-                                                         <td className="px-6 py-6 border-l border-white/5">
-                                                             <div className="flex gap-1.5 justify-center">
-                                                                 {[1, 2, 3, 4, 5].map(n => (
-                                                                     <input
-                                                                         key={n}
-                                                                         type="number"
-                                                                         value={ev[`assignment${n}`] ?? ''}
-                                                                         onChange={(e) => handleUpdateMark(ev.id, `assignment${n}`, e.target.value)}
-                                                                         className="w-10 h-10 bg-white/[0.02] border border-white/5 rounded-xl text-center text-[10px] focus:ring-2 focus:ring-blue-500 focus:bg-blue-500/5 outline-none transition-all"
-                                                                         placeholder={n}
-                                                                     />
-                                                                 ))}
-                                                             </div>
-                                                         </td>
-                                                         <td className="px-6 py-6 border-l border-white/5">
-                                                             <div className="flex gap-2 justify-center">
-                                                                 {[1, 2].map(n => (
-                                                                     <input
-                                                                         key={n}
-                                                                         type="number"
-                                                                         value={ev[`activity${n}`] ?? ''}
-                                                                         onChange={(e) => handleUpdateMark(ev.id, `activity${n}`, e.target.value)}
-                                                                         className="w-12 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-emerald-500/5 outline-none transition-all"
-                                                                         placeholder="0"
-                                                                     />
-                                                                 ))}
-                                                             </div>
-                                                         </td>
-                                                         <td className="px-6 py-6 border-l border-white/5">
-                                                             <div className="flex justify-center">
-                                                                 <input
-                                                                     type="number"
-                                                                     value={ev.modelLabMarks ?? ''}
-                                                                     onChange={(e) => handleUpdateMark(ev.id, 'modelLabMarks', e.target.value)}
-                                                                     className="w-24 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-sm font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all hover:bg-white/[0.05] hover:border-white/20"
-                                                                     placeholder="00"
-                                                                 />
-                                                             </div>
-                                                         </td>
-                                                     </>
-                                                 ) : (
-                                                     <>
-                                                         <td className="px-6 py-6 border-l border-white/5">
-                                                             <div className="flex gap-2 justify-center">
-                                                                 {[1, 2, 3].map(n => (
-                                                                     <input
-                                                                         key={n}
-                                                                         type="number"
-                                                                         value={ev[`cat${n}`] ?? ''}
-                                                                         onChange={(e) => handleUpdateMark(ev.id, `cat${n}`, e.target.value)}
-                                                                         className="w-14 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all"
-                                                                         placeholder={`#${n}`}
-                                                                     />
-                                                                 ))}
-                                                             </div>
-                                                         </td>
-                                                         <td className="px-6 py-6 border-l border-white/5">
-                                                             <div className="flex gap-1.5 justify-center">
-                                                                 {[1, 2, 3, 4, 5].map(n => (
-                                                                     <input
-                                                                         key={n}
-                                                                         type="number"
-                                                                         value={ev[`assignment${n}`] ?? ''}
-                                                                         onChange={(e) => handleUpdateMark(ev.id, `assignment${n}`, e.target.value)}
-                                                                         className="w-10 h-10 bg-white/[0.02] border border-white/5 rounded-xl text-center text-[10px] focus:ring-2 focus:ring-blue-500 focus:bg-blue-500/5 outline-none transition-all"
-                                                                         placeholder={n}
-                                                                     />
-                                                                 ))}
-                                                             </div>
-                                                         </td>
-                                                         <td className="px-6 py-6 border-l border-white/5">
-                                                             <div className="flex gap-2 justify-center">
-                                                                 {[1, 2].map(n => (
-                                                                     <input
-                                                                         key={n}
-                                                                         type="number"
-                                                                         value={ev[`activity${n}`] ?? ''}
-                                                                         onChange={(e) => handleUpdateMark(ev.id, `activity${n}`, e.target.value)}
-                                                                         className="w-12 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-emerald-500/5 outline-none transition-all"
-                                                                         placeholder="0"
-                                                                     />
-                                                                 ))}
-                                                             </div>
-                                                         </td>
-                                                     </>
-                                                 )}
+                                                      <>
+                                                          <td className="px-6 py-6 border-l border-slate-100">
+                                                              <div className="flex gap-2 justify-center">
+                                                                  {[1, 2, 3].map(n => (
+                                                                      <input
+                                                                          key={n}
+                                                                          type="number"
+                                                                          value={ev[`cat${n}`] ?? ''}
+                                                                          onChange={(e) => handleUpdateMark(ev.id, `cat${n}`, e.target.value)}
+                                                                          className="w-14 h-12 bg-slate-100 border border-slate-200 rounded-2xl text-center text-xs font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all text-foreground"
+                                                                          placeholder={`#${n}`}
+                                                                      />
+                                                                  ))}
+                                                              </div>
+                                                          </td>
+                                                          <td className="px-6 py-6 border-l border-slate-100">
+                                                              <div className="flex gap-1.5 justify-center">
+                                                                  {[1, 2, 3, 4, 5].map(n => (
+                                                                      <input
+                                                                          key={n}
+                                                                          type="number"
+                                                                          value={ev[`assignment${n}`] ?? ''}
+                                                                          onChange={(e) => handleUpdateMark(ev.id, `assignment${n}`, e.target.value)}
+                                                                          className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-xl text-center text-[10px] focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all text-foreground"
+                                                                          placeholder={n}
+                                                                      />
+                                                                  ))}
+                                                              </div>
+                                                          </td>
+                                                          <td className="px-6 py-6 border-l border-slate-100">
+                                                              <div className="flex gap-2 justify-center">
+                                                                  {[1, 2].map(n => (
+                                                                      <input
+                                                                          key={n}
+                                                                          type="number"
+                                                                          value={ev[`activity${n}`] ?? ''}
+                                                                          onChange={(e) => handleUpdateMark(ev.id, `activity${n}`, e.target.value)}
+                                                                          className="w-12 h-12 bg-slate-100 border border-slate-200 rounded-2xl text-center text-xs focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all text-foreground"
+                                                                          placeholder="0"
+                                                                      />
+                                                                  ))}
+                                                              </div>
+                                                          </td>
+                                                          <td className="px-6 py-6 border-l border-slate-100">
+                                                              <div className="flex justify-center">
+                                                                  <input
+                                                                      type="number"
+                                                                      value={ev.modelLabMarks ?? ''}
+                                                                      onChange={(e) => handleUpdateMark(ev.id, 'modelLabMarks', e.target.value)}
+                                                                      className="w-24 h-12 bg-slate-100 border border-slate-200 rounded-2xl text-center text-sm font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all hover:bg-slate-200 hover:border-slate-300 text-foreground"
+                                                                      placeholder="00"
+                                                                  />
+                                                              </div>
+                                                          </td>
+                                                      </>
+                                                  ) : (
+                                                      <>
+                                                          <td className="px-6 py-6 border-l border-slate-100">
+                                                              <div className="flex gap-2 justify-center">
+                                                                  {[1, 2, 3].map(n => (
+                                                                      <input
+                                                                          key={n}
+                                                                          type="number"
+                                                                          value={ev[`cat${n}`] ?? ''}
+                                                                          onChange={(e) => handleUpdateMark(ev.id, `cat${n}`, e.target.value)}
+                                                                          className="w-14 h-12 bg-slate-100 border border-slate-200 rounded-2xl text-center text-xs font-bold focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all text-foreground"
+                                                                          placeholder={`#${n}`}
+                                                                      />
+                                                                  ))}
+                                                              </div>
+                                                          </td>
+                                                          <td className="px-6 py-6 border-l border-slate-100">
+                                                              <div className="flex gap-1.5 justify-center">
+                                                                  {[1, 2, 3, 4, 5].map(n => (
+                                                                      <input
+                                                                          key={n}
+                                                                          type="number"
+                                                                          value={ev[`assignment${n}`] ?? ''}
+                                                                          onChange={(e) => handleUpdateMark(ev.id, `assignment${n}`, e.target.value)}
+                                                                          className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-xl text-center text-[10px] focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all text-foreground"
+                                                                          placeholder={n}
+                                                                      />
+                                                                  ))}
+                                                              </div>
+                                                          </td>
+                                                          <td className="px-6 py-6 border-l border-slate-100">
+                                                              <div className="flex gap-2 justify-center">
+                                                                  {[1, 2].map(n => (
+                                                                      <input
+                                                                          key={n}
+                                                                          type="number"
+                                                                          value={ev[`activity${n}`] ?? ''}
+                                                                          onChange={(e) => handleUpdateMark(ev.id, `activity${n}`, e.target.value)}
+                                                                          className="w-12 h-12 bg-slate-100 border border-slate-200 rounded-2xl text-center text-xs focus:ring-2 focus:ring-primary focus:bg-primary/5 outline-none transition-all text-foreground"
+                                                                          placeholder="0"
+                                                                      />
+                                                                  ))}
+                                                              </div>
+                                                          </td>
+                                                      </>
+                                                  )}
 
-                                                  <td className="px-6 py-6 border-l border-white/5 bg-emerald-500/[0.01]">
-                                                      <div className="flex justify-center">
-                                                          <input
-                                                              type="number"
-                                                              value={ev.attendancePercent ?? ''}
-                                                              onChange={(e) => handleUpdateMark(ev.id, 'attendancePercent', e.target.value)}
-                                                              className={`w-20 h-12 bg-white/[0.03] border border-white/10 rounded-2xl text-center text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all ${ev.attendancePercent < 75 ? 'text-red-400 font-bold' : 'text-emerald-400 font-bold'}`}
-                                                              placeholder="%"
-                                                          />
-                                                      </div>
-                                                  </td>
+                                                   <td className="px-6 py-6 border-l border-slate-100 bg-primary/5">
+                                                       <div className="flex justify-center">
+                                                           <input
+                                                               type="number"
+                                                               value={ev.attendancePercent ?? ''}
+                                                               onChange={(e) => handleUpdateMark(ev.id, 'attendancePercent', e.target.value)}
+                                                               className={`w-20 h-12 bg-white border border-slate-200 rounded-2xl text-center text-sm focus:ring-2 focus:ring-primary outline-none transition-all ${ev.attendancePercent < 75 ? 'text-red-500 font-bold' : 'text-primary font-bold'}`}
+                                                               placeholder="%"
+                                                           />
+                                                       </div>
+                                                   </td>
 
-                                                  {selectedSubject?.subject.type !== 'FULL_LAB' && (
-                                                  <td className="px-6 py-6 border-l border-white/5 bg-orange-500/[0.01]">
-                                                      <div className="flex gap-2 justify-center">
-                                                          {[1, 2, 3].map(n => (
-                                                              <input
-                                                                  key={n}
-                                                                  type="number"
-                                                                  disabled={!(ev.attendancePercent < 75 || (ev[`cat${n}`] !== null && ev[`cat${n}`] < 25))}
-                                                                  value={ev[`remedial${n}`] ?? ''}
-                                                                  onChange={(e) => handleUpdateMark(ev.id, `remedial${n}`, e.target.value)}
-                                                                  className={`w-12 h-12 rounded-2xl text-center text-xs font-bold outline-none transition-all ${(ev.attendancePercent < 75 || (ev[`cat${n}`] !== null && ev[`cat${n}`] < 25)) 
-                                                                    ? 'glass border-orange-500/50 border-2 bg-orange-500/10 text-orange-400' 
-                                                                    : 'bg-white/5 border-white/5 opacity-10'
-                                                                  }`}
-                                                                  placeholder={`R${n}`}
-                                                              />
-                                                          ))}
-                                                      </div>
-                                                  </td>
-                                                      )}
+                                                   {selectedSubject?.subject.type !== 'FULL_LAB' && (
+                                                   <td className="px-6 py-6 border-l border-slate-100 bg-orange-50">
+                                                       <div className="flex gap-2 justify-center">
+                                                           {[1, 2, 3].map(n => (
+                                                               <input
+                                                                   key={n}
+                                                                   type="number"
+                                                                   disabled={!(ev.attendancePercent < 75 || (ev[`cat${n}`] !== null && ev[`cat${n}`] < 25))}
+                                                                   value={ev[`remedial${n}`] ?? ''}
+                                                                   onChange={(e) => handleUpdateMark(ev.id, `remedial${n}`, e.target.value)}
+                                                                   className={`w-12 h-12 rounded-2xl text-center text-xs font-bold outline-none transition-all ${(ev.attendancePercent < 75 || (ev[`cat${n}`] !== null && ev[`cat${n}`] < 25)) 
+                                                                     ? 'bg-white border-orange-200 border-2 text-orange-500 focus:ring-2 focus:ring-orange-400' 
+                                                                     : 'bg-slate-100 border-slate-200 opacity-50 cursor-not-allowed text-slate-400'
+                                                                   }`}
+                                                                   placeholder={`R${n}`}
+                                                               />
+                                                           ))}
+                                                       </div>
+                                                   </td>
+                                                       )}
 
-                                                  <td className="px-6 py-6 text-center border-l border-white/5 bg-primary/20 backdrop-blur-sm">
-                                                      <div className="text-xl font-black text-white">
+                                                  <td className="px-6 py-6 text-center border-l border-border bg-primary/10 backdrop-blur-sm">
+                                                      <div className="text-xl font-black text-foreground">
                                                           {Math.round(ev.internalMarksTotal)}
                                                       </div>
                                                   </td>
@@ -792,19 +792,19 @@ export default function StaffDashboard() {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="glass w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-[40px] border border-white/10 relative z-10 shadow-2xl flex flex-col"
+                            className="bg-white w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-[40px] border border-slate-200 relative z-10 shadow-2xl flex flex-col"
                         >
-                            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                            <div className="p-8 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                                 <div className="flex items-center gap-4">
                                     <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center">
                                         <Users className="w-7 h-7 text-primary" />
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-bold">{activeStudent.name}'s Submissions</h2>
-                                        <p className="text-muted-foreground text-sm font-mono opacity-60">{activeStudent.email}</p>
+                                        <h2 className="text-2xl font-bold text-slate-800">{activeStudent.name}'s Submissions</h2>
+                                        <p className="text-slate-500 text-sm font-mono">{activeStudent.email}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => { setActiveStudent(null); setPreviewUrl(null); }} className="p-3 hover:bg-white/5 rounded-2xl border border-white/5 transition-all">
+                                <button onClick={() => { setActiveStudent(null); setPreviewUrl(null); }} className="p-3 hover:bg-slate-200 rounded-2xl border border-slate-200 transition-all text-slate-500 hover:text-slate-800">
                                     <X className="w-6 h-6" />
                                 </button>
                             </div>
@@ -825,29 +825,29 @@ export default function StaffDashboard() {
 
                                         return (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                                                <div className="glass p-6 rounded-[2rem] border border-white/10 flex flex-col justify-center items-center">
+                                                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-200 flex flex-col justify-center items-center shadow-lg shadow-slate-200/50">
                                                     <h4 className="text-sm font-black uppercase tracking-widest text-primary mb-4">Performance Radar</h4>
                                                     <div className="h-[200px] w-full">
                                                         <ResponsiveContainer width="100%" height="100%">
                                                             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                                                                <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                                                                <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} />
+                                                                <PolarGrid stroke="#e2e8f0" />
+                                                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />
                                                                 <Radar
                                                                     name="Performance"
                                                                     dataKey="value"
-                                                                    stroke="#3b82f6"
+                                                                    stroke="#2563eb"
                                                                     fill="#3b82f6"
-                                                                    fillOpacity={0.6}
+                                                                    fillOpacity={0.4}
                                                                 />
                                                             </RadarChart>
                                                         </ResponsiveContainer>
                                                     </div>
                                                 </div>
-                                                <div className="glass p-8 rounded-[2rem] border border-white/10 flex flex-col justify-center">
+                                                <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200 flex flex-col justify-center shadow-lg shadow-slate-200/50">
                                                     <div className="text-[10px] text-primary font-black uppercase tracking-widest mb-2">Total Internal Marks</div>
-                                                    <div className="text-6xl font-black tracking-tighter text-white">
+                                                    <div className="text-6xl font-black tracking-tighter text-slate-800">
                                                         {studentEval.internalMarksTotal.toFixed(1)}
-                                                        <span className="text-xl text-muted-foreground ml-2 font-medium">/ 40</span>
+                                                        <span className="text-xl text-slate-400 ml-2 font-medium">/ 40</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -868,27 +868,27 @@ export default function StaffDashboard() {
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ delay: i * 0.1 }}
-                                                    className="glass p-6 rounded-3xl border border-white/5 hover:border-white/20 transition-all flex flex-col gap-6"
+                                                    className="bg-white p-6 rounded-3xl border border-slate-200 hover:border-slate-300 transition-all flex flex-col gap-6 shadow-xl shadow-slate-200/50"
                                                 >
                                                     <div className="flex justify-between items-start">
                                                         <div className="flex items-center gap-4">
-                                                            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+                                                            <div className="p-3 bg-blue-50 rounded-xl text-primary">
                                                                 <FileText className="w-6 h-6" />
                                                             </div>
                                                             <div>
-                                                                <div className="font-bold text-lg flex items-center gap-2">
+                                                                <div className="font-bold text-lg text-slate-800 flex items-center gap-2">
                                                                     Assignment Submission
                                                                     {(() => {
                                                                         const ext = asgn.fileUrl?.split('.').pop()?.toLowerCase();
                                                                         const isRealExt = ext && ext.length < 5 && !ext.includes('/');
                                                                         return (
-                                                                            <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] font-black uppercase tracking-tighter text-muted-foreground border border-white/5">
+                                                                            <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-black uppercase tracking-tighter text-slate-500 border border-slate-200">
                                                                                 {isRealExt ? ext.toUpperCase() : 'FILE'}
                                                                             </span>
                                                                         );
                                                                     })()}
                                                                 </div>
-                                                                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                                                <div className="text-xs text-slate-500 flex items-center gap-2">
                                                                     {new Date(asgn.submittedAt).toLocaleDateString()} • {asgn.fileUrl?.split('/').pop()?.split('_')[0] || 'View Document'}
                                                                 </div>
                                                             </div>
@@ -912,12 +912,12 @@ export default function StaffDashboard() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="p-6 bg-blue-500/5 rounded-2xl border border-blue-500/10 space-y-3 relative group/ai">
-                                                        <div className="flex items-center gap-2 text-blue-400">
+                                                    <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 space-y-3 relative group/ai">
+                                                        <div className="flex items-center gap-2 text-primary">
                                                             <Sparkles className="w-4 h-4" />
                                                             <span className="text-xs font-bold uppercase tracking-widest">AI Academic Review</span>
                                                         </div>
-                                                        <div className="text-sm leading-relaxed text-white/80 whitespace-pre-wrap font-medium">
+                                                        <div className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap font-medium">
                                                             {asgn.aiFeedback || "No AI feedback yet."}
                                                         </div>
                                                     </div>

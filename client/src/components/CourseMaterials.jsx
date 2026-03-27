@@ -61,7 +61,7 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
         }
     };
 
-    if (loading) return <div className="animate-pulse space-y-3"><div className="h-20 bg-white/5 rounded-2xl" /></div>;
+    if (loading) return <div className="animate-pulse space-y-3"><div className="h-20 bg-slate-100 rounded-2xl" /></div>;
 
     return (
         <div className="space-y-6">
@@ -71,14 +71,14 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
                         <div className="p-2 bg-primary/10 rounded-lg">
                             <BookOpen className="w-4 h-4 text-primary" />
                         </div>
-                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white/90">
+                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-800">
                             Resources
                         </h3>
                     </div>
                     {role !== 'STUDENT' && (
                         <button
                             onClick={() => setShowUpload(!showUpload)}
-                            className="bg-primary/20 hover:bg-primary transition-all p-1.5 rounded-lg text-primary hover:text-white"
+                            className="bg-primary/10 hover:bg-primary transition-all p-1.5 rounded-lg text-primary hover:text-white"
                             title="Add Material"
                         >
                             <Plus className="w-4 h-4" />
@@ -93,7 +93,7 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-4"
+                        className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4"
                     >
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -103,7 +103,7 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
                                     value={formData.title}
                                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                     placeholder="e.g. Unit 1 Notes"
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary"
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary text-slate-800"
                                 />
                             </div>
                             <div>
@@ -111,7 +111,7 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
                                 <select
                                     value={formData.category}
                                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm"
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800"
                                 >
                                     <option value="NOTES">Handout / Notes</option>
                                     <option value="SYLLABUS">Syllabus</option>
@@ -119,9 +119,9 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
                                 </select>
                             </div>
                         </div>
-                        <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/5 hover:border-primary/40 rounded-2xl transition-all cursor-pointer group">
-                            <UploadCloud className="w-8 h-8 text-muted-foreground group-hover:text-primary mb-2" />
-                            <span className="text-xs font-bold text-muted-foreground group-hover:text-white">Choose File to Upload</span>
+                        <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200 hover:border-primary/40 rounded-2xl transition-all cursor-pointer group">
+                            <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-primary mb-2" />
+                            <span className="text-xs font-bold text-slate-500 group-hover:text-primary">Choose File to Upload</span>
                             <input type="file" className="hidden" onChange={handleUpload} disabled={uploading || !formData.title} />
                             {uploading && <div className="mt-4 w-full h-1 bg-primary/20 rounded-full overflow-hidden"><div className="h-full bg-primary animate-progress" /></div>}
                         </label>
@@ -131,18 +131,18 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
 
             <div className="grid grid-cols-1 gap-3">
                 {materials.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground bg-white/[0.02] rounded-3xl border border-white/5 border-dashed">
+                    <div className="p-8 text-center text-slate-500 bg-slate-50 rounded-3xl border border-slate-200 border-dashed">
                         No academic resources available yet
                     </div>
                 ) : (
                     materials.map(m => (
-                        <div key={m.id} className="p-3 bg-white/[0.02] hover:bg-white/[0.05] rounded-[1.25rem] border border-white/5 transition-all group">
+                        <div key={m.id} className="p-3 bg-white hover:bg-slate-50 rounded-[1.25rem] border border-slate-200 transition-all group shadow-sm hover:shadow-md">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex-shrink-0 flex items-center justify-center text-primary group-hover:scale-105 transition-transform font-bold">
                                     <FileText className="w-5 h-5" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <h4 className="text-[11px] font-black text-white/90 truncate uppercase tracking-wider">{m.title}</h4>
+                                    <h4 className="text-[11px] font-black text-slate-800 truncate uppercase tracking-wider">{m.title}</h4>
                                     <div className="flex items-center gap-1.5 mt-1 overflow-hidden">
                                         <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary whitespace-nowrap">{m.category}</span>
                                         <span className="text-[8px] text-muted-foreground font-medium truncate opacity-60">• {m.fileType}</span>
@@ -174,7 +174,7 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
                                     {role !== 'STUDENT' && (
                                         <button
                                             onClick={() => handleDelete(m.id)}
-                                            className="p-1.5 hover:bg-red-500/20 text-muted-foreground hover:text-red-400 rounded-lg transition-all"
+                                            className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
                                         </button>

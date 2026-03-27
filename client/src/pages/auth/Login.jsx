@@ -31,35 +31,35 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#020c0c]">
+        <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
             {/* Dynamic Background Elements */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-900/10 rounded-full blur-[120px] animate-pulse" />
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
 
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md glass p-8 rounded-[2rem] relative z-10 shadow-2xl border border-white/5"
+                className="w-full max-w-md glass p-8 rounded-[2rem] relative z-10 shadow-xl border border-border"
             >
-                <div className="text-center mb-8">
+                <div className="text-center mb-10">
                     <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-primary/10 mb-6 border border-primary/20">
                         <Shield className="w-10 h-10 text-primary" />
                     </div>
-                    <h1 className="text-4xl font-black tracking-tight bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent italic">NO DUE</h1>
-                    <p className="text-emerald-500/60 font-medium tracking-widest text-[10px] uppercase mt-1">Automation Framework</p>
+                    <h1 className="text-4xl font-black tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent italic uppercase">NO DUE</h1>
+                    <p className="text-primary font-bold tracking-widest text-[10px] uppercase mt-1">Automation Framework</p>
                 </div>
 
 
                 <form onSubmit={handleLogin} className="space-y-6">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium ml-1">Academic Email</label>
+                        <label className="text-sm font-semibold text-foreground/80 ml-1">Academic Email</label>
                         <div className="relative">
                             <input
                                 type="email"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all pl-11"
+                                className="w-full bg-slate-100/50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/30 transition-all pl-11 text-foreground"
                                 placeholder="mentor@college.edu"
                             />
                             <Users className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -67,14 +67,14 @@ export default function Login() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium ml-1">Password</label>
+                        <label className="text-sm font-semibold text-foreground/80 ml-1">Password</label>
                         <div className="relative">
                             <input
                                 type="password"
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all pl-11"
+                                className="w-full bg-slate-100/50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/30 transition-all pl-11 text-foreground"
                                 placeholder="••••••••"
                             />
                             <LogIn className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -99,13 +99,13 @@ export default function Login() {
                         )}
                     </button>
                     <div className="text-center mt-3">
-                        <button type="button" onClick={() => navigate('/register')} className="text-xs font-semibold text-white/40 hover:text-white transition-all">
+                        <button type="button" onClick={() => navigate('/register')} className="text-xs font-semibold text-muted-foreground hover:text-primary transition-all">
                             No account? <span className="text-primary underline">Register new Mentor</span>
                         </button>
                     </div>
                 </form>
 
-                <div className="mt-8 pt-6 border-t border-white/5 grid grid-cols-3 gap-4">
+                <div className="mt-8 pt-6 border-t border-border grid grid-cols-3 gap-4">
                     <div className="text-center p-2">
                         <Shield className="w-4 h-4 mx-auto text-primary/60 mb-1" />
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Mentor</p>

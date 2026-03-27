@@ -4,29 +4,26 @@
 
 @layer base {
   :root {
-    --background: 180 30% 2%;
-    /* Very deep teal/black */
-    --foreground: 150 20% 98%;
-    /* Soft mint-white */
-    --card: 180 30% 4%;
-    --card-foreground: 150 20% 98%;
-    --popover: 180 30% 4%;
-    --popover-foreground: 150 20% 98%;
-    --primary: 158 94% 40%;
-    /* Vibrant Emerald */
-    --primary-foreground: 180 30% 5%;
-    --secondary: 180 20% 12%;
-    --secondary-foreground: 150 20% 98%;
-    --muted: 180 20% 12%;
-    --muted-foreground: 160 10% 60%;
-    --accent: 158 94% 30%;
-    --accent-foreground: 150 20% 98%;
-    --destructive: 0 84% 60%;
+    --background: 210 40% 98%;    /* Slate 50 */
+    --foreground: 215 25% 27%;    /* Slate 900 */
+    --card: 0 0% 100%;            /* White */
+    --card-foreground: 215 25% 27%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 27%;
+    --primary: 221 83% 53%;       /* Blue 600 */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 214 32% 91%;     /* Slate 200 */
+    --secondary-foreground: 215 25% 27%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 221 83% 53%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;     /* Red 500 */
     --destructive-foreground: 210 40% 98%;
-    --border: 180 20% 12%;
-    --input: 180 20% 12%;
-    --ring: 158 94% 40%;
-    --radius: 1rem;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+    --radius: 0.75rem;
   }
 }
 
@@ -38,9 +35,9 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
-    background-image:
-      radial-gradient(at 0% 0%, hsla(158, 94%, 20%, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, hsla(180, 50%, 10%, 0.2) 0px, transparent 50%);
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(221, 83%, 90%, 0.4) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(210, 40%, 95%, 0.4) 0px, transparent 50%);
     background-attachment: fixed;
   }
 }
@@ -59,15 +56,15 @@ input[type=number] {
 }
 
 .glass {
-  background: rgba(10, 25, 25, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 }
 
 .premium-gradient {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -78,9 +75,7 @@ input[type=number] {
 /* Hide scrollbar for IE, Edge and Firefox */
 .scrollbar-hide {
   -ms-overflow-style: none;
-  /* IE and Edge */
   scrollbar-width: none;
-  /* Firefox */
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -92,24 +87,23 @@ input[type=number] {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.05);
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .premium-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 }
 
 .input-focus-glow:focus {
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.4);
 }
 
 @keyframes progress {
@@ -119,4 +113,4 @@ input[type=number] {
 
 .animate-progress {
   animation: progress 1.5s infinite;
-}
+}
