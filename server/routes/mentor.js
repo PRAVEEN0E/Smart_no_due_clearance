@@ -118,6 +118,42 @@ async function mentorRoutes(fastify, opts) {
         return { message: 'Fee update completed', results };
     });
 
+    fastify.post('/bulk-add-common-fee', async (request, reply) => {
+        const { amount } = request.body;
+        if (!amount || isNaN(amount) || amount <= 0) {
+            return reply.status(400).send({ message: 'Invalid fee amount' });
+        }
+
+        const isAdmin = request.user.email === 'admin@college.edu';
+
+        const students = await prisma.user.findMany({
+            where: {
+                role: 'STUDENT',
+                ...(!isAdmin ? { createdById: request.user.id } : {})
+            },
+            select: { id: true }
+        });
+
+        const studentIds = students.map(s => s.id);
+        if (studentIds.length === 0) return { message: 'No students found to add fee', updatedCount: 0 };
+
+        const updateResult = await prisma.feeRecord.updateMany({
+            where: { studentId: { in: studentIds } },
+            data: {
+                feeBalance: { increment: parseFloat(amount) },
+                feeClearedAuto: false,
+                clearedAt: null
+            }
+        });
+
+        await prisma.hallTicket.updateMany({
+            where: { studentId: { in: studentIds } },
+            data: { isUnlocked: false }
+        });
+
+        return { message: `Successfully added ₹${amount} fee to ${updateResult.count} students.`, updatedCount: updateResult.count };
+    });
+
     fastify.post('/students', { schema: mentorSchema.createStudent }, async (request, reply) => {
         const { name, email, password } = request.body;
         const passwordHash = await bcrypt.hash(password, 12);
@@ -337,20 +373,25 @@ async function mentorRoutes(fastify, opts) {
     // --- MANUAL FEE OVERRIDE ---
     fastify.put('/fees/:studentId', { schema: mentorSchema.updateFee }, async (request, reply) => {
         const { feeClearedManual } = request.body;
-        const feeRecord = await prisma.feeRecord.update({
-            where: { studentId: request.params.studentId },
-            data: {
-                feeClearedManual,
-                feeBalance: feeClearedManual ? 0 : undefined,
-                clearedAt: feeClearedManual ? new Date() : null
-            }
-        });
+        try {
+            const feeRecord = await prisma.feeRecord.update({
+                where: { studentId: request.params.studentId },
+                data: {
+                    feeClearedManual,
+                    feeBalance: feeClearedManual ? 0 : undefined,
+                    clearedAt: feeClearedManual ? new Date() : null
+                }
+            });
 
-        // Proactively check for hall ticket unlock
-        const { checkAndUnlock } = require('../services/hallTicketService');
-        await checkAndUnlock(request.params.studentId, prisma);
+            // Proactively check for hall ticket unlock
+            const { checkAndUnlock } = require('../services/hallTicketService');
+            await checkAndUnlock(request.params.studentId, prisma);
 
-        return feeRecord;
+            return feeRecord;
+        } catch (error) {
+            console.error("Fee Update Error:", error);
+            return reply.status(500).send({ message: error.message || "Failed to update fee or generate hall ticket" });
+        }
     });
 
     // --- ANALYTICS ---

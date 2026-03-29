@@ -18,7 +18,8 @@ import {
     ShieldCheck,
     Megaphone,
     Sparkles,
-    AlertCircle
+    AlertCircle,
+    Wallet
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,6 +47,9 @@ export default function MentorDashboard() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false); // For Staff mapping
     const [showStudentAssignModal, setShowStudentAssignModal] = useState(false); // For Student mapping
+    const [showCommonFeeModal, setShowCommonFeeModal] = useState(false);
+    const [commonFeeAmount, setCommonFeeAmount] = useState('');
+    const [addingCommonFee, setAddingCommonFee] = useState(false);
     const [modalMode, setModalMode] = useState('student'); // 'student', 'subject', 'staff'
     const [formData, setFormData] = useState({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', syllabusText: '' });
     const [editingId, setEditingId] = useState(null);
@@ -230,8 +234,29 @@ export default function MentorDashboard() {
         setShowAddModal(false);
         setShowAssignModal(false);
         setShowStudentAssignModal(false);
+        setShowCommonFeeModal(false);
         setEditingId(null);
-        setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1 });
+        setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '' });
+        setCommonFeeAmount('');
+    };
+
+    const handleAssignCommonFee = async (e) => {
+        e.preventDefault();
+        if (!commonFeeAmount || isNaN(commonFeeAmount) || commonFeeAmount <= 0) {
+            return toast.error("Please enter a valid amount");
+        }
+        try {
+            setAddingCommonFee(true);
+            const res = await api.post('/mentor/bulk-add-common-fee', { amount: commonFeeAmount });
+            toast.success(res.data.message || "Fee added successfully");
+            setCommonFeeAmount('');
+            setShowCommonFeeModal(false);
+            fetchData();
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to add common fee");
+        } finally {
+            setAddingCommonFee(false);
+        }
     };
 
     const getFilteredData = () => {
@@ -616,7 +641,7 @@ export default function MentorDashboard() {
                                 />
                             </label>
 
-                            <label className="flex flex-col p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 hover:bg-emerald-500/10 transition-all cursor-pointer group">
+                        <label className="flex flex-col p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 hover:bg-emerald-500/10 transition-all cursor-pointer group">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-emerald-500/20 rounded-lg group-hover:bg-emerald-500/30 transition-all">
                                         <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -634,6 +659,21 @@ export default function MentorDashboard() {
                                     disabled={uploadLoading}
                                 />
                             </label>
+
+                            <button
+                                onClick={() => setShowCommonFeeModal(true)}
+                                className="flex flex-col p-4 rounded-2xl bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-all text-left group"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-amber-200/50 rounded-lg group-hover:bg-amber-200 transition-all">
+                                        <Wallet className="w-4 h-4 text-amber-600" />
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-xs text-slate-800">Assign Common Fee</div>
+                                        <div className="text-[9px] text-slate-500">Add fee to all your students</div>
+                                    </div>
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -777,6 +817,65 @@ export default function MentorDashboard() {
                                     </div>
                                 </div>
                                 <button type="submit" className="w-full premium-gradient py-4 rounded-xl font-bold text-white shadow-lg shadow-primary/20 active:scale-95 transition-all">Create Connection</button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Common Fee Modal */}
+            <AnimatePresence>
+                {showCommonFeeModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={closeModals}
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="bg-white w-full max-w-md rounded-3xl shadow-xl relative z-10 overflow-hidden"
+                        >
+                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                    <Wallet className="w-5 h-5 text-amber-500" />
+                                    Assign Common Fee
+                                </h3>
+                                <button onClick={closeModals} className="p-2 hover:bg-slate-200 rounded-full transition-all text-slate-500">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <form onSubmit={handleAssignCommonFee} className="p-6 space-y-6">
+                                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-800 text-sm">
+                                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                    <p>This fee will be instantly added to the balance of <strong>every student</strong> under your mentorship and will automatically relock their hall tickets.</p>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2 text-left">Fee Amount (₹)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                                        <input
+                                            type="number"
+                                            value={commonFeeAmount}
+                                            onChange={(e) => setCommonFeeAmount(e.target.value)}
+                                            required
+                                            min="1"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-3 text-slate-800 font-bold outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all"
+                                            placeholder="e.g. 500"
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={addingCommonFee || !commonFeeAmount}
+                                    className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                                >
+                                    {addingCommonFee ? 'Applying Fee...' : 'Apply Common Fee'}
+                                </button>
                             </form>
                         </motion.div>
                     </div>

@@ -437,7 +437,11 @@ body {
 
         // Save PDF locally instead of Cloudinary to bypass strict PDF delivery restrictions
         const fileName = `ticket_${studentId}_${Date.now()}.pdf`;
-        const filePath = path.join(__dirname, '../uploads/halltickets', fileName);
+        const dirPath = path.join(__dirname, '../uploads/halltickets');
+        if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true });
+        }
+        const filePath = path.join(dirPath, fileName);
         fs.writeFileSync(filePath, pdfBuffer);
         
         const pdfUrl = `/uploads/halltickets/${fileName}`;

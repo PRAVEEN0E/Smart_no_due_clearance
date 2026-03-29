@@ -14,7 +14,8 @@ import {
     X,
     AlertTriangle,
     Info,
-    RefreshCw
+    RefreshCw,
+    CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -43,6 +44,7 @@ export default function StudentDashboard() {
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [showTicketModal, setShowTicketModal] = useState(false);
     const [ticketUrl, setTicketUrl] = useState('');
+    const [paymentProcessing, setPaymentProcessing] = useState(false);
 
     const getFullUrl = (url) => {
         if (!url) return '';
@@ -122,6 +124,19 @@ export default function StudentDashboard() {
         }
     };
 
+    const handlePayFees = async () => {
+        setPaymentProcessing(true);
+        try {
+            const res = await api.post('/student/pay-fees');
+            toast.success(res.data.message || 'Payment processed successfully!');
+            fetchDashboard();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Payment failed.');
+        } finally {
+            setPaymentProcessing(false);
+        }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -142,20 +157,35 @@ export default function StudentDashboard() {
                     </p>
                 </div>
 
-                <motion.button
-                    whileHover={canDownloadTicket ? { scale: 1.05 } : {}}
-                    whileTap={canDownloadTicket ? { scale: 0.95 } : {}}
-                    disabled={!canDownloadTicket}
-                    onClick={handleDownloadTicket}
-                    className={`px-8 py-4 rounded-3xl font-bold flex items-center gap-3 transition-all ${canDownloadTicket
-                        ? 'premium-gradient text-white shadow-xl shadow-primary/20 cursor-pointer'
-                        : 'bg-white/5 border border-white/10 text-muted-foreground cursor-not-allowed'
-                        }`}
-                >
-                    <Download className="w-5 h-5" />
-                    {canDownloadTicket ? 'Download Hall Ticket' : 'Hall Ticket Locked'}
-                    {!canDownloadTicket && <AlertCircle className="w-4 h-4 ml-2 opacity-40" />}
-                </motion.button>
+                <div className="flex items-center gap-4">
+                    {!isFeeCleared && data.feeRecord?.feeBalance > 0 && (
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handlePayFees}
+                            disabled={paymentProcessing}
+                            className={`px-6 py-4 rounded-3xl font-bold flex items-center gap-3 transition-all bg-amber-500 hover:bg-amber-600 text-white shadow-xl shadow-amber-500/20 cursor-pointer disabled:opacity-50`}
+                        >
+                            <CreditCard className="w-5 h-5" />
+                            {paymentProcessing ? 'Processing...' : `Pay Dues (₹${data.feeRecord.feeBalance})`}
+                        </motion.button>
+                    )}
+
+                    <motion.button
+                        whileHover={canDownloadTicket ? { scale: 1.05 } : {}}
+                        whileTap={canDownloadTicket ? { scale: 0.95 } : {}}
+                        disabled={!canDownloadTicket}
+                        onClick={handleDownloadTicket}
+                        className={`px-8 py-4 rounded-3xl font-bold flex items-center gap-3 transition-all ${canDownloadTicket
+                            ? 'premium-gradient text-white shadow-xl shadow-primary/20 cursor-pointer'
+                            : 'bg-white/5 border border-slate-200 text-slate-500 cursor-not-allowed'
+                            }`}
+                    >
+                        <Download className="w-5 h-5" />
+                        {canDownloadTicket ? 'Download Hall Ticket' : 'Hall Ticket Locked'}
+                        {!canDownloadTicket && <AlertCircle className="w-4 h-4 ml-2 opacity-40" />}
+                    </motion.button>
+                </div>
             </div>
 
             {/* Performance Analytics Section */}

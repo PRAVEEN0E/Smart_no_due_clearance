@@ -168,6 +168,30 @@ async function studentRoutes(fastify, opts) {
         return { pdfUrl: `${ticket.pdfUrl}?t=${Date.now()}` };
     });
 
+    fastify.post('/pay-fees', async (request, reply) => {
+        try {
+            const feeRecord = await prisma.feeRecord.findUnique({ where: { studentId: request.user.id } });
+            if (!feeRecord || feeRecord.feeBalance <= 0) return reply.status(400).send({ message: 'No pending fees' });
+
+            const updatedFee = await prisma.feeRecord.update({
+                where: { studentId: request.user.id },
+                data: {
+                    feeBalance: 0,
+                    feeClearedManual: true, // We act as if payment was processed successfully immediately.
+                    clearedAt: new Date()
+                }
+            });
+
+            // Automatically unlock hall ticket if this was the last blocker
+            await checkAndUnlock(request.user.id, prisma);
+
+            return { success: true, message: 'Payment successful! Fee cleared processing completed.', feeRecord: updatedFee };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ message: 'Payment processing failed: ' + error.message });
+        }
+    });
+
     // Public Verification Route (Used by QR scanners in Exam Hall)
     fastify.get('/verify/:studentId', async (request, reply) => {
         const { studentId } = request.params;
