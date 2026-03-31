@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt');
 const mentorSchema = require('../schemas/mentor.schema');
 const { parseStudentExcel, parseFeeExcel } = require('../services/excelService');
-const { sendWelcomeEmail } = require('../services/emailService');
+const { sendWelcomeEmail, sendFeeUpdateEmail, sendAnnouncementEmail } = require('../services/emailService');
 
 async function mentorRoutes(fastify, opts) {
     // Apply authentication and mentor-role guard to all routes in this plugin
@@ -150,6 +150,15 @@ async function mentorRoutes(fastify, opts) {
             where: { studentId: { in: studentIds } },
             data: { isUnlocked: false }
         });
+
+        // Get student info for emails
+        const studentInfo = await prisma.user.findMany({
+            where: { id: { in: studentIds } },
+            select: { email: true, name: true }
+        });
+        
+        // Notify them asynchronously
+        Promise.allSettled(studentInfo.map(s => sendFeeUpdateEmail(s.email, s.name, amount))).catch(console.error);
 
         return { message: `Successfully added ₹${amount} fee to ${updateResult.count} students.`, updatedCount: updateResult.count };
     });
@@ -398,7 +407,7 @@ async function mentorRoutes(fastify, opts) {
     // Announcement Management
     fastify.post('/announcements', async (request, reply) => {
         const { title, content, type, priority, expiresAt } = request.body;
-        return prisma.announcement.create({
+        const announcement = await prisma.announcement.create({
             data: {
                 title,
                 content,
@@ -408,6 +417,25 @@ async function mentorRoutes(fastify, opts) {
                 expiresAt: expiresAt ? new Date(expiresAt) : null
             }
         });
+
+        // Email Alert for Higher Priority Announcements
+        if (announcement.priority >= 2) {
+            prisma.user.findMany({
+                where: { role: 'STUDENT' }, // You could refine this to 'students belonging to this mentor'
+                select: { email: true }
+            }).then(recipients => {
+                const emails = recipients.map(r => r.email);
+                
+                // Chunk to 50 for Resend limits
+                const chunkSize = 50;
+                for (let i = 0; i < emails.length; i += chunkSize) {
+                    const chunk = emails.slice(i, i + chunkSize);
+                    sendAnnouncementEmail(chunk, title, content, announcement.priority).catch(console.error);
+                }
+            }).catch(console.error);
+        }
+
+        return announcement;
     });
 
     fastify.get('/announcements', async (request) => {

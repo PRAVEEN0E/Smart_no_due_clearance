@@ -2,7 +2,7 @@ const staffSchema = require('../schemas/staff.schema');
 const { parseMarksExcel, generateMarksExcel } = require('../services/excelService');
 const { calculateInternalMarks } = require('../services/marksCalculator');
 const { logAction } = require('../services/auditService');
-const { sendMarksUpdateEmail } = require('../services/emailService');
+const { sendMarksUpdateEmail, sendSubjectApprovedEmail } = require('../services/emailService');
 const { sendNotification } = require('../services/notificationService');
 
 async function staffRoutes(fastify, opts) {
@@ -210,6 +210,9 @@ async function staffRoutes(fastify, opts) {
                 message: `Your internal marks for ${updatedEval.subject.name} have been approved by staff.`,
                 type: 'SUCCESS'
             }).catch(console.error);
+
+            // Send Subject Approved Email
+            sendSubjectApprovedEmail(updatedEval.student.email, updatedEval.student.name, updatedEval.subject.name);
 
             return updatedEval;
         } catch (err) {
