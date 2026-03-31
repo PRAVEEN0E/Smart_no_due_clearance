@@ -30,22 +30,34 @@ async function authRoutes(fastify, opts) {
         return { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
     });
 
-    // Bootstrap Mentor (for development)
+    // Bootstrap Super Admin (for development)
     fastify.post('/bootstrap', async (request, reply) => {
-        const mentorExists = await prisma.user.findFirst({ where: { role: 'MENTOR' } });
-        if (mentorExists) return { message: 'Mentor already exists' };
+        const adminExists = await prisma.user.findFirst({ where: { email: 'admin@college.edu' } });
+        if (adminExists) return { message: 'SuperAdmin already exists' };
 
         const passwordHash = await bcrypt.hash('Admin@123', 12);
-        const mentor = await prisma.user.create({
-            data: {
-                name: 'System Admin',
-                email: 'admin@college.edu',
-                passwordHash,
-                role: 'MENTOR'
-            }
+        
+        const result = await prisma.$transaction(async (tx) => {
+            const college = await tx.college.create({
+                data: {
+                    name: 'System Default College',
+                    domain: 'college.edu'
+                }
+            });
+
+            const admin = await tx.user.create({
+                data: {
+                    name: 'System Admin',
+                    email: 'admin@college.edu',
+                    passwordHash,
+                    role: 'MENTOR', // Reverted to MENTOR to ensure frontend routing works cleanly
+                    collegeId: college.id
+                }
+            });
+            return { admin, college };
         });
 
-        return { message: 'Mentor created', email: mentor.email };
+        return { message: 'SuperAdmin created', email: result.admin.email, college: result.college.name };
     });
 
     // Public Mentor Registration (Creates a new Tenant/College)

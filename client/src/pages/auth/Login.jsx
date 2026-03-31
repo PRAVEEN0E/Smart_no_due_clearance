@@ -20,7 +20,7 @@ export default function Login() {
             setAuth(data.user, data.token);
 
             // Redirect based on role
-            if (data.user.role === 'MENTOR') navigate('/mentor');
+            if (data.user.role === 'MENTOR' || data.user.role === 'SUPERADMIN') navigate('/mentor');
             else if (data.user.role === 'STAFF') navigate('/staff');
             else navigate('/student');
         } catch (err) {

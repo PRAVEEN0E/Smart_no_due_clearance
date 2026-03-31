@@ -52,10 +52,10 @@ const DashboardLayout = ({ children, title }) => {
     );
 };
 
-const ProtectedRoute = ({ children, role }) => {
+const ProtectedRoute = ({ children, roles }) => {
     const { user, token } = useAuth();
     if (!token) return <Navigate to="/login" />;
-    if (role && user.role !== role) return <Navigate to="/login" />;
+    if (roles && !roles.includes(user.role)) return <Navigate to="/login" />;
     return <DashboardLayout>{children}</DashboardLayout>;
 };
 
@@ -87,9 +87,9 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/verify/hallticket/:studentId" element={<Verification />} />
-                <Route path="/mentor/*" element={<ProtectedRoute role="MENTOR"><MentorDashboard /></ProtectedRoute>} />
-                <Route path="/staff/*" element={<ProtectedRoute role="STAFF"><StaffDashboard /></ProtectedRoute>} />
-                <Route path="/student/*" element={<ProtectedRoute role="STUDENT"><StudentDashboard /></ProtectedRoute>} />
+                <Route path="/mentor/*" element={<ProtectedRoute roles={['MENTOR', 'SUPERADMIN']}><MentorDashboard /></ProtectedRoute>} />
+                <Route path="/staff/*" element={<ProtectedRoute roles={['STAFF']}><StaffDashboard /></ProtectedRoute>} />
+                <Route path="/student/*" element={<ProtectedRoute roles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
                 <Route path="/" element={<Navigate to="/login" />} />
             </Routes>
             <Analytics />
