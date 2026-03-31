@@ -23,7 +23,8 @@ async function authRoutes(fastify, opts) {
             id: user.id,
             email: user.email,
             role: user.role,
-            name: user.name
+            name: user.name,
+            collegeId: user.collegeId
         });
 
         return { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
@@ -47,24 +48,36 @@ async function authRoutes(fastify, opts) {
         return { message: 'Mentor created', email: mentor.email };
     });
 
-    // Public Mentor Registration
+    // Public Mentor Registration (Creates a new Tenant/College)
     fastify.post('/register-mentor', async (request, reply) => {
-        const { name, email, password } = request.body;
+        const { name, email, password, collegeName } = request.body;
 
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing) return reply.status(409).send({ message: 'Email already exists' });
 
         const passwordHash = await bcrypt.hash(password, 12);
-        const mentor = await prisma.user.create({
-            data: {
-                name,
-                email,
-                passwordHash,
-                role: 'MENTOR'
-            }
+        
+        const result = await prisma.$transaction(async (tx) => {
+            const college = await tx.college.create({
+                data: {
+                    name: collegeName || 'Default College',
+                    domain: email.split('@')[1]
+                }
+            });
+
+            const mentor = await tx.user.create({
+                data: {
+                    name,
+                    email,
+                    passwordHash,
+                    role: 'MENTOR',
+                    collegeId: college.id
+                }
+            });
+            return { mentor, college };
         });
 
-        return { message: 'Mentor registered successfully', email: mentor.email };
+        return { message: 'Mentor & College registered successfully', email: result.mentor.email, college: result.college.name };
     });
 
     // Profile & Signature Management
@@ -118,6 +131,7 @@ async function authRoutes(fastify, opts) {
     fastify.get('/announcements', { preHandler: [fastify.authenticate] }, async (request) => {
         return prisma.announcement.findMany({
             where: {
+                collegeId: request.user.collegeId,
                 OR: [
                     { expiresAt: null },
                     { expiresAt: { gt: new Date() } }

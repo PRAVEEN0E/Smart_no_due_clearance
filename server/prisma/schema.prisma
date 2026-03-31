@@ -8,6 +8,7 @@ datasource db {
 }
 
 enum Role {
+  SUPERADMIN // New role for multi-tenant system admins
   MENTOR
   STAFF
   STUDENT
@@ -19,15 +20,31 @@ enum SubjectType {
   THEORY_WITH_LAB
 }
 
+// MULTI-TENANT: College Model
+model College {
+  id        String   @id @default(uuid())
+  name      String
+  domain    String?  @unique // Optional domain routing
+  createdAt DateTime @default(now())
+
+  users        User[]
+  subjects     Subject[]
+  announcements Announcement[]
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String
-  email        String   @unique
+  email        String   @unique // Keep global for login purposes
   passwordHash String
   role         Role
   signatureUrl String?  // For digital signatures (Staff/Mentor)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  
+  // MULTI-TENANT RELATION
+  collegeId    String?
+  college      College? @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   // Relations
   staffSubjects   StaffSubject[]   @relation("StaffToSubjects")
@@ -59,11 +76,15 @@ model AuditLog {
 model Subject {
   id          String      @id @default(uuid())
   name        String
-  code        String      @unique
+  code        String      
   type        SubjectType
   createdAt   DateTime    @default(now())
   createdById String?
   createdBy   User?       @relation("SubjectCreator", fields: [createdById], references: [id])
+  
+  // MULTI-TENANT RELATION
+  collegeId   String?
+  college     College?    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   // Relations
   staffAssignments   StaffSubject[]
@@ -72,6 +93,9 @@ model Subject {
   assignments        Assignment[]
   materials          Material[]
   syllabusText       String?     @db.Text
+
+  // A subject code is only unique WITHIN a specific college
+  @@unique([code, collegeId])
 }
 
 model StaffSubject {
@@ -193,6 +217,10 @@ model Announcement {
   createdById String
   createdAt   DateTime @default(now())
   expiresAt   DateTime?
+  
+  // MULTI-TENANT RELATION
+  collegeId   String?
+  college     College? @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 }
 
 model Material {
