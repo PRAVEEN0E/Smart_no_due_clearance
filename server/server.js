@@ -10,9 +10,8 @@ const fs = require('fs');
 
 // Register Plugins
 fastify.register(require('@fastify/cors'), {
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : true, // True allows the request's origin if it matches credentials
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    credentials: true
+    origin: '*', // Adjust this to specific domains in production if needed
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 });
 
 fastify.register(multipart, {

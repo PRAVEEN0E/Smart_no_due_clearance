@@ -154,12 +154,8 @@ async function authRoutes(fastify, opts) {
         });
     });
 
-    fastify.get('/audit-logs', { preHandler: [fastify.authenticate, fastify.authorize(['MENTOR', 'SUPERADMIN'])] }, async (request) => {
-        const isSuperAdmin = request.user.role === 'SUPERADMIN';
+    fastify.get('/audit-logs', { preHandler: [fastify.authenticate, fastify.authorize(['MENTOR'])] }, async (request) => {
         return prisma.auditLog.findMany({
-            where: {
-                ...(isSuperAdmin ? {} : { collegeId: request.user.collegeId })
-            },
             orderBy: { createdAt: 'desc' },
             take: 50
         });

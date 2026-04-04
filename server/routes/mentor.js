@@ -2,7 +2,6 @@ const bcrypt = require('bcrypt');
 const mentorSchema = require('../schemas/mentor.schema');
 const { parseStudentExcel, parseFeeExcel } = require('../services/excelService');
 const { sendWelcomeEmail, sendFeeUpdateEmail, sendAnnouncementEmail } = require('../services/emailService');
-const { logAction } = require('../services/auditService');
 
 async function mentorRoutes(fastify, opts) {
     // Apply authentication and mentor-role guard to all routes in this plugin
@@ -12,15 +11,13 @@ async function mentorRoutes(fastify, opts) {
 
     fastify.get('/staff', async (request) => {
         const isSuperAdmin = request.user.role === 'SUPERADMIN';
-        // A college-level admin is someone whom the system considers to have special rights. 
-        // For now, we'll keep the logic but allow it to be more flexible (e.g., mentors are often admins of their own departments)
-        
+        const isAdmin = isSuperAdmin || request.user.email === 'admin@college.edu';
+
         return prisma.user.findMany({
             where: {
                 role: 'STAFF',
                 ...(isSuperAdmin ? {} : { collegeId: request.user.collegeId }),
-                // Only show staff created by this mentor, unless they are a SuperAdmin
-                ...(!isSuperAdmin ? { createdById: request.user.id } : {})
+                ...(!isAdmin ? { createdById: request.user.id } : {})
             }
         });
     });
@@ -40,27 +37,18 @@ async function mentorRoutes(fastify, opts) {
         // Send Welcome Email
         sendWelcomeEmail(email, name, password);
 
-        // Audit Trail
-        logAction(prisma, {
-            action: 'USER_MANAGEMENT',
-            details: `Created new Staff: ${name} (${email})`,
-            userId: request.user.id,
-            userEmail: request.user.email,
-            collegeId: request.user.collegeId
-        });
-
         return { id: staff.id, name: staff.name, email: staff.email, role: staff.role };
     });
 
     // --- STUDENT MANAGEMENT ---
     fastify.get('/students', async (request) => {
         const isSuperAdmin = request.user.role === 'SUPERADMIN';
+        const isAdmin = isSuperAdmin || request.user.email === 'admin@college.edu';
         return prisma.user.findMany({
             where: {
                 role: 'STUDENT',
                 ...(isSuperAdmin ? {} : { collegeId: request.user.collegeId }),
-                // Unless superadmin, only show students this mentor created/claims
-                ...(!isSuperAdmin ? { createdById: request.user.id } : {})
+                ...(!isAdmin ? { createdById: request.user.id } : {})
             },
             include: { feeRecord: true }
         });
@@ -124,15 +112,6 @@ async function mentorRoutes(fastify, opts) {
                 results.push({ email: f.email, status: 'Error', reason: err.message });
             }
         }
-        // Audit Trail
-        logAction(prisma, {
-            action: 'FEE_MANAGEMENT',
-            details: `Bulk fee update processed for ${results.length} students.`,
-            userId: request.user.id,
-            userEmail: request.user.email,
-            collegeId: request.user.collegeId
-        });
-
         return { message: 'Fee update completed', results };
     });
 
@@ -178,21 +157,7 @@ async function mentorRoutes(fastify, opts) {
         });
         
         // Notify them asynchronously
-        // Notify them in chunks of 50 to avoid rate limits or memory exhaustion
-        const CHUNK_SIZE = 50;
-        for (let i = 0; i < studentInfo.length; i += CHUNK_SIZE) {
-            const chunk = studentInfo.slice(i, i + CHUNK_SIZE);
-            Promise.allSettled(chunk.map(s => sendFeeUpdateEmail(s.email, s.name, amount))).catch(console.error);
-        }
-
-        // Audit Trail
-        logAction(prisma, {
-            action: 'FEE_MANAGEMENT',
-            details: `Common fee of ₹${amount} added to all students.`,
-            userId: request.user.id,
-            userEmail: request.user.email,
-            collegeId: request.user.collegeId
-        });
+        Promise.allSettled(studentInfo.map(s => sendFeeUpdateEmail(s.email, s.name, amount))).catch(console.error);
 
         return { message: `Successfully added ₹${amount} fee to ${updateResult.count} students.`, updatedCount: updateResult.count };
     });
@@ -255,22 +220,16 @@ async function mentorRoutes(fastify, opts) {
             const existing = await prisma.user.findUnique({ where: { email: s.email } });
 
             if (existing) {
-                // IMPORTANT: Only claim if the student belongs to the SAME college
-                if (existing.collegeId === request.user.collegeId) {
-                    // If student exists but has no owner, claim them for this mentor
-                    if (!existing.createdById) {
-                        const claimed = await prisma.user.update({
-                            where: { id: existing.id },
-                            data: { createdById: request.user.id }
-                        });
-                        results.push(claimed);
-                    } else {
-                        // Already owned by another mentor in the same college — skip
-                        results.push(existing);
-                    }
+                // If student exists but has no owner, claim them for this mentor
+                if (!existing.createdById) {
+                    const claimed = await prisma.user.update({
+                        where: { id: existing.id },
+                        data: { createdById: request.user.id }
+                    });
+                    results.push(claimed);
                 } else {
-                    // Student belongs to another college! Block any cross-tenant leakage.
-                    results.push({ email: s.email, status: 'Error', message: 'User exists in another institution.' });
+                    // Already owned by another mentor — skip
+                    results.push(existing);
                 }
                 continue;
             }
@@ -334,30 +293,20 @@ async function mentorRoutes(fastify, opts) {
     // --- SUBJECT MANAGEMENT ---
     fastify.get('/subjects', async (request) => {
         const isSuperAdmin = request.user.role === 'SUPERADMIN';
+        const isAdmin = isSuperAdmin || request.user.email === 'admin@college.edu';
         return prisma.subject.findMany({
             where: {
                 ...(isSuperAdmin ? {} : { collegeId: request.user.collegeId }),
-                ...(!isSuperAdmin ? { createdById: request.user.id } : {})
+                ...(!isAdmin ? { createdById: request.user.id } : {})
             },
             include: { staffAssignments: { include: { staff: true } } }
         });
     });
 
     fastify.post('/subjects', { schema: mentorSchema.createSubject }, async (request, reply) => {
-        const subject = await prisma.subject.create({
+        return prisma.subject.create({
             data: { ...request.body, createdById: request.user.id, collegeId: request.user.collegeId }
         });
-
-        // Audit Trail
-        logAction(prisma, {
-            action: 'SUBJECT_MANAGEMENT',
-            details: `Created new Subject: ${request.body.name} (${request.body.code})`,
-            userId: request.user.id,
-            userEmail: request.user.email,
-            collegeId: request.user.collegeId
-        });
-
-        return subject;
     });
 
     fastify.put('/subjects/:id', async (request, reply) => {
@@ -515,11 +464,11 @@ async function mentorRoutes(fastify, opts) {
         const isAdmin = isSuperAdmin || request.user.email === 'admin@college.edu';
 
         const collegeFilter = isSuperAdmin ? {} : { collegeId: request.user.collegeId };
-        const studentFilter = { role: 'STUDENT', ...collegeFilter, ...(!isSuperAdmin ? { createdById: request.user.id } : {}) };
-        const staffFilter = isSuperAdmin
+        const studentFilter = { role: 'STUDENT', ...collegeFilter, ...(!isAdmin ? { createdById: request.user.id } : {}) };
+        const staffFilter = isAdmin
             ? { role: { in: ['STAFF', 'MENTOR'] }, ...collegeFilter }
             : { role: 'STAFF', ...collegeFilter, createdById: request.user.id };
-        const subjectFilter = isSuperAdmin
+        const subjectFilter = isAdmin
             ? { ...collegeFilter }
             : { ...collegeFilter, createdById: request.user.id };
 

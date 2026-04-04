@@ -30,7 +30,6 @@ model College {
   users        User[]
   subjects     Subject[]
   announcements Announcement[]
-  auditLogs     AuditLog[]
 }
 
 model User {
@@ -71,8 +70,6 @@ model AuditLog {
   details   String   @db.Text
   userId    String
   userEmail String
-  collegeId String?
-  college   College? @relation(fields: [collegeId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
 }
 

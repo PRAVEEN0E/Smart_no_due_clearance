@@ -1,12 +1,11 @@
-async function logAction(prisma, { action, details, userId, userEmail, collegeId }) {
+async function logAction(prisma, { action, details, userId, userEmail }) {
     try {
         await prisma.auditLog.create({
             data: {
                 action,
                 details: typeof details === 'object' ? JSON.stringify(details) : details,
                 userId,
-                userEmail,
-                collegeId
+                userEmail
             }
         });
     } catch (err) {
