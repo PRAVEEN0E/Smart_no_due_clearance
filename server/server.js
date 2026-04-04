@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Register Plugins
-const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173'];
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()) : ['http://localhost:5173'];
 fastify.register(require('@fastify/cors'), {
     origin: (origin, cb) => {
         if (!origin || allowedOrigins.includes(origin)) {
