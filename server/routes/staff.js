@@ -150,7 +150,8 @@ async function staffRoutes(fastify, opts) {
                 changes: updateData
             },
             userId: request.user.id,
-            userEmail: request.user.email
+            userEmail: request.user.email,
+            collegeId: request.user.collegeId
         });
 
         // Background processes
@@ -194,7 +195,8 @@ async function staffRoutes(fastify, opts) {
                 action: 'APPROVAL',
                 details: { student: updatedEval.student.name, subject: updatedEval.subject.name },
                 userId: request.user.id,
-                userEmail: request.user.email
+                userEmail: request.user.email,
+                collegeId: request.user.collegeId
             });
 
             // Trigger hall ticket check in the background
