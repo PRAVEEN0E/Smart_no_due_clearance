@@ -1,6 +1,5 @@
-import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { LogOut, Palette } from 'lucide-react';
-import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import MentorDashboard from './pages/mentor/MentorDashboard';
@@ -24,15 +23,8 @@ const DashboardLayout = ({ children, title }) => {
             <nav className="border-b border-white/5 bg-black/20 backdrop-blur-xl sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        {user?.college?.logoUrl ? (
-                            <img src={user.college.logoUrl} alt="Logo" className="w-10 h-10 rounded-xl object-contain bg-white/5 p-1" />
-                        ) : (
-                            <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center font-black text-primary border border-primary/30">N</div>
-                        )}
-                        <div className="flex flex-col">
-                            <h1 className="text-xl font-black italic tracking-tighter leading-none">NO DUE</h1>
-                            <span className="text-[9px] font-bold text-emerald-500/60 uppercase tracking-[0.2em]">{user?.college?.name || 'FRAMEWORK'}</span>
-                        </div>
+                        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center font-black text-primary border border-primary/30">N</div>
+                        <h1 className="text-xl font-black italic tracking-tighter">NO DUE <span className="text-emerald-500/60 not-italic font-medium">FRAMEWORK</span></h1>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -67,21 +59,7 @@ const ProtectedRoute = ({ children, roles }) => {
     return <DashboardLayout>{children}</DashboardLayout>;
 };
 
-
 function App() {
-    const { user } = useAuth();
-    
-    useEffect(() => {
-        if (user?.college?.primaryColor) {
-            // Check if it's a valid hex or color name
-            document.documentElement.style.setProperty('--primary', user.college.primaryColor);
-            // Also adjust emerald-500 equivalent if needed, but for now just primary
-        } else {
-            // Reset to default if no college color
-            document.documentElement.style.setProperty('--primary', '221 83% 53%'); // Original HSL parts
-        }
-    }, [user]);
-
     return (
         <>
             <Toaster

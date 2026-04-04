@@ -273,54 +273,10 @@ async function generateImportantQA(subjectName, syllabusText, studentPerformance
     }
 }
 
-async function generateMockExam(subjectName, syllabusText, evaluation) {
-    try {
-        const c1 = (evaluation.remedial1 !== undefined && evaluation.remedial1 !== null) ? evaluation.remedial1 : (evaluation.cat1 || 0);
-        const c2 = (evaluation.remedial2 !== undefined && evaluation.remedial2 !== null) ? evaluation.remedial2 : (evaluation.cat2 || 0);
-        const c3 = (evaluation.remedial3 !== undefined && evaluation.remedial3 !== null) ? evaluation.remedial3 : (evaluation.cat3 || 0);
-
-        const prompt = `
-        You are an elite academic tutor for the subject: "${subjectName}".
-        
-        Syllabus Content:
-        ${syllabusText || "General subject knowledge based on the subject name."}
-        
-        Student's CAT Scores (out of 50):
-        - CAT 1: ${c1}, CAT 2: ${c2}, CAT 3: ${c3}
-        - Total Internal: ${evaluation.internalMarksTotal}/40
-        
-        Task:
-        1. Identify the student's "Weak Points" based on their CAT scores. (Lower scores indicate difficulty in that part of the syllabus).
-        2. Generate a "Personalized Mock Exam" consisting of:
-           - Part A: 5 Short Answer Questions (focused on weak areas).
-           - Part B: 3 Detailed Conceptual Questions (focused on mastery).
-           - Part C: A "Cheat Sheet" of 3-5 critical formulas or concepts they MUST memorize for "${subjectName}".
-        
-        Format the output in professional Markdown with these headings:
-        ## 🎯 Personal Strength/Weakness Analysis
-        ## 📝 Personalized Mock Exam
-        ## 🧠 Critical Memo-Sheet
-        
-        Be encouraging and highly specific to the provided syllabus.
-        `;
-
-        const completion = await groq.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
-            model: "llama-3.3-70b-versatile",
-        });
-
-        return completion.choices[0]?.message?.content || "Mock exam currently unavailable.";
-    } catch (error) {
-        console.error("Mock Exam Error:", error.message);
-        return "Failed to generate mock exam. Please try again later.";
-    }
-}
-
 module.exports = {
     generateFeedback,
     predictStudentSuccess,
     chatWithAI,
     generateAcademicInsights,
-    generateImportantQA,
-    generateMockExam
+    generateImportantQA
 };

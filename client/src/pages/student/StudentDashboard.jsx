@@ -34,7 +34,6 @@ import api from '../../lib/api';
 import CourseMaterials from '../../components/CourseMaterials';
 import AIChatBubble from '../../components/AIChatBubble';
 import useAuthStore from '../../store/authStore';
-import { DashboardSkeleton } from '../../components/Skeleton';
 
 export default function StudentDashboard() {
     const { token: authToken } = useAuthStore();
@@ -138,7 +137,11 @@ export default function StudentDashboard() {
         }
     };
 
-    if (loading) return <DashboardSkeleton />;
+    if (loading) return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+    );
 
     const isAllApproved = data.evaluations.length > 0 && data.evaluations.every(e => e.staffApproved);
     const isFeeCleared = data.feeRecord?.feeClearedAuto || data.feeRecord?.feeClearedManual;
