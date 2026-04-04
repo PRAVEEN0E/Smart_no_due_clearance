@@ -9,9 +9,27 @@ const path = require('path');
 const fs = require('fs');
 
 // Register Plugins
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173'];
 fastify.register(require('@fastify/cors'), {
-    origin: '*', // Adjust this to specific domains in production if needed
+    origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            cb(null, true);
+            return;
+        }
+        cb(new Error("Not allowed by CORS"), false);
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+});
+
+fastify.register(require('@fastify/rate-limit'), {
+    max: 100,
+    timeWindow: '1 minute',
+    errorResponseBuilder: (request, context) => ({
+        statusCode: 429,
+        error: 'Too Many Requests',
+        message: `I will allow only ${context.after} seconds wait before retrying.`,
+        expiresIn: context.after
+    })
 });
 
 fastify.register(multipart, {

@@ -6,7 +6,14 @@ async function studentRoutes(fastify, opts) {
 
     const { prisma } = fastify;
 
-    fastify.post('/predict/:subjectId', async (request, reply) => {
+    fastify.post('/predict/:subjectId', {
+        config: {
+            rateLimit: {
+                max: 5,
+                timeWindow: '1 minute'
+            }
+        }
+    }, async (request, reply) => {
         const { subjectId } = request.params;
         const evaluation = await prisma.evaluation.findFirst({
             where: { studentId: request.user.id, subjectId },
@@ -215,7 +222,14 @@ async function studentRoutes(fastify, opts) {
         };
     });
 
-    fastify.post('/qa', async (request, reply) => {
+    fastify.post('/qa', {
+        config: {
+            rateLimit: {
+                max: 3,
+                timeWindow: '1 minute'
+            }
+        }
+    }, async (request, reply) => {
         const { subjectId } = request.body;
         const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
         if (!subject) return reply.status(404).send({ message: 'Subject not found' });
@@ -230,7 +244,14 @@ async function studentRoutes(fastify, opts) {
         return { response };
     });
 
-    fastify.post('/chat', async (request) => {
+    fastify.post('/chat', {
+        config: {
+            rateLimit: {
+                max: 10,
+                timeWindow: '1 minute'
+            }
+        }
+    }, async (request) => {
         const { message, subjectId } = request.body;
         const evals = await prisma.evaluation.findMany({
             where: { studentId: request.user.id },

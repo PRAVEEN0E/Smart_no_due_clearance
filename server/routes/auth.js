@@ -3,7 +3,14 @@ const bcrypt = require('bcrypt');
 async function authRoutes(fastify, opts) {
     const { prisma } = fastify;
 
-    fastify.post('/login', async (request, reply) => {
+    fastify.post('/login', {
+        config: {
+            rateLimit: {
+                max: 5,
+                timeWindow: '1 minute'
+            }
+        }
+    }, async (request, reply) => {
         const { email, password } = request.body;
 
         const user = await prisma.user.findUnique({

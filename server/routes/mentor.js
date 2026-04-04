@@ -100,6 +100,12 @@ async function mentorRoutes(fastify, opts) {
             try {
                 const user = await prisma.user.findUnique({ where: { email: f.email } });
                 if (user) {
+                    // Check Multi-tenant context: only update if student belongs to same college
+                    if (user.collegeId !== request.user.collegeId) {
+                        results.push({ email: f.email, status: 'Not Authorized', reason: 'Student belongs to a different college context' });
+                        continue;
+                    }
+
                     await prisma.feeRecord.update({
                         where: { studentId: user.id },
                         data: { feeBalance: f.feeBalance, feeClearedAuto: f.feeBalance <= 0 }
@@ -220,13 +226,17 @@ async function mentorRoutes(fastify, opts) {
             const existing = await prisma.user.findUnique({ where: { email: s.email } });
 
             if (existing) {
-                // If student exists but has no owner, claim them for this mentor
+                // If student exists but has no owner, claim them for this mentor ONLY if collegeId matches
                 if (!existing.createdById) {
-                    const claimed = await prisma.user.update({
-                        where: { id: existing.id },
-                        data: { createdById: request.user.id }
-                    });
-                    results.push(claimed);
+                    if (existing.collegeId === request.user.collegeId) {
+                        const claimed = await prisma.user.update({
+                            where: { id: existing.id },
+                            data: { createdById: request.user.id }
+                        });
+                        results.push(claimed);
+                    } else {
+                        results.push({ ...existing, error: 'Cannot claim: student belongs to different college' });
+                    }
                 } else {
                     // Already owned by another mentor — skip
                     results.push(existing);
