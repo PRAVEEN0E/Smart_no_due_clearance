@@ -22,10 +22,12 @@ enum SubjectType {
 
 // MULTI-TENANT: College Model
 model College {
-  id        String   @id @default(uuid())
-  name      String
-  domain    String?  @unique // Optional domain routing
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  name         String
+  domain       String?  @unique // Optional domain routing
+  logoUrl      String?  // Custom branding for each college
+  primaryColor String?  // HEX code (e.g., #2563eb)
+  createdAt    DateTime @default(now())
 
   users        User[]
   subjects     Subject[]

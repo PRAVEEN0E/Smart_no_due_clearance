@@ -160,6 +160,24 @@ const start = async () => {
     try {
         const port = process.env.PORT || 3000;
         await fastify.listen({ port, host: '0.0.0.0' });
+        
+        // Initialize Socket.IO
+        const { Server } = require('socket.io');
+        const io = new Server(fastify.server, {
+            cors: {
+                origin: allowedOrigins,
+                methods: ['GET', 'POST']
+            }
+        });
+        
+        fastify.decorate('io', io);
+        
+        io.on('connection', (socket) => {
+            socket.on('join', (userId) => {
+                socket.join(userId);
+            });
+        });
+
         fastify.log.info(`Server listening on ${fastify.server.address().port}`);
     } catch (err) {
         fastify.log.error(err);

@@ -14,7 +14,8 @@ async function authRoutes(fastify, opts) {
         const { email, password } = request.body;
 
         const user = await prisma.user.findUnique({
-            where: { email }
+            where: { email },
+            include: { college: true }
         });
 
         if (!user) {
@@ -31,10 +32,26 @@ async function authRoutes(fastify, opts) {
             email: user.email,
             role: user.role,
             name: user.name,
-            collegeId: user.collegeId
+            collegeId: user.collegeId,
+            collegeName: user.college?.name,
+            collegeLogo: user.college?.logoUrl,
+            collegeColor: user.college?.primaryColor
         });
 
-        return { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+        return { 
+            token, 
+            user: { 
+                id: user.id, 
+                name: user.name, 
+                email: user.email, 
+                role: user.role,
+                college: {
+                    name: user.college?.name,
+                    logoUrl: user.college?.logoUrl,
+                    primaryColor: user.college?.primaryColor
+                }
+            } 
+        };
     });
 
     // Bootstrap Super Admin (for development)

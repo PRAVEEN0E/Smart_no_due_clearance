@@ -23,8 +23,15 @@ const DashboardLayout = ({ children, title }) => {
             <nav className="border-b border-white/5 bg-black/20 backdrop-blur-xl sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center font-black text-primary border border-primary/30">N</div>
-                        <h1 className="text-xl font-black italic tracking-tighter">NO DUE <span className="text-emerald-500/60 not-italic font-medium">FRAMEWORK</span></h1>
+                        {user?.college?.logoUrl ? (
+                            <img src={user.college.logoUrl} alt="Logo" className="w-10 h-10 rounded-xl object-contain bg-white/5 p-1" />
+                        ) : (
+                            <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center font-black text-primary border border-primary/30">N</div>
+                        )}
+                        <div className="flex flex-col">
+                            <h1 className="text-xl font-black italic tracking-tighter leading-none">NO DUE</h1>
+                            <span className="text-[9px] font-bold text-emerald-500/60 uppercase tracking-[0.2em]">{user?.college?.name || 'FRAMEWORK'}</span>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -59,9 +66,11 @@ const ProtectedRoute = ({ children, roles }) => {
     return <DashboardLayout>{children}</DashboardLayout>;
 };
 
+import { SocketProvider } from './context/SocketContext';
+
 function App() {
     return (
-        <>
+        <SocketProvider>
             <Toaster
                 position="top-center"
                 reverseOrder={false}
@@ -93,7 +102,7 @@ function App() {
                 <Route path="/" element={<Navigate to="/login" />} />
             </Routes>
             <Analytics />
-        </>
+        </SocketProvider>
     );
 }
 

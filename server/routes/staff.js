@@ -208,7 +208,8 @@ async function staffRoutes(fastify, opts) {
                 userId: evaluation.studentId,
                 title: 'Subject Cleared',
                 message: `Your internal marks for ${updatedEval.subject.name} have been approved by staff.`,
-                type: 'SUCCESS'
+                type: 'SUCCESS',
+                io: fastify.io
             }).catch(console.error);
 
             // Send Subject Approved Email
