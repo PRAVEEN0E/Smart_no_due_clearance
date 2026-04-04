@@ -1,12 +1,8 @@
-async function sendNotification(prisma, { userId, title, message, type = 'INFO', io }) {
+async function sendNotification(prisma, { userId, title, message, type = 'INFO' }) {
     try {
         const notification = await prisma.notification.create({
             data: { userId, title, message, type }
         });
-
-        if (io) {
-            io.to(userId).emit('new_notification', notification);
-        }
 
         return notification;
     } catch (error) {

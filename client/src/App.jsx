@@ -67,7 +67,6 @@ const ProtectedRoute = ({ children, roles }) => {
     return <DashboardLayout>{children}</DashboardLayout>;
 };
 
-import { SocketProvider } from './context/SocketContext';
 
 function App() {
     const { user } = useAuth();
@@ -84,7 +83,7 @@ function App() {
     }, [user]);
 
     return (
-        <SocketProvider>
+        <>
             <Toaster
                 position="top-center"
                 reverseOrder={false}
@@ -116,7 +115,7 @@ function App() {
                 <Route path="/" element={<Navigate to="/login" />} />
             </Routes>
             <Analytics />
-        </SocketProvider>
+        </>
     );
 }
 

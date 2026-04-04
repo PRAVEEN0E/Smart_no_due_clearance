@@ -36,7 +36,6 @@
     "razorpay": "^2.9.6",
     "resend": "^6.10.0",
     "stripe": "^21.0.1",
-    "socket.io": "^4.8.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

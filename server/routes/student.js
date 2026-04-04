@@ -131,8 +131,7 @@ async function studentRoutes(fastify, opts) {
                 userId: request.user.id,
                 title: 'Assignment Uploaded',
                 message: `Your assignment for ${subject?.name || 'Subject'} was received. AI is analyzing it now!`,
-                type: 'SUCCESS',
-                io: fastify.io
+                type: 'SUCCESS'
             }).catch(console.error);
 
             // 2. Trigger AI Feedback in the background
@@ -148,8 +147,7 @@ async function studentRoutes(fastify, opts) {
                     userId: request.user.id,
                     title: 'AI Feedback Ready',
                     message: `Detailed feedback for your ${subject?.name || 'Subject'} assignment has been generated!`,
-                    type: 'INFO',
-                    io: fastify.io
+                    type: 'INFO'
                 }).catch(console.error);
             }).catch(err => {
                 fastify.log.error(`Background AI Analysis Error: ${err.message}`);
