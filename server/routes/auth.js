@@ -184,6 +184,27 @@ async function authRoutes(fastify, opts) {
             take: 50
         });
     });
+
+    fastify.get('/branding', async (request, reply) => {
+        const host = request.headers.host || '';
+        // Simple logic: check if domain matches exactly OR if subdomain matches the 'domain' field
+        const college = await prisma.college.findFirst({
+            where: {
+                OR: [
+                    { domain: host },
+                    { domain: host.split('.')[0] }
+                ]
+            }
+        });
+
+        if (!college) return { name: 'Smart No Due', logoUrl: null, primaryColor: null };
+
+        return {
+            name: college.name,
+            logoUrl: college.logoUrl,
+            primaryColor: college.primaryColor
+        };
+    });
 }
 
 

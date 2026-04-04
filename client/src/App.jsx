@@ -1,5 +1,6 @@
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { LogOut, Palette } from 'lucide-react';
+import React, { useEffect } from 'react';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import MentorDashboard from './pages/mentor/MentorDashboard';
@@ -69,6 +70,19 @@ const ProtectedRoute = ({ children, roles }) => {
 import { SocketProvider } from './context/SocketContext';
 
 function App() {
+    const { user } = useAuth();
+    
+    useEffect(() => {
+        if (user?.college?.primaryColor) {
+            // Check if it's a valid hex or color name
+            document.documentElement.style.setProperty('--primary', user.college.primaryColor);
+            // Also adjust emerald-500 equivalent if needed, but for now just primary
+        } else {
+            // Reset to default if no college color
+            document.documentElement.style.setProperty('--primary', '221 83% 53%'); // Original HSL parts
+        }
+    }, [user]);
+
     return (
         <SocketProvider>
             <Toaster

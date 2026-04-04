@@ -270,6 +270,31 @@ async function studentRoutes(fastify, opts) {
 
         return { response: await chatWithAI(evals, `${message} ${specificContext}`) };
     });
+
+    fastify.post('/mock-exam/:subjectId', {
+        config: {
+            rateLimit: {
+                max: 3,
+                timeWindow: '1 minute'
+            }
+        }
+    }, async (request, reply) => {
+        const { subjectId } = request.params;
+        const { generateMockExam } = require('../services/aiService');
+
+        const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
+        if (!subject) return reply.status(404).send({ message: 'Subject not found' });
+
+        const evaluation = await prisma.evaluation.findFirst({
+            where: { studentId: request.user.id, subjectId }
+        });
+
+        if (!evaluation) return reply.status(404).send({ message: 'Evaluation data not found for this subject' });
+
+        const mockExam = await generateMockExam(subject.name, subject.syllabusText, evaluation);
+
+        return { mockExam };
+    });
 }
 
 module.exports = studentRoutes;
