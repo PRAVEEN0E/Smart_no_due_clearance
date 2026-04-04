@@ -83,6 +83,32 @@ fastify.decorate('auth', (guards) => {
     };
 });
 
+// Global Audit Hook for Mutation Logging
+const { logAction } = require('./services/auditService');
+fastify.addHook('onResponse', async (request, reply) => {
+    const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method);
+    const isApi = request.url.startsWith('/api') && !request.url.includes('/proxy');
+    
+    // Only log mutations to API routes
+    if (isMutation && isApi) {
+        const prisma = fastify.prisma;
+        const user = request.user || {};
+        
+        logAction(prisma, {
+            action: `${request.method}_${request.url.split('/')[2]?.toUpperCase() || 'UNKNOWN'}`,
+            userId: user.id,
+            userEmail: user.email,
+            method: request.method,
+            url: request.url,
+            statusCode: reply.statusCode,
+            details: {
+                params: request.params,
+                body: request.body,
+            }
+        }).catch(err => fastify.log.error(`Global Audit Fail: ${err.message}`));
+    }
+});
+
 // Debug hook for 401s
 fastify.addHook('onSend', async (request, reply, payload) => {
     if (reply.statusCode === 401) {
