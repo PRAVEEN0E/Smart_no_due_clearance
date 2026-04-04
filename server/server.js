@@ -71,6 +71,28 @@ if (fs.existsSync(distPath)) {
     });
 }
 
+// Global Error Handler
+fastify.setErrorHandler(async (error, request, reply) => {
+    fastify.log.error(error);
+
+    // Custom Prisma/Validation/CORS error handling can go here
+    if (error.statusCode === 429) {
+        return reply.status(429).send({ error: 'Rate Limit Exceeded', message: error.message });
+    }
+
+    if (error.message === 'Not allowed by CORS') {
+        return reply.status(403).send({ error: 'Forbidden', message: 'CORS policy restriction' });
+    }
+
+    // Generic safe error for production
+    const isProd = process.env.NODE_ENV === 'production';
+    reply.status(error.statusCode || 500).send({
+        error: isProd ? 'Internal Server Error' : error.name,
+        message: isProd ? 'An unexpected error occurred. Please try again later.' : error.message,
+        ...(isProd ? {} : { stack: error.stack })
+    });
+});
+
 fastify.register(require('./plugins/prisma'));
 fastify.register(require('./plugins/auth'));
 
