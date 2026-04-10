@@ -29,12 +29,13 @@ async function staffRoutes(fastify, opts) {
         return prisma.studentSubject.findMany({
             where: { subjectId: { in: subIds } },
             include: {
-                student: true,
-                subject: true,
+                student: {
+                    select: { id: true, name: true, email: true, role: true, signatureUrl: true, collegeId: true }
+                },
                 subject: {
                     include: {
                         evaluations: {
-                            where: { studentId: request.user.id } // This logic needs to be refined
+                            where: { staffId: request.user.id }
                         }
                     }
                 }

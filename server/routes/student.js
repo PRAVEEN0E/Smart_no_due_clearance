@@ -68,9 +68,18 @@ async function studentRoutes(fastify, opts) {
             }
         });
 
+        // Optimization: Remove potential sensitive nested data from user query if needed
+        // but here it's mostly subject relationship which is fine.
+
         const suggestions = await generateAcademicInsights(evals, studentWithSubjects.studentSubjects);
 
-        return { evaluations: evals, feeRecord: fee, hallTicket: ticket, suggestions };
+        return { 
+            evaluations: evals, 
+            feeRecord: fee, 
+            hallTicket: ticket, 
+            suggestions,
+            user: { id: studentWithSubjects.id, name: studentWithSubjects.name, email: studentWithSubjects.email }
+        };
     });
 
     fastify.get('/marks', async (request) => {

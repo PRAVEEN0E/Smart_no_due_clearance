@@ -174,7 +174,8 @@ async function mentorRoutes(fastify, opts) {
 
         const student = await prisma.$transaction(async (tx) => {
             const newUser = await tx.user.create({
-                data: { name, email, passwordHash, role: 'STUDENT', createdById: request.user.id, collegeId: request.user.collegeId }
+                data: { name, email, passwordHash, role: 'STUDENT', createdById: request.user.id, collegeId: request.user.collegeId },
+                select: { id: true, name: true, email: true, role: true, collegeId: true }
             });
             await tx.feeRecord.create({
                 data: { studentId: newUser.id, feeBalance: 0, feeClearedAuto: true }
@@ -198,7 +199,8 @@ async function mentorRoutes(fastify, opts) {
 
         return prisma.user.update({
             where: { id: request.params.id },
-            data: updateData
+            data: updateData,
+            select: { id: true, name: true, email: true, role: true, collegeId: true }
         });
     });
 
@@ -212,7 +214,8 @@ async function mentorRoutes(fastify, opts) {
 
         return prisma.user.update({
             where: { id: request.params.id },
-            data: updateData
+            data: updateData,
+            select: { id: true, name: true, email: true, role: true, collegeId: true }
         });
     });
 

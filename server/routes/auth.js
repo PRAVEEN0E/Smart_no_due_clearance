@@ -11,92 +11,122 @@ async function authRoutes(fastify, opts) {
             }
         }
     }, async (request, reply) => {
-        const { email, password } = request.body;
+        try {
+            const { email, password } = request.body;
 
-        const user = await prisma.user.findUnique({
-            where: { email }
-        });
+            if (!email || !password) {
+                return reply.status(400).send({ message: 'Email and password are required' });
+            }
 
-        if (!user) {
-            return reply.status(401).send({ message: 'Invalid credentials' });
+            const user = await prisma.user.findUnique({
+                where: { email: email.toLowerCase().trim() }
+            });
+
+            if (!user) {
+                fastify.log.warn(`Login attempt for non-existent user: ${email}`);
+                return reply.status(401).send({ message: 'Invalid credentials' });
+            }
+
+            const isMatch = await bcrypt.compare(password, user.passwordHash);
+            if (!isMatch) {
+                fastify.log.warn(`Failed password attempt for user: ${email}`);
+                return reply.status(401).send({ message: 'Invalid credentials' });
+            }
+
+            const token = fastify.jwt.sign({
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                name: user.name,
+                collegeId: user.collegeId
+            });
+
+            return { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ message: 'Internal server error during login' });
         }
-
-        const isMatch = await bcrypt.compare(password, user.passwordHash);
-        if (!isMatch) {
-            return reply.status(401).send({ message: 'Invalid credentials' });
-        }
-
-        const token = fastify.jwt.sign({
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            name: user.name,
-            collegeId: user.collegeId
-        });
-
-        return { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
     });
 
     // Bootstrap Super Admin (for development)
     fastify.post('/bootstrap', async (request, reply) => {
-        const adminExists = await prisma.user.findFirst({ where: { email: 'admin@college.edu' } });
-        if (adminExists) return { message: 'SuperAdmin already exists' };
+        try {
+            const adminExists = await prisma.user.findFirst({ where: { email: 'admin@college.edu' } });
+            if (adminExists) return { message: 'SuperAdmin already exists' };
 
-        const passwordHash = await bcrypt.hash('Admin@123', 12);
-        
-        const result = await prisma.$transaction(async (tx) => {
-            const college = await tx.college.create({
-                data: {
-                    name: 'System Default College',
-                    domain: 'college.edu'
-                }
+            const passwordHash = await bcrypt.hash('Admin@123', 12);
+            
+            const result = await prisma.$transaction(async (tx) => {
+                const college = await tx.college.create({
+                    data: {
+                        name: 'System Default College',
+                        domain: 'college.edu'
+                    }
+                });
+
+                const admin = await tx.user.create({
+                    data: {
+                        name: 'System Admin',
+                        email: 'admin@college.edu',
+                        passwordHash,
+                        role: 'MENTOR', 
+                        collegeId: college.id
+                    }
+                });
+                return { admin, college };
             });
 
-            const admin = await tx.user.create({
-                data: {
-                    name: 'System Admin',
-                    email: 'admin@college.edu',
-                    passwordHash,
-                    role: 'MENTOR', // Reverted to MENTOR to ensure frontend routing works cleanly
-                    collegeId: college.id
-                }
-            });
-            return { admin, college };
-        });
-
-        return { message: 'SuperAdmin created', email: result.admin.email, college: result.college.name };
+            return { message: 'SuperAdmin created', email: result.admin.email, college: result.college.name };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ message: 'Failed to bootstrap admin' });
+        }
     });
 
     // Public Mentor Registration (Creates a new Tenant/College)
     fastify.post('/register-mentor', async (request, reply) => {
-        const { name, email, password, collegeName } = request.body;
+        try {
+            const { name, email, password, collegeName } = request.body;
 
-        const existing = await prisma.user.findUnique({ where: { email } });
-        if (existing) return reply.status(409).send({ message: 'Email already exists' });
+            if (!name || !email || !password || !collegeName) {
+                return reply.status(400).send({ message: 'All fields (name, email, password, collegeName) are required' });
+            }
 
-        const passwordHash = await bcrypt.hash(password, 12);
-        
-        const result = await prisma.$transaction(async (tx) => {
-            const college = await tx.college.create({
-                data: {
-                    name: collegeName || 'Default College',
-                    domain: email.split('@')[1]
-                }
+            if (!email.includes('@')) {
+                return reply.status(400).send({ message: 'Invalid email format' });
+            }
+
+            const normalizedEmail = email.toLowerCase().trim();
+            const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+            if (existing) return reply.status(409).send({ message: 'Email already exists' });
+
+            const passwordHash = await bcrypt.hash(password, 12);
+            
+            const result = await prisma.$transaction(async (tx) => {
+                const college = await tx.college.create({
+                    data: {
+                        name: collegeName,
+                        domain: normalizedEmail.split('@')[1]
+                    }
+                });
+
+                const mentor = await tx.user.create({
+                    data: {
+                        name,
+                        email: normalizedEmail,
+                        passwordHash,
+                        role: 'MENTOR',
+                        collegeId: college.id
+                    }
+                });
+                return { mentor, college };
             });
 
-            const mentor = await tx.user.create({
-                data: {
-                    name,
-                    email,
-                    passwordHash,
-                    role: 'MENTOR',
-                    collegeId: college.id
-                }
-            });
-            return { mentor, college };
-        });
-
-        return { message: 'Mentor & College registered successfully', email: result.mentor.email, college: result.college.name };
+            return { message: 'Mentor & College registered successfully', email: result.mentor.email, college: result.college.name };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ message: error.message || 'Registration failed' });
+        }
     });
 
     // Profile & Signature Management
