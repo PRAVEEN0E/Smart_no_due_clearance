@@ -151,7 +151,8 @@ async function staffRoutes(fastify, opts) {
                 changes: updateData
             },
             userId: request.user.id,
-            userEmail: request.user.email
+            userEmail: request.user.email,
+            collegeId: request.user.collegeId
         });
 
         // Background processes
@@ -195,7 +196,8 @@ async function staffRoutes(fastify, opts) {
                 action: 'APPROVAL',
                 details: { student: updatedEval.student.name, subject: updatedEval.subject.name },
                 userId: request.user.id,
-                userEmail: request.user.email
+                userEmail: request.user.email,
+                collegeId: request.user.collegeId
             });
 
             // Trigger hall ticket check in the background
@@ -240,11 +242,8 @@ async function staffRoutes(fastify, opts) {
         });
         if (!staffSub) return reply.status(403).send({ message: 'Unauthorized to regenerate feedback for this subject' });
 
-        // Get relative path from URL and convert to absolute
-        const relativePath = assignment.fileUrl.replace('/uploads/', '');
-        const absolutePath = path.resolve(__dirname, '../uploads', relativePath);
-
-        const aiFeedback = await generateFeedback(absolutePath, assignment.subject.name);
+        // Pass URL or local path directly to service; it handles both
+        const aiFeedback = await generateFeedback(assignment.fileUrl, assignment.subject.name);
 
         const updated = await prisma.assignment.update({
             where: { id: assignmentId },

@@ -8,6 +8,7 @@ export default function Register() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [collegeName, setCollegeName] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
@@ -18,12 +19,12 @@ export default function Register() {
         setLoading(true);
         setError('');
         try {
-            // Step 1: Register the new mentor account (Defaulting college name to ensure backend success)
+            // Step 1: Register the new mentor account (explicitly sending collegeName)
             await api.post('/auth/register-mentor', { 
                 name, 
                 email, 
                 password, 
-                collegeName: name ? `${name}'s Institution` : "My College" 
+                collegeName: collegeName.trim() || `${name}'s Institution`
             });
 
             // Step 2: Clear any stale session (old admin token) from localStorage
@@ -84,6 +85,17 @@ export default function Register() {
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full bg-slate-100/50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/30 transition-all text-foreground"
                                 placeholder="Dr. John Doe"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-foreground/80 ml-1">College/Institution Name</label>
+                            <input
+                                required
+                                type="text"
+                                value={collegeName}
+                                onChange={(e) => setCollegeName(e.target.value)}
+                                className="w-full bg-slate-100/50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/30 transition-all text-foreground"
+                                placeholder="E.g. Engineering College of Excellence"
                             />
                         </div>
                         <div className="space-y-2">

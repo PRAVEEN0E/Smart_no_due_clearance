@@ -70,6 +70,7 @@ model AuditLog {
   details   String   @db.Text
   userId    String
   userEmail String
+  collegeId String?
   createdAt DateTime @default(now())
 }
 
