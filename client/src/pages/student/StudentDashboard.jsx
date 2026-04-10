@@ -46,14 +46,13 @@ export default function StudentDashboard() {
     const [ticketUrl, setTicketUrl] = useState('');
     const [paymentProcessing, setPaymentProcessing] = useState(false);
 
-    const getFullUrl = (url) => {
-        if (!url) return '';
-        
-        let backendBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+    const getFileUrl = (url) => {
+        if (!url) return '#';
+        let backendBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : window.location.origin;
         if (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1);
 
-        // If it's a Cloudinary URL, wrap it with our proxy to bypass 401/CORS
         if (url.startsWith('https://res.cloudinary.com')) {
+            const authToken = localStorage.getItem('token');
             return `${backendBase}/api/proxy?url=${encodeURIComponent(url)}&token=${authToken}`;
         }
 
@@ -114,7 +113,7 @@ export default function StudentDashboard() {
         try {
             const res = await api.get('/student/hallticket');
             if (res.data.pdfUrl) {
-                setTicketUrl(getFullUrl(res.data.pdfUrl));
+                setTicketUrl(getFileUrl(res.data.pdfUrl));
                 setShowTicketModal(true);
             } else {
                 toast.error("Hall ticket generated but URL not found. Please try again.");

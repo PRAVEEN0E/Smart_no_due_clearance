@@ -62,12 +62,11 @@ export default function StaffDashboard() {
     const getFullUrl = (url) => {
         if (!url) return '';
         
-        let backendBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+        let backendBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : window.location.origin;
         if (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1);
 
         // If it's a Cloudinary URL, wrap it with our proxy to bypass 401/CORS
         if (url.startsWith('https://res.cloudinary.com')) {
-            // Append token as query param so the proxy route can authenticate (iframes don't send headers)
             return `${backendBase}/api/proxy?url=${encodeURIComponent(url)}&token=${authToken}`;
         }
 

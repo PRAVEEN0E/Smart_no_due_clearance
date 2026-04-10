@@ -154,7 +154,7 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
                                             const url = m.fileUrl;
                                             if (!url) return '#';
                                             
-                                            let backendBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+                                            let backendBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : window.location.origin;
                                             if (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1);
 
                                             if (url.startsWith('https://res.cloudinary.com')) {
