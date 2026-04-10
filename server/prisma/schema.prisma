@@ -24,7 +24,7 @@ enum SubjectType {
 model College {
   id        String   @id @default(uuid())
   name      String
-  domain    String?  @unique // Optional domain routing
+  domain    String?  // Optional domain routing
   createdAt DateTime @default(now())
 
   users        User[]
