@@ -13,13 +13,11 @@ async function mentorRoutes(fastify, opts) {
         const isSuperAdmin = request.user.role === 'SUPERADMIN';
         const isAdmin = isSuperAdmin || request.user.email === 'admin@college.edu';
 
-        return prisma.user.findMany({
-            where: {
-                role: 'STAFF',
-                ...(isSuperAdmin ? {} : { collegeId: request.user.collegeId }),
-                ...(!isAdmin ? { createdById: request.user.id } : {})
-            }
-        });
+        const where = { role: 'STAFF' };
+        if (!isSuperAdmin) where.collegeId = request.user.collegeId || null;
+        if (!isAdmin) where.createdById = request.user.id;
+
+        return prisma.user.findMany({ where });
     });
 
     // --- STAFF MANAGEMENT ---
@@ -44,14 +42,20 @@ async function mentorRoutes(fastify, opts) {
     fastify.get('/students', async (request) => {
         const isSuperAdmin = request.user.role === 'SUPERADMIN';
         const isAdmin = isSuperAdmin || request.user.email === 'admin@college.edu';
-        return prisma.user.findMany({
-            where: {
-                role: 'STUDENT',
-                ...(isSuperAdmin ? {} : { collegeId: request.user.collegeId }),
-                ...(!isAdmin ? { createdById: request.user.id } : {})
-            },
-            include: { feeRecord: true }
-        });
+        
+        const where = { role: 'STUDENT' };
+        if (!isSuperAdmin) where.collegeId = request.user.collegeId || null;
+        if (!isAdmin) where.createdById = request.user.id;
+
+        try {
+            return await prisma.user.findMany({
+                where,
+                include: { feeRecord: true }
+            });
+        } catch (error) {
+            fastify.log.error(`Students Fetch Error: ${error.message}`);
+            throw error;
+        }
     });
 
     fastify.post('/bulk-students', async (request, reply) => {
@@ -204,6 +208,15 @@ async function mentorRoutes(fastify, opts) {
         });
     });
 
+    fastify.get('/staff/:id', async (request, reply) => {
+        const staff = await prisma.user.findUnique({
+            where: { id: request.params.id },
+            select: { id: true, name: true, email: true, role: true, collegeId: true }
+        });
+        if (!staff) return reply.status(404).send({ message: 'Staff not found' });
+        return staff;
+    });
+
     fastify.put('/staff/:id', async (request, reply) => {
         const { name, email, password } = request.body;
         const updateData = { name, email };
@@ -299,6 +312,11 @@ async function mentorRoutes(fastify, opts) {
     });
 
     fastify.delete('/students/:id', async (request, reply) => {
+        await prisma.user.delete({ where: { id: request.params.id } });
+        return { success: true };
+    });
+
+    fastify.delete('/staff/:id', async (request, reply) => {
         await prisma.user.delete({ where: { id: request.params.id } });
         return { success: true };
     });

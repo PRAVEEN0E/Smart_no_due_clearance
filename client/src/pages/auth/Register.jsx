@@ -18,8 +18,13 @@ export default function Register() {
         setLoading(true);
         setError('');
         try {
-            // Step 1: Register the new mentor account
-            await api.post('/auth/register-mentor', { name, email, password });
+            // Step 1: Register the new mentor account (Defaulting college name to ensure backend success)
+            await api.post('/auth/register-mentor', { 
+                name, 
+                email, 
+                password, 
+                collegeName: name ? `${name}'s Institution` : "My College" 
+            });
 
             // Step 2: Clear any stale session (old admin token) from localStorage
             logout();
