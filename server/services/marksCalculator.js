@@ -12,13 +12,14 @@ function calculateInternalMarks(evalData, subjectType) {
     // - Improvement: If a remedial mark is present for a CAT, it replaces that CAT score.
     // - For Labs: Remedials are not applicable.
     const isLab = subjectType === 'FULL_LAB';
-    const effectiveCat1 = (!isLab && evalData.remedial1 !== undefined && evalData.remedial1 !== null) ? evalData.remedial1 : (cat1 || 0);
-    const effectiveCat2 = (!isLab && evalData.remedial2 !== undefined && evalData.remedial2 !== null) ? evalData.remedial2 : (cat2 || 0);
-    const effectiveCat3 = (!isLab && evalData.remedial3 !== undefined && evalData.remedial3 !== null) ? evalData.remedial3 : (cat3 || 0);
+    // Remedials only replace a CAT score if they are higher than the original
+    const effectiveCat1 = (!isLab && evalData.remedial1 !== undefined && evalData.remedial1 !== null) ? Math.max(evalData.remedial1, cat1 || 0) : (cat1 || 0);
+    const effectiveCat2 = (!isLab && evalData.remedial2 !== undefined && evalData.remedial2 !== null) ? Math.max(evalData.remedial2, cat2 || 0) : (cat2 || 0);
+    const effectiveCat3 = (!isLab && evalData.remedial3 !== undefined && evalData.remedial3 !== null) ? Math.max(evalData.remedial3, cat3 || 0) : (cat3 || 0);
 
     let rawCats = [effectiveCat1, effectiveCat2, effectiveCat3];
 
-    const cats = rawCats.sort((a, b) => b - a);
+    const cats = [...rawCats].sort((a, b) => b - a);
     const bestTwoSum = cats[0] + cats[1];
     const catMarks = (bestTwoSum / 100) * 20;
 
@@ -47,9 +48,11 @@ function calculateInternalMarks(evalData, subjectType) {
     let total = 0;
 
     if (subjectType === 'FULL_LAB') {
-        // For Labs: Sum available components and cap at 40
-        // Model (assumed ~20) + Activities (assumed ~20) + Assignments/Record (assumed ~10) + Attendance (5)
-        total = (modelLabMarks || 0) + (activitySum) + (assignSum / 5) + attendanceMarks;
+        // For Labs (Max 40): Model Lab (20) + Activities scaled (10) + Assignments scaled (5) + Attendance (5)
+        const labModelMarks = Math.min((modelLabMarks || 0), 20); // cap at 20
+        const labActivityMarks = (activitySum / 20) * 10; // scale 0-20 → 0-10
+        const labAssignMarks = (assignSum / 50) * 5; // scale 0-50 → 0-5
+        total = labModelMarks + labActivityMarks + labAssignMarks + attendanceMarks;
     } else if (subjectType === 'THEORY_WITH_LAB') {
         // For Hybrid: CATs (20) + Assignments (10) + Activities (5) + Attendance (5) + Model Lab (e.g. 10)
         // Scaled and capped at 40

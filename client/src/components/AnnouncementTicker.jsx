@@ -40,9 +40,9 @@ export default function AnnouncementTicker() {
             <div className={`absolute left-0 top-0 bottom-0 w-1 ${current.priority === 3 ? 'bg-red-500' : current.priority === 2 ? 'bg-orange-500' : 'bg-primary'
                 }`} />
 
-            <div className="max-w-7xl mx-auto px-6 h-10 flex items-center justify-between gap-4">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:h-10 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 overflow-hidden">
-                    <Megaphone className={`w-4 h-4 shrink-0 ${current.priority === 3 ? 'text-red-400 animate-pulse' : 'text-primary'
+                    <Megaphone className={`w-3.5 h-3.5 md:w-4 md:h-4 shrink-0 ${current.priority === 3 ? 'text-red-400 animate-pulse' : 'text-primary'
                         }`} />
                     <AnimatePresence mode="wait">
                         <motion.div
@@ -50,12 +50,12 @@ export default function AnnouncementTicker() {
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
                             exit={{ x: -20, opacity: 0 }}
-                            className="flex items-center gap-2 whitespace-nowrap"
+                            className="flex flex-wrap items-center gap-2"
                         >
-                            <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-primary/20 text-primary">
+                            <span className="text-[9px] md:text-[10px] uppercase font-black px-1.5 md:px-2 py-0.5 rounded bg-primary/20 text-primary shrink-0">
                                 {current.type}
                             </span>
-                            <span className="text-xs font-medium tracking-wide">
+                            <span className="text-[10px] md:text-xs font-medium tracking-wide leading-tight">
                                 <span className="font-bold">{current.title}:</span> {current.content}
                             </span>
                         </motion.div>

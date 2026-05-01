@@ -16,6 +16,7 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
     }, [subjectId]);
 
     const fetchMaterials = async () => {
+        if (!subjectId) return;
         try {
             const res = await api.get(`/materials/subject/${subjectId}`);
             setMaterials(res.data);

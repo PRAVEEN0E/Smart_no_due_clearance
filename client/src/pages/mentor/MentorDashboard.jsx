@@ -132,6 +132,8 @@ export default function MentorDashboard() {
         setEditingId(item.id);
         if (mode === 'subject') {
             setFormData({ name: item.name, code: item.code, type: item.type, syllabusText: item.syllabusText || '' });
+        } else if (mode === 'announcement') {
+            setFormData({ name: item.title, content: item.content, type: item.type || 'GENERAL', priority: item.priority || 1 });
         } else {
             setFormData({ name: item.name, email: item.email, password: '' });
         }
@@ -157,7 +159,7 @@ export default function MentorDashboard() {
                 payload = { name: formData.name, email: formData.email };
                 if (formData.password) payload.password = formData.password;
             } else if (modalMode === 'announcement') {
-                endpoint = `/mentor/announcements`;
+                endpoint = `/mentor/announcements${idPath}`;
                 payload = { title: formData.name, content: formData.content, type: formData.type, priority: formData.priority };
             } else {
                 endpoint = `/mentor/subjects${idPath}`;
@@ -340,12 +342,12 @@ export default function MentorDashboard() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
-                        className="glass p-6 rounded-[2rem] border border-border relative overflow-hidden group hover:border-primary/30 transition-all cursor-default shadow-sm"
+                        className="glass p-4 md:p-6 rounded-[2rem] border border-border relative overflow-hidden group hover:border-primary/30 transition-all cursor-default shadow-sm"
                     >
-                        <div className={`absolute -right-4 -top-4 w-24 h-24 ${stat.bg} rounded-full blur-3xl opacity-50 group-hover:opacity-100 transition-all duration-500`} />
-                        <stat.icon className={`w-8 h-8 ${stat.color} mb-4 relative z-10`} />
-                        <p className="text-[10px] text-primary/60 uppercase tracking-[0.2em] font-bold relative z-10">{stat.label}</p>
-                        <h2 className="text-4xl font-black mt-2 tabular-nums relative z-10 tracking-tight text-foreground">{stat.value}</h2>
+                        <div className={`absolute -right-4 -top-4 w-16 md:w-24 h-16 md:h-24 ${stat.bg} rounded-full blur-3xl opacity-50 group-hover:opacity-100 transition-all duration-500`} />
+                        <stat.icon className={`w-6 h-6 md:w-8 md:h-8 ${stat.color} mb-3 md:mb-4 relative z-10`} />
+                        <p className="text-[9px] md:text-[10px] text-primary/60 uppercase tracking-[0.2em] font-bold relative z-10">{stat.label}</p>
+                        <h2 className="text-2xl md:text-4xl font-black mt-1 md:mt-2 tabular-nums relative z-10 tracking-tight text-foreground">{stat.value}</h2>
                     </motion.div>
                 ))}
             </div>
@@ -356,12 +358,12 @@ export default function MentorDashboard() {
                 {/* Management Table */}
                 <div className="lg:col-span-2 glass rounded-3xl border border-border shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex flex-wrap items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200 backdrop-blur-md">
+                        <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200 backdrop-blur-md overflow-x-auto scrollbar-hide shrink-0">
                             {['students', 'staff', 'subjects', 'audit', 'announcements'].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab
+                                    className={`px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === tab
                                         ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
                                         : 'text-muted-foreground hover:text-foreground hover:bg-slate-200'
                                         }`}
@@ -541,9 +543,9 @@ export default function MentorDashboard() {
                                                             <LinkIcon className="w-4 h-4" />
                                                         </button>
                                                     )}
-                                                    {activeTab !== 'announcements' && (
+                                                    {activeTab !== 'audit' && (
                                                         <button
-                                                            onClick={() => handleEditClick(activeTab === 'subjects' ? 'subject' : (activeTab === 'staff' ? 'staff' : 'student'), item)}
+                                                            onClick={() => handleEditClick(activeTab === 'subjects' ? 'subject' : (activeTab === 'staff' ? 'staff' : (activeTab === 'announcements' ? 'announcement' : 'student')), item)}
                                                             className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-800 transition-all"
                                                             title="Edit"
                                                         >
@@ -764,10 +766,12 @@ export default function MentorDashboard() {
                                     </>
                                 ) : (
                                     <>
-                                        <div><label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Subject Name</label><input required type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3" /></div>
-                                        <div><label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Code</label><input required type="text" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 font-mono" /></div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div><label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Subject Name</label><input required type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary/20" /></div>
+                                            <div><label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Code</label><input required type="text" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 font-mono text-foreground outline-none focus:ring-2 focus:ring-primary/20" /></div>
+                                        </div>
                                         <div><label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Category</label>
-                                            <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3">
+                                            <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-foreground outline-none">
                                                 <option value="FULL_THEORY">Full Theory</option>
                                                 <option value="FULL_LAB">Practical/Lab</option>
                                                 <option value="THEORY_WITH_LAB">Hybrid (Theory+Lab)</option>
@@ -779,7 +783,7 @@ export default function MentorDashboard() {
                                                 value={formData.syllabusText} 
                                                 onChange={(e) => setFormData({ ...formData, syllabusText: e.target.value })} 
                                                 placeholder="Paste subject units, topics or learning outcomes here..." 
-                                                className="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 min-h-[150px] text-xs leading-relaxed" 
+                                                className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 min-h-[150px] text-xs leading-relaxed text-foreground outline-none focus:ring-2 focus:ring-primary/20" 
                                             />
                                         </div>
                                     </>

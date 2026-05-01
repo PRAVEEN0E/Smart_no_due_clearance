@@ -10,7 +10,8 @@ async function checkAndUnlock(studentId, prisma) {
         include: {
             studentSubjects: { include: { subject: true } },
             feeRecord: true,
-            createdBy: true
+            createdBy: true,
+            college: true
         }
     });
 
@@ -222,7 +223,7 @@ body {
     <div class="header">
 
         <div class="college">
-            VELALAR COLLEGE OF ENGINEERING AND TECHNOLOGY
+            ${student.college?.name || 'INSTITUTION NAME'}
         </div>
 
         <div class="affiliation">
@@ -230,7 +231,7 @@ body {
         </div>
 
         <div class="doc-type">
-            HALL TICKET FOR SEMESTER EXAMINATIONS - MAY 2025
+            HALL TICKET FOR SEMESTER EXAMINATIONS - ${new Date().toLocaleString('default', { month: 'long' }).toUpperCase()} ${new Date().getFullYear()}
         </div>
 
     </div>
@@ -258,7 +259,7 @@ body {
                         <td class="label">Reg No</td>
                         <td class="sep">:</td>
                         <td class="value">
-                            ${studentId.toUpperCase()}
+                            ${student.email.toUpperCase()}
                         </td>
                     </tr>
 
@@ -331,7 +332,14 @@ body {
         <tbody>
 
             ${student.studentSubjects.map((ss, index) => {
-            const examDates = ['15/05/2025', '17/05/2025', '20/05/2025', '22/05/2025', '24/05/2025', '27/05/2025'];
+            const baseDate = new Date();
+            // Generate exam dates: starting from 15 days out, every 2-3 days
+            const examDates = [];
+            for (let d = 0; d < 6; d++) {
+                const examDate = new Date(baseDate);
+                examDate.setDate(baseDate.getDate() + 15 + (d * 2));
+                examDates.push(examDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+            }
             const session = (index % 2 === 0) ? 'FN' : 'AN';
             const date = examDates[index % examDates.length];
 

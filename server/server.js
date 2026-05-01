@@ -1,7 +1,11 @@
 require('dotenv').config();
 const fastify = require('fastify')({
     logger: true,
-    bodyLimit: 10485760 // 10MB limit for bulk uploads
+    routerOptions: {
+        ignoreTrailingSlash: true
+    },
+    bodyLimit: 10485760, // 10MB limit for bulk uploads
+    connectionTimeout: 10000 // 10 seconds timeout
 });
 const multipart = require('@fastify/multipart');
 
@@ -12,7 +16,13 @@ const fs = require('fs');
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()) : ['http://localhost:5173'];
 fastify.register(require('@fastify/cors'), {
     origin: (origin, cb) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        // Allow all origins in development or if the origin is in our allowed list
+        if (!origin || 
+            process.env.NODE_ENV !== 'production' || 
+            allowedOrigins.includes(origin) || 
+            origin.startsWith('http://192.168.') || 
+            origin.startsWith('http://localhost') || 
+            origin.startsWith('http://127.0.0.1')) {
             cb(null, true);
             return;
         }

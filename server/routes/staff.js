@@ -55,15 +55,6 @@ async function staffRoutes(fastify, opts) {
 
         if (assignedSubjectIds.length === 0) return [];
 
-        // Auto-fix: update any evaluations for these subjects that still have null staffId
-        await prisma.evaluation.updateMany({
-            where: {
-                subjectId: { in: assignedSubjectIds },
-                staffId: null
-            },
-            data: { staffId: request.user.id }
-        });
-
         // Now fetch all evaluations for this staff's subjects
         return prisma.evaluation.findMany({
             where: {

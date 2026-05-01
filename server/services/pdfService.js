@@ -9,21 +9,15 @@ async function getBrowser() {
     const isLocal = !process.env.RENDER;
     
     if (isLocal) {
-        // In local dev, we use the standard 'puppeteer' package which downloads its own chrome
         try {
             const puppeteer = require('puppeteer');
             return await puppeteer.launch({
-                headless: 'new',
-                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
             });
         } catch (err) {
-            console.error("Local puppeteer launch failed, trying puppeteer-core", err);
-            // Fallback to puppeteer-core if standard puppeteer isn't configured
-            return await puppeteerCore.launch({
-                headless: 'new',
-                executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', // Typical Windows path
-                args: ['--no-sandbox']
-            });
+            console.error("Puppeteer launch failed:", err);
+            throw err;
         }
     } else {
         // On Render, we must use puppeteer-core + @sparticuz/chromium

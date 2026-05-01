@@ -6,9 +6,13 @@ async function materialRoutes(fastify, opts) {
     const { prisma } = fastify;
 
     // Fetch materials for a subject (Student view)
-    fastify.get('/subject/:subjectId', { preHandler: [fastify.authenticate] }, async (request) => {
+    fastify.get('/subject/:subjectId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+        const { subjectId } = request.params;
+        if (!subjectId || subjectId === 'undefined' || subjectId === 'null') {
+            return [];
+        }
         return prisma.material.findMany({
-            where: { subjectId: request.params.subjectId },
+            where: { subjectId },
             include: { uploadedBy: { select: { name: true } } },
             orderBy: { createdAt: 'desc' }
         });
@@ -32,7 +36,11 @@ async function materialRoutes(fastify, opts) {
                     const ext = path.extname(part.filename).slice(1).toUpperCase() || 'PDF';
                     fileType = ext;
                     const fileName = `mat_${request.user.id}_${Date.now()}.${ext.toLowerCase()}`;
-                    const filePath = path.join(__dirname, '../uploads/materials', fileName);
+                    const dirPath = path.join(__dirname, '../uploads/materials');
+                    if (!fs.existsSync(dirPath)) {
+                        fs.mkdirSync(dirPath, { recursive: true });
+                    }
+                    const filePath = path.join(dirPath, fileName);
                     
                     await pipeline(part.file, fs.createWriteStream(filePath));
                     fileUrl = `/uploads/materials/${fileName}`;

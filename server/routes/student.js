@@ -71,7 +71,12 @@ async function studentRoutes(fastify, opts) {
         // Optimization: Remove potential sensitive nested data from user query if needed
         // but here it's mostly subject relationship which is fine.
 
-        const suggestions = await generateAcademicInsights(evals, studentWithSubjects.studentSubjects);
+        let suggestions = [];
+        try {
+            suggestions = await generateAcademicInsights(evals, studentWithSubjects.studentSubjects);
+        } catch (err) {
+            fastify.log.error(`AI Insights Error: ${err.message}`);
+        }
 
         return { 
             evaluations: evals, 

@@ -50,7 +50,7 @@ async function mentorRoutes(fastify, opts) {
         try {
             return await prisma.user.findMany({
                 where,
-                include: { feeRecord: true }
+                include: { feeRecord: true, studentSubjects: { include: { subject: true } } }
             });
         } catch (error) {
             fastify.log.error(`Students Fetch Error: ${error.message}`);
@@ -110,9 +110,17 @@ async function mentorRoutes(fastify, opts) {
                         continue;
                     }
 
-                    await prisma.feeRecord.update({
+                    await prisma.feeRecord.upsert({
                         where: { studentId: user.id },
-                        data: { feeBalance: f.feeBalance, feeClearedAuto: f.feeBalance <= 0 }
+                        create: {
+                            studentId: user.id,
+                            feeBalance: f.feeBalance,
+                            feeClearedAuto: f.feeBalance <= 0
+                        },
+                        update: {
+                            feeBalance: f.feeBalance,
+                            feeClearedAuto: f.feeBalance <= 0
+                        }
                     });
                     results.push({ email: f.email, status: 'Updated' });
                 } else {
@@ -194,6 +202,12 @@ async function mentorRoutes(fastify, opts) {
     });
 
     fastify.put('/students/:id', async (request, reply) => {
+        // Authorization: verify student belongs to same college
+        const existing = await prisma.user.findUnique({ where: { id: request.params.id } });
+        if (!existing || existing.collegeId !== request.user.collegeId) {
+            return reply.status(403).send({ message: 'Unauthorized: student belongs to a different college' });
+        }
+
         const { name, email, password } = request.body;
         const updateData = { name, email };
 
@@ -218,6 +232,12 @@ async function mentorRoutes(fastify, opts) {
     });
 
     fastify.put('/staff/:id', async (request, reply) => {
+        // Authorization: verify staff belongs to same college
+        const existing = await prisma.user.findUnique({ where: { id: request.params.id } });
+        if (!existing || existing.collegeId !== request.user.collegeId) {
+            return reply.status(403).send({ message: 'Unauthorized: staff belongs to a different college' });
+        }
+
         const { name, email, password } = request.body;
         const updateData = { name, email };
 
@@ -269,6 +289,7 @@ async function mentorRoutes(fastify, opts) {
                     passwordHash,
                     role: 'STUDENT',
                     createdById: request.user.id,
+                    collegeId: request.user.collegeId,
                     feeRecord: {
                         create: { feeBalance: 0, feeClearedAuto: true }
                     }
@@ -292,18 +313,21 @@ async function mentorRoutes(fastify, opts) {
         for (const f of feeData) {
             const student = await prisma.user.findUnique({ where: { email: f.email } });
             if (student) {
+                // Multi-tenant check: only update if student belongs to same college
+                if (student.collegeId !== request.user.collegeId) continue;
+
                 await prisma.feeRecord.upsert({
                     where: { studentId: student.id },
                     update: {
                         feeBalance: f.feeBalance,
-                        feeClearedAuto: f.feeBalance === 0,
-                        clearedAt: f.feeBalance === 0 ? new Date() : null
+                        feeClearedAuto: f.feeBalance <= 0,
+                        clearedAt: f.feeBalance <= 0 ? new Date() : null
                     },
                     create: {
                         studentId: student.id,
                         feeBalance: f.feeBalance,
-                        feeClearedAuto: f.feeBalance === 0,
-                        clearedAt: f.feeBalance === 0 ? new Date() : null
+                        feeClearedAuto: f.feeBalance <= 0,
+                        clearedAt: f.feeBalance <= 0 ? new Date() : null
                     }
                 });
             }
@@ -312,11 +336,21 @@ async function mentorRoutes(fastify, opts) {
     });
 
     fastify.delete('/students/:id', async (request, reply) => {
+        // Authorization: verify student belongs to same college
+        const existing = await prisma.user.findUnique({ where: { id: request.params.id } });
+        if (!existing || existing.collegeId !== request.user.collegeId) {
+            return reply.status(403).send({ message: 'Unauthorized: cannot delete users from another college' });
+        }
         await prisma.user.delete({ where: { id: request.params.id } });
         return { success: true };
     });
 
     fastify.delete('/staff/:id', async (request, reply) => {
+        // Authorization: verify staff belongs to same college
+        const existing = await prisma.user.findUnique({ where: { id: request.params.id } });
+        if (!existing || existing.collegeId !== request.user.collegeId) {
+            return reply.status(403).send({ message: 'Unauthorized: cannot delete users from another college' });
+        }
         await prisma.user.delete({ where: { id: request.params.id } });
         return { success: true };
     });
@@ -484,6 +518,27 @@ async function mentorRoutes(fastify, opts) {
             orderBy: { createdAt: 'desc' },
             take: 10
         });
+    });
+
+    fastify.put('/announcements/:id', async (request, reply) => {
+        const { id } = request.params;
+        const { title, content, type, priority, expiresAt } = request.body;
+        
+        try {
+            const updated = await prisma.announcement.update({
+                where: { id },
+                data: {
+                    title,
+                    content,
+                    type,
+                    priority: parseInt(priority) || 1,
+                    expiresAt: expiresAt ? new Date(expiresAt) : null
+                }
+            });
+            return updated;
+        } catch (error) {
+            return reply.status(404).send({ message: 'Announcement not found' });
+        }
     });
 
     fastify.delete('/announcements/:id', async (request) => {

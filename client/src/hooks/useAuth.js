@@ -6,7 +6,7 @@ export default function useAuth() {
     const { user, token, setAuth, logout } = useAuthStore();
     const navigate = useNavigate();
 
-    const isAdmin = user?.role === 'MENTOR';
+    const isAdmin = user?.role === 'MENTOR' || user?.role === 'SUPERADMIN';
     const isStaff = user?.role === 'STAFF';
     const isStudent = user?.role === 'STUDENT';
 

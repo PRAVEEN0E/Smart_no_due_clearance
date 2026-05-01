@@ -52,7 +52,6 @@ export default function StudentDashboard() {
         if (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1);
 
         if (url.startsWith('https://res.cloudinary.com')) {
-            const authToken = localStorage.getItem('token');
             return `${backendBase}/api/proxy?url=${encodeURIComponent(url)}&token=${authToken}`;
         }
 
@@ -148,24 +147,24 @@ export default function StudentDashboard() {
 
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
                 <div>
-                    <h1 className="text-4xl font-bold tracking-tight">Academic Portal</h1>
-                    <p className="text-muted-foreground mt-2 flex items-center gap-2">
-                        <Layout className="w-4 h-4" /> Keep track of your semester clearance.
+                    <h1 className="text-2xl md:text-4xl font-bold tracking-tight">Academic Portal</h1>
+                    <p className="text-xs md:text-sm text-muted-foreground mt-1 flex items-center gap-2">
+                        <Layout className="w-3.5 h-3.5" /> Keep track of your semester clearance.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-4">
                     {!isFeeCleared && data.feeRecord?.feeBalance > 0 && (
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={handlePayFees}
                             disabled={paymentProcessing}
-                            className={`px-6 py-4 rounded-3xl font-bold flex items-center gap-3 transition-all bg-amber-500 hover:bg-amber-600 text-white shadow-xl shadow-amber-500/20 cursor-pointer disabled:opacity-50`}
+                            className={`px-5 md:px-6 py-3 md:py-4 rounded-2xl md:rounded-3xl font-bold flex items-center justify-center gap-3 transition-all bg-amber-500 hover:bg-amber-600 text-white shadow-xl shadow-amber-500/20 cursor-pointer disabled:opacity-50 text-sm md:text-base`}
                         >
-                            <CreditCard className="w-5 h-5" />
+                            <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
                             {paymentProcessing ? 'Processing...' : `Pay Dues (₹${data.feeRecord.feeBalance})`}
                         </motion.button>
                     )}
@@ -175,14 +174,14 @@ export default function StudentDashboard() {
                         whileTap={canDownloadTicket ? { scale: 0.95 } : {}}
                         disabled={!canDownloadTicket}
                         onClick={handleDownloadTicket}
-                        className={`px-8 py-4 rounded-3xl font-bold flex items-center gap-3 transition-all ${canDownloadTicket
+                        className={`px-6 md:px-8 py-3 md:py-4 rounded-2xl md:rounded-3xl font-bold flex items-center justify-center gap-3 transition-all text-sm md:text-base ${canDownloadTicket
                             ? 'premium-gradient text-white shadow-xl shadow-primary/20 cursor-pointer'
                             : 'bg-white/5 border border-slate-200 text-slate-500 cursor-not-allowed'
                             }`}
                     >
-                        <Download className="w-5 h-5" />
+                        <Download className="w-4 h-4 md:w-5 md:h-5" />
                         {canDownloadTicket ? 'Download Hall Ticket' : 'Hall Ticket Locked'}
-                        {!canDownloadTicket && <AlertCircle className="w-4 h-4 ml-2 opacity-40" />}
+                        {!canDownloadTicket && <AlertCircle className="w-3.5 h-3.5 ml-1 md:ml-2 opacity-40" />}
                     </motion.button>
                 </div>
             </div>
@@ -260,7 +259,7 @@ export default function StudentDashboard() {
                     <div className="w-full h-2 bg-slate-200 rounded-full mt-8 overflow-hidden">
                         <div
                             className="h-full bg-primary transition-all duration-1000"
-                            style={{ width: `${(data.evaluations.filter(e => e.staffApproved).length / data.evaluations.length) * 100}%` }}
+                            style={{ width: `${data.evaluations.length > 0 ? (data.evaluations.filter(e => e.staffApproved).length / data.evaluations.length) * 100 : 0}%` }}
                         />
                     </div>
                 </div>
@@ -269,19 +268,24 @@ export default function StudentDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Clearance Tracker */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="glass rounded-3xl border border-white/10 overflow-hidden">
-                        <div className="p-6 border-b border-white/5 bg-white/[0.01]">
-                            <h3 className="font-bold flex items-center gap-2">
-                                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    <div className="glass rounded-3xl border border-slate-200/50 overflow-hidden shadow-sm">
+                        <div className="p-6 border-b border-slate-100 bg-white/50">
+                            <h3 className="font-bold flex items-center gap-2 text-slate-800">
+                                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                                 Subject Clearance Status
                             </h3>
                         </div>
                         <div className="p-2">
-                            <div className="divide-y divide-white/5">
+                            <div className="divide-y divide-slate-100">
                                 {data.evaluations.map((ev, i) => {
-                                    const prediction = ev.aiPrediction ? JSON.parse(ev.aiPrediction) : null;
+                                    let prediction = null;
+                                    try {
+                                        prediction = ev.aiPrediction ? JSON.parse(ev.aiPrediction) : null;
+                                    } catch (e) {
+                                        prediction = null;
+                                    }
                                     return (
-                                        <div key={i} className="flex flex-col p-4 hover:bg-white/[0.01] transition-all rounded-2xl group border-l-4 border-transparent hover:border-l-primary/40">
+                                        <div key={i} className="flex flex-col p-4 hover:bg-primary/[0.03] transition-all rounded-2xl group border-l-4 border-transparent hover:border-l-primary/40">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-mono text-[10px] font-black ${ev.staffApproved ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-orange-500/10 text-orange-600 border border-orange-200'

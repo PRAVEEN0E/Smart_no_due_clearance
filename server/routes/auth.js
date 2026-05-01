@@ -39,7 +39,7 @@ async function authRoutes(fastify, opts) {
                 role: user.role,
                 name: user.name,
                 collegeId: user.collegeId
-            });
+            }, { expiresIn: '7d' });
 
             return { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
         } catch (error) {
@@ -69,7 +69,7 @@ async function authRoutes(fastify, opts) {
                         name: 'System Admin',
                         email: 'admin@college.edu',
                         passwordHash,
-                        role: 'MENTOR', 
+                        role: 'SUPERADMIN', 
                         collegeId: college.id
                     }
                 });
@@ -161,21 +161,8 @@ async function authRoutes(fastify, opts) {
 
         return { signatureUrl };
     });
-    // Notification Routes
-    fastify.get('/notifications', { preHandler: [fastify.authenticate] }, async (request) => {
-        return prisma.notification.findMany({
-            where: { userId: request.user.id },
-            orderBy: { createdAt: 'desc' },
-            take: 20
-        });
-    });
-
-    fastify.put('/notifications/:id/read', { preHandler: [fastify.authenticate] }, async (request) => {
-        return prisma.notification.update({
-            where: { id: request.params.id, userId: request.user.id },
-            data: { isRead: true }
-        });
-    });
+    // Notification routes are handled by the dedicated /api/notifications plugin (notifications.js)
+    // Removed duplicate routes here to avoid maintenance drift.
 
     fastify.get('/announcements', { preHandler: [fastify.authenticate] }, async (request) => {
         return prisma.announcement.findMany({

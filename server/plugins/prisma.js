@@ -4,7 +4,10 @@ const fp = require('fastify-plugin');
 async function prismaPlugin(fastify, opts) {
   const prisma = new PrismaClient();
 
-  await prisma.$connect();
+  // Try to connect but don't crash if it fails
+  prisma.$connect().catch(err => {
+    fastify.log.error(`Prisma initial connection failed: ${err.message}`);
+  });
 
   fastify.decorate('prisma', prisma);
 

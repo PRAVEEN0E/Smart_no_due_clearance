@@ -501,35 +501,35 @@ export default function StaffDashboard() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-separate border-spacing-0">
                                 <thead>
-                                    <tr className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.25em] bg-white/[0.03] backdrop-blur-md">
-                                        <th className="px-8 py-8 min-w-[240px] border-b border-border rounded-tl-3xl">Student Information</th>
-                                        <th className="px-4 py-8 text-center text-primary/80 w-[90px] border-b border-border">Files</th>
-                                        {selectedSubject?.subject.type === 'FULL_LAB' ? (
-                                            <>
-                                                <th className="px-6 py-8 text-center w-[160px] border-l border-b border-border bg-slate-50">Model Lab</th>
-                                                <th className="px-6 py-8 text-center w-[200px] border-l border-b border-border bg-slate-50">Lab Activities</th>
-                                            </>
-                                        ) : selectedSubject?.subject.type === 'THEORY_WITH_LAB' ? (
-                                            <>
-                                                <th className="px-6 py-8 text-center w-[180px] border-l border-b border-border bg-slate-50">CAT Assessments</th>
-                                                <th className="px-6 py-8 text-center w-[240px] border-l border-b border-border bg-slate-50">Assignments</th>
-                                                <th className="px-6 py-8 text-center w-[140px] border-l border-b border-border bg-slate-50">Activities</th>
-                                                <th className="px-6 py-8 text-center w-[160px] border-l border-b border-border bg-slate-50">Model Lab</th>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <th className="px-6 py-8 text-center w-[180px] border-l border-b border-border bg-slate-50">CAT Assessments</th>
-                                                <th className="px-6 py-8 text-center w-[240px] border-l border-b border-border bg-slate-50">Assignments</th>
-                                                <th className="px-6 py-8 text-center w-[140px] border-l border-b border-border bg-slate-50">Activities</th>
-                                            </>
-                                        )}
-                                        <th className="px-4 py-8 text-center w-[110px] border-l border-b border-border bg-primary/5">Attend %</th>
-                                        {selectedSubject?.subject.type !== 'FULL_LAB' && (
-                                            <th className="px-6 py-8 text-center w-[180px] border-l border-b border-border bg-orange-50">Remedial</th>
-                                        )}
-                                        <th className="px-4 py-8 text-center w-[100px] font-black text-foreground border-l border-b border-border bg-primary/10">Final</th>
-                                        <th className="px-8 py-8 text-right min-w-[180px] border-b border-border rounded-tr-3xl">Verification</th>
-                                    </tr>
+                                     <tr className="text-[9px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em] md:tracking-[0.25em] bg-white/[0.03] backdrop-blur-md">
+                                         <th className="px-4 md:px-8 py-4 md:py-8 min-w-[200px] md:min-w-[240px] border-b border-border rounded-tl-2xl md:rounded-tl-3xl">Student Information</th>
+                                         <th className="px-2 md:px-4 py-4 md:py-8 text-center text-primary/80 w-[70px] md:w-[90px] border-b border-border">Files</th>
+                                         {selectedSubject?.subject.type === 'FULL_LAB' ? (
+                                             <>
+                                                 <th className="px-4 md:px-6 py-4 md:py-8 text-center w-[120px] md:w-[160px] border-l border-b border-white/10 bg-white/[0.02]">Model Lab</th>
+                                                 <th className="px-4 md:px-6 py-4 md:py-8 text-center w-[160px] md:w-[200px] border-l border-b border-white/10 bg-white/[0.02]">Lab Activities</th>
+                                             </>
+                                         ) : selectedSubject?.subject.type === 'THEORY_WITH_LAB' ? (
+                                             <>
+                                                 <th className="px-4 md:px-6 py-4 md:py-8 text-center w-[140px] md:w-[180px] border-l border-b border-white/10 bg-white/[0.02]">CAT Assessments</th>
+                                                 <th className="px-4 md:px-6 py-4 md:py-8 text-center w-[200px] md:w-[240px] border-l border-b border-white/10 bg-white/[0.02]">Assignments</th>
+                                                 <th className="px-4 md:px-6 py-4 md:py-8 text-center w-[110px] md:w-[140px] border-l border-b border-white/10 bg-white/[0.02]">Activities</th>
+                                                 <th className="px-4 md:px-6 py-4 md:py-8 text-center w-[120px] md:w-[160px] border-l border-b border-white/10 bg-white/[0.02]">Model Lab</th>
+                                             </>
+                                         ) : (
+                                             <>
+                                                 <th className="px-4 md:px-6 py-4 md:py-8 text-center w-[140px] md:w-[180px] border-l border-b border-white/10 bg-white/[0.02]">CAT Assessments</th>
+                                                 <th className="px-4 md:px-6 py-4 md:py-8 text-center w-[200px] md:w-[240px] border-l border-b border-white/10 bg-white/[0.02]">Assignments</th>
+                                                 <th className="px-4 md:px-6 py-4 md:py-8 text-center w-[110px] md:w-[140px] border-l border-b border-white/10 bg-white/[0.02]">Activities</th>
+                                             </>
+                                         )}
+                                         <th className="px-2 md:px-4 py-4 md:py-8 text-center w-[80px] md:w-[110px] border-l border-b border-white/10 bg-primary/5">Attend %</th>
+                                         {selectedSubject?.subject.type !== 'FULL_LAB' && (
+                                             <th className="px-4 md:px-6 py-4 md:py-8 text-center w-[140px] md:w-[180px] border-l border-b border-white/10 bg-orange-500/5">Remedial</th>
+                                         )}
+                                         <th className="px-2 md:px-4 py-4 md:py-8 text-center w-[80px] md:w-[100px] font-black text-foreground border-l border-b border-white/10 bg-primary/10">Final</th>
+                                         <th className="px-4 md:px-8 py-4 md:py-8 text-right min-w-[140px] md:min-w-[180px] border-b border-border rounded-tr-2xl md:rounded-tr-3xl">Verification</th>
+                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
                                     <AnimatePresence mode="popLayout">
