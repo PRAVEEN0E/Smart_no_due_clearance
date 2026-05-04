@@ -5,7 +5,7 @@ const fastify = require('fastify')({
         ignoreTrailingSlash: true
     },
     bodyLimit: 10485760, // 10MB limit for bulk uploads
-    connectionTimeout: 10000 // 10 seconds timeout
+    connectionTimeout: 30000 // 30 seconds timeout to handle slow PDF generation
 });
 const multipart = require('@fastify/multipart');
 

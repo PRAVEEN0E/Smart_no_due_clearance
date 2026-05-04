@@ -2,34 +2,80 @@ const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 
 // Initialize Resend with API key from environment
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = (process.env.RESEND_API_KEY) ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Setup Nodemailer for Gmail fallback (as requested in .env)
+// Setup Nodemailer for Gmail fallback
 const transporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Use SSL/TLS
+    service: process.env.EMAIL_SERVICE === 'gmail' ? 'gmail' : undefined,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    }
+    },
+    // Add timeouts to prevent hanging the server
+    connectionTimeout: 5000, // 5 seconds
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
+    debug: false,
+    logger: false
 });
 
 async function sendEmail(to, subject, html, attachments = []) {
-    try {
-        const actualTo = process.env.DEV_EMAIL_OVERRIDE || to;
-        
-        // Add override notice if in development mode
-        let finalHtml = html;
-        if (process.env.DEV_EMAIL_OVERRIDE && process.env.DEV_EMAIL_OVERRIDE !== to) {
-            finalHtml = `
-                <div style="background-color:#fff3cd; color:#856404; padding:10px; margin-bottom:20px; border:1px solid #ffeeba; border-radius:5px;">
-                    <b>Development Mode Override:</b> This email was originally intended for <b>${Array.isArray(to) ? to.join(', ') : to}</b>
-                </div>
-                ${html}
-            `;
-        }
+    const actualTo = process.env.DEV_EMAIL_OVERRIDE || to;
+    
+    // Add override notice if in development mode
+    let finalHtml = html;
+    if (process.env.DEV_EMAIL_OVERRIDE && process.env.DEV_EMAIL_OVERRIDE !== to) {
+        finalHtml = `
+            <div style="background-color:#fff3cd; color:#856404; padding:10px; margin-bottom:20px; border:1px solid #ffeeba; border-radius:5px;">
+                <b>Development Mode Override:</b> This email was originally intended for <b>${Array.isArray(to) ? to.join(', ') : to}</b>
+            </div>
+            ${html}
+        `;
+    }
 
-        // --- OPTION 1: NODEMAILER (GMAIL) ---
-        if (process.env.EMAIL_SERVICE === 'gmail' && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    // --- STRATEGY: Try Resend first if available (HTTP based, more reliable on Render) ---
+    if (resend && process.env.RESEND_API_KEY) {
+        try {
+            const payload = {
+                from: process.env.EMAIL_FROM || 'InstiSync Notifications <onboarding@resend.dev>',
+                to: actualTo,
+                subject,
+                html: finalHtml,
+            };
+
+            if (attachments && attachments.length > 0) {
+                const fs = require('fs');
+                payload.attachments = attachments.map(att => {
+                    if (att.content) {
+                        return { filename: att.filename, content: att.content };
+                    }
+                    if (att.path && fs.existsSync(att.path)) {
+                        return {
+                            filename: att.filename,
+                            content: fs.readFileSync(att.path)
+                        };
+                    }
+                    return null;
+                }).filter(Boolean);
+            }
+
+            const data = await resend.emails.send(payload);
+            if (!data.error) {
+                console.log(`📧 Resend sent to ${to}: ${data.data.id}`);
+                return data.data;
+            }
+            console.error('⚠️ Resend failed, falling back to Nodemailer:', data.error);
+        } catch (err) {
+            console.error('❌ Resend Exception:', err.message);
+        }
+    }
+
+    // --- STRATEGY 2: Fallback to Nodemailer (Gmail) ---
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        try {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: actualTo,
@@ -43,47 +89,16 @@ async function sendEmail(to, subject, html, attachments = []) {
             };
 
             const info = await transporter.sendMail(mailOptions);
-            console.log(`📧 Gmail sent to ${to}: ${info.messageId}`);
+            console.log(`📧 Nodemailer sent to ${to}: ${info.messageId}`);
             return info;
-        }
-
-        // --- OPTION 2: RESEND (FALLBACK) ---
-        const payload = {
-            from: process.env.EMAIL_FROM || 'InstiSync Notifications <onboarding@resend.dev>',
-            to: actualTo,
-            subject,
-            html: finalHtml,
-        };
-
-        if (attachments && attachments.length > 0) {
-            const fs = require('fs');
-            payload.attachments = attachments.map(att => {
-                if (att.content) {
-                    return { filename: att.filename, content: att.content };
-                }
-                if (att.path && fs.existsSync(att.path)) {
-                    return {
-                        filename: att.filename,
-                        content: fs.readFileSync(att.path)
-                    };
-                }
-                return null;
-            }).filter(Boolean);
-        }
-
-        const data = await resend.emails.send(payload);
-
-        if (data.error) {
-            console.error('❌ Resend Error:', data.error);
+        } catch (error) {
+            console.error('❌ Nodemailer/Gmail Dispatch Error:', error.message);
             return null;
         }
-
-        console.log(`📧 Resend sent to ${to}: ${data.data.id}`);
-        return data.data;
-    } catch (error) {
-        console.error('❌ Email Dispatch Error:', error);
-        return null;
     }
+
+    console.error('❌ No email provider configured or all failed.');
+    return null;
 }
 
 /**
