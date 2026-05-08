@@ -5,37 +5,79 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="theme-color" content="#7c3aed" />
+  <meta name="description" content="Efficient and automated No Due clearance system for educational institutions. Streamline the student clearance process with ease." />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://smart-no-due-clearance.vercel.app/" />
+  <meta property="og:title" content="Smart No Due Clearance System" />
+  <meta property="og:description" content="Streamline the student clearance process with our automated No Due system." />
+  <meta property="og:image" content="/logo512.png" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://smart-no-due-clearance.vercel.app/" />
+  <meta property="twitter:title" content="Smart No Due Clearance System" />
+  <meta property="twitter:description" content="Streamline the student clearance process with our automated No Due system." />
+  <meta property="twitter:image" content="/logo512.png" />
+
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/logo192.png" />
-  <title>No Due Form Automation System</title>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js');
-      });
-    }
-  </script>
+  <title>Smart No Due | Automated Student Clearance System</title>
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
-    rel="stylesheet">
+    rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </noscript>
+
   <style>
+    :root {
+      --primary: #7c3aed;
+    }
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       background-color: #fcfcfc;
       color: #1e293b;
+      margin: 0;
+      min-height: 100vh;
     }
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-      font-family: 'Outfit', sans-serif;
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    }
+    /* Critical UI placeholder while JS loads */
+    #root:empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #fcfcfc;
+    }
+    #root:empty::after {
+      content: "";
+      width: 40px;
+      height: 40px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW registration failed:', err));
+      });
+    }
+  </script>
 </head>
 
 <body>

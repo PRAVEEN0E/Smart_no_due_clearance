@@ -1,18 +1,27 @@
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { LogOut, Layout, Download, AlertCircle, CreditCard } from 'lucide-react';
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import MentorDashboard from './pages/mentor/MentorDashboard';
-import StaffDashboard from './pages/staff/StaffDashboard';
-import StudentDashboard from './pages/student/StudentDashboard';
+import { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { LogOut, Loader2 } from 'lucide-react';
 import useAuth from './hooks/useAuth';
 import NotificationBell from './components/NotificationBell';
 import AnnouncementTicker from './components/AnnouncementTicker';
 import { Toaster } from 'react-hot-toast';
 
-// Shared Layout for Dashboards
-import Verification from './pages/Verification';
-import AIChatBubble from './components/AIChatBubble';
+// Lazy load pages for performance
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const MentorDashboard = lazy(() => import('./pages/mentor/MentorDashboard'));
+const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard'));
+const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard'));
+const Verification = lazy(() => import('./pages/Verification'));
+const AIChatBubble = lazy(() => import('./components/AIChatBubble'));
+
+// Loading Fallback Component
+const PageLoader = () => (
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-background gap-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-sm font-bold text-slate-400 animate-pulse tracking-widest uppercase">Initializing Framework...</p>
+    </div>
+);
 
 const DashboardLayout = ({ children }) => {
     const { logout, user } = useAuth();
@@ -83,15 +92,17 @@ function App() {
                     },
                 }}
             />
-            <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/verify/hallticket/:studentId" element={<Verification />} />
-                <Route path="/mentor/*" element={<ProtectedRoute roles={['MENTOR', 'SUPERADMIN']}><MentorDashboard /></ProtectedRoute>} />
-                <Route path="/staff/*" element={<ProtectedRoute roles={['STAFF']}><StaffDashboard /></ProtectedRoute>} />
-                <Route path="/student/*" element={<ProtectedRoute roles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
-                <Route path="/" element={<Navigate to="/login" />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+                <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/verify/hallticket/:studentId" element={<Verification />} />
+                    <Route path="/mentor/*" element={<ProtectedRoute roles={['MENTOR', 'SUPERADMIN']}><MentorDashboard /></ProtectedRoute>} />
+                    <Route path="/staff/*" element={<ProtectedRoute roles={['STAFF']}><StaffDashboard /></ProtectedRoute>} />
+                    <Route path="/student/*" element={<ProtectedRoute roles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
+                    <Route path="/" element={<Navigate to="/login" />} />
+                </Routes>
+            </Suspense>
         </>
     );
 }

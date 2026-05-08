@@ -68,9 +68,12 @@ self.addEventListener('fetch', (event) => {
 
                 return response;
             }).catch(() => {
-                // If fetch fails (offline), and it's not in cache, we could return a fallback image or text
-                // For now, just let it fail gracefully
-                return new Response('Network error occurred', { status: 408, headers: { 'Content-Type': 'text/plain' } });
+                // If fetch fails (offline), and it's not in cache, return a generic offline response
+                // or just let it fail so the browser shows its default offline page
+                if (event.request.mode === 'navigate') {
+                    return caches.match('/index.html') || caches.match('/');
+                }
+                return null; // Let the browser handle the network error
             });
         })
     );

@@ -3,6 +3,20 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
     plugins: [react()],
+    build: {
+        minify: 'terser',
+        cssMinify: true,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+                    'vendor-ui': ['framer-motion', 'lucide-react', 'recharts'],
+                    'vendor-utils': ['axios', 'zustand', 'react-hot-toast']
+                }
+            }
+        },
+        chunkSizeWarningLimit: 1000
+    },
     server: {
         port: 5173,
         host: true,
