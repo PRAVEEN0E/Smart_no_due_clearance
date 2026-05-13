@@ -1,10 +1,6 @@
-const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 
-// Initialize Resend with API key from environment
-const resend = (process.env.RESEND_API_KEY) ? new Resend(process.env.RESEND_API_KEY) : null;
-
-// Setup Nodemailer for Gmail fallback
+// Setup Nodemailer for Gmail
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
@@ -38,48 +34,11 @@ async function sendEmail(to, subject, html, attachments = []) {
         `;
     }
 
-    // --- STRATEGY: Try Resend first if available (HTTP based, more reliable on Render) ---
-    if (resend && process.env.RESEND_API_KEY) {
-        try {
-            const payload = {
-                from: process.env.EMAIL_FROM || 'InstiSync Notifications <onboarding@resend.dev>',
-                to: actualTo,
-                subject,
-                html: finalHtml,
-            };
-
-            if (attachments && attachments.length > 0) {
-                const fs = require('fs');
-                payload.attachments = attachments.map(att => {
-                    if (att.content) {
-                        return { filename: att.filename, content: att.content };
-                    }
-                    if (att.path && fs.existsSync(att.path)) {
-                        return {
-                            filename: att.filename,
-                            content: fs.readFileSync(att.path)
-                        };
-                    }
-                    return null;
-                }).filter(Boolean);
-            }
-
-            const data = await resend.emails.send(payload);
-            if (!data.error) {
-                console.log(`📧 Resend sent to ${to}: ${data.data.id}`);
-                return data.data;
-            }
-            console.error('⚠️ Resend failed, falling back to Nodemailer:', data.error);
-        } catch (err) {
-            console.error('❌ Resend Exception:', err.message);
-        }
-    }
-
-    // --- STRATEGY 2: Fallback to Nodemailer (Gmail) ---
+    // --- STRATEGY: Nodemailer (Gmail) ---
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         try {
             const mailOptions = {
-                from: process.env.EMAIL_USER,
+                from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
                 to: actualTo,
                 subject: subject,
                 html: finalHtml,
@@ -99,7 +58,7 @@ async function sendEmail(to, subject, html, attachments = []) {
         }
     }
 
-    console.error('❌ No email provider configured or all failed.');
+    console.error('❌ No email provider configured (EMAIL_USER or EMAIL_PASS missing).');
     return null;
 }
 
@@ -213,10 +172,8 @@ async function sendAnnouncementEmail(emails, title, content, priority) {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const highlightColor = priority === 3 ? '#ef4444' : '#f59e0b';
     
-    // Convert multiple emails into an array for Resend (supports up to 50 recipients at once usually, we map it or send BCC if supported)
-    // For simplicity, we loop or use bcc. With resend, you can pass array to `bcc` or `to`.
-    // We will just return a promise.all for individual emails or let the caller loop.
-    // It's better for the caller to provide arrays, but to keep existing structure, we accept array of emails and send them as BCC.
+    // For multiple emails, Nodemailer handles arrays in the 'to' or 'bcc' fields.
+    // We pass the email(s) directly to the sendEmail function.
     const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
         <h2 style="color: ${highlightColor};">📢 Important Announcement</h2>
