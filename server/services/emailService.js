@@ -19,7 +19,9 @@ const transporter = nodemailer.createTransport({
     greetingTimeout: 5000,
     socketTimeout: 10000,
     debug: false,
-    logger: false
+    logger: false,
+    // Force IPv4 to prevent ENETUNREACH errors on networks without IPv6 routes
+    family: 4
 });
 
 async function sendEmail(to, subject, html, attachments = []) {
