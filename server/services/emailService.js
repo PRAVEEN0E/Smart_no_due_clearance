@@ -4,20 +4,23 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true, // Use SSL/TLS
-    service: process.env.EMAIL_SERVICE === 'gmail' ? 'gmail' : undefined,
+    secure: true, 
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-    // Add timeouts to prevent hanging the server
-    connectionTimeout: 5000, // 5 seconds
-    greetingTimeout: 5000,
-    socketTimeout: 10000,
-    debug: false,
-    logger: false,
-    // Force IPv4 to prevent ENETUNREACH errors on networks without IPv6 routes
-    family: 4
+    // Increased timeouts for stable cloud dispatch
+    connectionTimeout: 20000, 
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
+    dnsTimeout: 10000,
+    // Force IPv4 to prevent ENETUNREACH errors on cloud networks
+    family: 4,
+    tls: {
+        // Essential for some SMTP handshakes in serverless/container environments
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
+    }
 });
 
 async function sendEmail(to, subject, html, attachments = []) {
