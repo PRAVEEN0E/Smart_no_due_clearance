@@ -80,7 +80,7 @@ async function generateMarksPDF(subjectName, evaluations, staffName) {
         printBackground: true,
         margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
     });
-    await browser.close();
+    await page.close();
     return pdfBuffer;
 }
 

@@ -441,7 +441,7 @@ body {
         const page = await browser.newPage();
         await page.setContent(htmlContent);
         const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-        await browser.close();
+        await page.close();
 
         // Save PDF locally instead of Cloudinary to bypass strict PDF delivery restrictions
         const fileName = `ticket_${studentId}_${Date.now()}.pdf`;
