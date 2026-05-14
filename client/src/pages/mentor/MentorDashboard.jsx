@@ -14,17 +14,13 @@ import {
     TrendingUp,
     X,
     UserPlus,
-    Link as LinkIcon,
-    ShieldCheck,
-    Megaphone,
-    Sparkles,
-    AlertCircle,
     Wallet
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
 import useAuth from '../../hooks/useAuth';
+import LoadingScreen from '../../components/LoadingScreen';
 import {
     BarChart,
     Bar,
@@ -38,6 +34,8 @@ import {
 export default function MentorDashboard() {
     const { user } = useAuth();
     const [stats, setStats] = useState({ studentCount: 0, staffCount: 0, subjectCount: 0, totalApprovals: 0 });
+    const [classStats, setClassStats] = useState([]);
+    const [deptStats, setDeptStats] = useState([]);
     const [students, setStudents] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [staff, setStaff] = useState([]);
@@ -74,6 +72,8 @@ export default function MentorDashboard() {
                 api.get('/mentor/announcements')
             ]);
             setStats(statsRes.data.stats);
+            setClassStats(statsRes.data.classStats || []);
+            setDeptStats(statsRes.data.deptStats || []);
             setStudents(studentsRes.data);
             setSubjects(subjectsRes.data);
             setStaff(staffRes.data);
@@ -289,11 +289,7 @@ export default function MentorDashboard() {
         });
     };
 
-    if (loading) return (
-        <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-        </div>
-    );
+    if (loading) return <LoadingScreen message="Syncing Institutional Records..." />;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
@@ -592,6 +588,39 @@ export default function MentorDashboard() {
                                     <Bar dataKey="val" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Class-wise Performance Chart */}
+                    <div className="glass p-6 rounded-3xl border border-white/10">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-2 font-bold">
+                                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                                <h3>Class Performance</h3>
+                            </div>
+                            <span className="text-[10px] font-black uppercase bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-400/10">Clearance %</span>
+                        </div>
+                        <div className="h-[250px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart layout="vertical" data={classStats}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#ffffff05" />
+                                    <XAxis type="number" domain={[0, 100]} hide />
+                                    <YAxis dataKey="name" type="category" stroke="#666" fontSize={9} width={80} />
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', fontSize: '10px' }}
+                                        formatter={(value) => [`${value}%`, 'Cleared']}
+                                    />
+                                    <Bar dataKey="clearanceRate" fill="#10b981" radius={[0, 4, 4, 0]} barSize={12} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                            {classStats.slice(0, 4).map((c, i) => (
+                                <div key={i} className="bg-white/5 p-2 rounded-xl border border-white/5">
+                                    <div className="text-[8px] text-muted-foreground uppercase font-black">{c.name}</div>
+                                    <div className="text-xs font-bold">{c.clearanceRate}%</div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 

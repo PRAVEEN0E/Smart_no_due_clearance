@@ -576,15 +576,66 @@ async function mentorRoutes(fastify, opts) {
             ? { staffApproved: true }
             : { staffApproved: true, subjectId: { in: mentorSubjectIds } };
 
-        const [studentCount, staffCount, subjectCount, totalApprovals] = await Promise.all([
+        const [studentCount, staffCount, subjectCount, totalApprovals, students] = await Promise.all([
             prisma.user.count({ where: studentFilter }),
             prisma.user.count({ where: staffFilter }),
             prisma.subject.count({ where: subjectFilter }),
-            prisma.evaluation.count({ where: approvalFilter })
+            prisma.evaluation.count({ where: approvalFilter }),
+            prisma.user.findMany({ 
+                where: studentFilter, 
+                include: { evaluations: true } 
+            })
         ]);
+
+        // Group Stats by Class and Department
+        const classStats = {};
+        const deptStats = {};
+
+        students.forEach(s => {
+            const cls = s.className || 'Unassigned';
+            const dept = s.department || 'Unassigned';
+
+            // Class Grouping
+            if (!classStats[cls]) classStats[cls] = { total: 0, cleared: 0, internalAvg: 0, marksCount: 0 };
+            classStats[cls].total++;
+            
+            // Dept Grouping
+            if (!deptStats[dept]) deptStats[dept] = { total: 0, cleared: 0 };
+            deptStats[dept].total++;
+
+            // Calculate progress/marks
+            const studentEvals = s.evaluations || [];
+            const clearedCount = studentEvals.filter(e => e.staffApproved).length;
+            if (studentEvals.length > 0 && clearedCount === studentEvals.length) {
+                classStats[cls].cleared++;
+                deptStats[dept].cleared++;
+            }
+
+            studentEvals.forEach(e => {
+                if (e.internalMarksTotal > 0) {
+                    classStats[cls].internalAvg += e.internalMarksTotal;
+                    classStats[cls].marksCount++;
+                }
+            });
+        });
+
+        const formattedClassStats = Object.keys(classStats).map(name => ({
+            name,
+            clearanceRate: Math.round((classStats[name].cleared / classStats[name].total) * 100),
+            averageMarks: classStats[name].marksCount > 0 ? (classStats[name].internalAvg / classStats[name].marksCount).toFixed(1) : 0,
+            studentCount: classStats[name].total
+        }));
+
+        const formattedDeptStats = Object.keys(deptStats).map(name => ({
+            name,
+            clearanceRate: Math.round((deptStats[name].cleared / deptStats[name].total) * 100),
+            studentCount: deptStats[name].total
+        }));
 
         return {
             stats: { studentCount, staffCount, subjectCount, totalApprovals },
+            classStats: formattedClassStats,
+            deptStats: formattedDeptStats,
             recentActivity: []
         };
     });

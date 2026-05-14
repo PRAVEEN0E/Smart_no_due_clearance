@@ -18,6 +18,7 @@ import {
     CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import LoadingScreen from '../../components/LoadingScreen';
 import {
     ResponsiveContainer,
     BarChart,
@@ -135,11 +136,7 @@ export default function StudentDashboard() {
         }
     };
 
-    if (loading) return (
-        <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-        </div>
-    );
+    if (loading) return <LoadingScreen message="Unlocking Academic Portal..." />;
 
     const isAllApproved = data.evaluations.length > 0 && data.evaluations.every(e => e.staffApproved);
     const isFeeCleared = data.feeRecord?.feeClearedAuto || data.feeRecord?.feeClearedManual;
