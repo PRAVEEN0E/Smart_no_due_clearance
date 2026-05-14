@@ -76,7 +76,9 @@ async function mentorRoutes(fastify, opts) {
                         passwordHash,
                         role: 'STUDENT',
                         createdById: request.user.id,
-                        collegeId: request.user.collegeId
+                        collegeId: request.user.collegeId,
+                        className: s.className || null,
+                        department: s.department || null
                     }
                 });
                 await prisma.feeRecord.create({ data: { studentId: user.id, feeBalance: 0 } });
@@ -181,13 +183,20 @@ async function mentorRoutes(fastify, opts) {
     });
 
     fastify.post('/students', { schema: mentorSchema.createStudent }, async (request, reply) => {
-        const { name, email, password } = request.body;
+        const { name, email, password, className, department } = request.body;
         const passwordHash = await bcrypt.hash(password, 12);
+
+        // Auto-inherit mentor's department if not explicitly set
+        let studentDept = department || null;
+        if (!studentDept) {
+            const mentor = await prisma.user.findUnique({ where: { id: request.user.id }, select: { department: true } });
+            studentDept = mentor?.department || null;
+        }
 
         const student = await prisma.$transaction(async (tx) => {
             const newUser = await tx.user.create({
-                data: { name, email, passwordHash, role: 'STUDENT', createdById: request.user.id, collegeId: request.user.collegeId },
-                select: { id: true, name: true, email: true, role: true, collegeId: true }
+                data: { name, email, passwordHash, role: 'STUDENT', createdById: request.user.id, collegeId: request.user.collegeId, className: className || null, department: studentDept },
+                select: { id: true, name: true, email: true, role: true, collegeId: true, className: true, department: true }
             });
             await tx.feeRecord.create({
                 data: { studentId: newUser.id, feeBalance: 0, feeClearedAuto: true }

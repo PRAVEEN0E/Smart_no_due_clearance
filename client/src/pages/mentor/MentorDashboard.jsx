@@ -51,7 +51,7 @@ export default function MentorDashboard() {
     const [commonFeeAmount, setCommonFeeAmount] = useState('');
     const [addingCommonFee, setAddingCommonFee] = useState(false);
     const [modalMode, setModalMode] = useState('student'); // 'student', 'subject', 'staff'
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', syllabusText: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', syllabusText: '', className: '' });
     const [editingId, setEditingId] = useState(null);
     const [assignData, setAssignData] = useState({ staffId: '', subjectId: '' });
     const [activeStudent, setActiveStudent] = useState(null);
@@ -152,7 +152,7 @@ export default function MentorDashboard() {
 
             if (modalMode === 'student') {
                 endpoint = `/mentor/students${idPath}`;
-                payload = { name: formData.name, email: formData.email };
+                payload = { name: formData.name, email: formData.email, className: formData.className || undefined };
                 if (formData.password) payload.password = formData.password;
             } else if (modalMode === 'staff') {
                 endpoint = `/mentor/staff${idPath}`;
@@ -171,7 +171,7 @@ export default function MentorDashboard() {
             fetchData();
             setShowAddModal(false);
             setEditingId(null);
-            setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '' });
+            setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '' });
             toast.success(`${modalMode} ${isEditing ? 'updated' : 'added'} successfully!`);
         } catch (err) {
             toast.error(err.response?.data?.message || "Failed to process request");
@@ -238,7 +238,7 @@ export default function MentorDashboard() {
         setShowStudentAssignModal(false);
         setShowCommonFeeModal(false);
         setEditingId(null);
-        setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '' });
+        setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '' });
         setCommonFeeAmount('');
     };
 
@@ -763,6 +763,18 @@ export default function MentorDashboard() {
                                                 className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary/20"
                                             />
                                         </div>
+                                        {modalMode === 'student' && (
+                                            <div>
+                                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Class / Section</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.className}
+                                                    onChange={(e) => setFormData({ ...formData, className: e.target.value })}
+                                                    placeholder="e.g. III Year CSE - A"
+                                                    className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary/20"
+                                                />
+                                            </div>
+                                        )}
                                     </>
                                 ) : (
                                     <>

@@ -18,7 +18,9 @@ const mentorSchema = {
             properties: {
                 name: { type: 'string' },
                 email: { type: 'string', format: 'email' },
-                password: { type: 'string', minLength: 6 }
+                password: { type: 'string', minLength: 6 },
+                className: { type: 'string' },
+                department: { type: 'string' }
             }
         }
     },

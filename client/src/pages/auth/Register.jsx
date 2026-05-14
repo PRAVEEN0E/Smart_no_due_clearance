@@ -9,6 +9,7 @@ export default function Register() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [collegeName, setCollegeName] = useState('');
+    const [department, setDepartment] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
@@ -24,7 +25,8 @@ export default function Register() {
                 name, 
                 email, 
                 password, 
-                collegeName: collegeName.trim() || `${name}'s Institution`
+                collegeName: collegeName.trim() || `${name}'s Institution`,
+                department: department || null
             });
 
             // Step 2: Clear any stale session (old admin token) from localStorage
@@ -97,6 +99,28 @@ export default function Register() {
                                 className="w-full bg-slate-100/50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/30 transition-all text-foreground"
                                 placeholder="E.g. Engineering College of Excellence"
                             />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-foreground/80 ml-1">Department</label>
+                            <select
+                                value={department}
+                                onChange={(e) => setDepartment(e.target.value)}
+                                className="w-full bg-slate-100/50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/30 transition-all text-foreground appearance-none cursor-pointer"
+                            >
+                                <option value="">Select Department (Optional)</option>
+                                <option value="CSE">CSE - Computer Science</option>
+                                <option value="ECE">ECE - Electronics & Communication</option>
+                                <option value="EEE">EEE - Electrical & Electronics</option>
+                                <option value="MECH">MECH - Mechanical</option>
+                                <option value="CIVIL">CIVIL - Civil Engineering</option>
+                                <option value="IT">IT - Information Technology</option>
+                                <option value="AIDS">AIDS - AI & Data Science</option>
+                                <option value="AIML">AIML - AI & Machine Learning</option>
+                                <option value="BME">BME - Biomedical</option>
+                                <option value="MBA">MBA - Business Administration</option>
+                                <option value="MCA">MCA - Computer Applications</option>
+                                <option value="OTHER">Other</option>
+                            </select>
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-foreground/80 ml-1">College Email</label>

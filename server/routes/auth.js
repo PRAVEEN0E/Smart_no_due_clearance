@@ -86,7 +86,7 @@ async function authRoutes(fastify, opts) {
     // Public Mentor Registration (Creates a new Tenant/College)
     fastify.post('/register-mentor', async (request, reply) => {
         try {
-            const { name, email, password, collegeName } = request.body;
+            const { name, email, password, collegeName, department } = request.body;
 
             if (!name || !email || !password || !collegeName) {
                 return reply.status(400).send({ message: 'All fields (name, email, password, collegeName) are required' });
@@ -116,7 +116,8 @@ async function authRoutes(fastify, opts) {
                         email: normalizedEmail,
                         passwordHash,
                         role: 'MENTOR',
-                        collegeId: college.id
+                        collegeId: college.id,
+                        department: department || null
                     }
                 });
                 return { mentor, college };
@@ -131,10 +132,14 @@ async function authRoutes(fastify, opts) {
 
     // Profile & Signature Management
     fastify.get('/me', { preHandler: [fastify.authenticate] }, async (request) => {
-        return prisma.user.findUnique({
+        const user = await prisma.user.findUnique({
             where: { id: request.user.id },
-            select: { id: true, name: true, email: true, role: true, signatureUrl: true }
+            select: { id: true, name: true, email: true, role: true, signatureUrl: true, className: true, department: true, college: { select: { name: true } } }
         });
+        return {
+            ...user,
+            collegeName: user?.college?.name || null
+        };
     });
 
     fastify.post('/signature', { preHandler: [fastify.authenticate] }, async (request, reply) => {

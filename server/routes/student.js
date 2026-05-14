@@ -64,7 +64,8 @@ async function studentRoutes(fastify, opts) {
         const studentWithSubjects = await prisma.user.findUnique({
             where: { id: request.user.id },
             include: {
-                studentSubjects: { include: { subject: true } }
+                studentSubjects: { include: { subject: true } },
+                college: true
             }
         });
 
@@ -83,7 +84,14 @@ async function studentRoutes(fastify, opts) {
             feeRecord: fee, 
             hallTicket: ticket, 
             suggestions,
-            user: { id: studentWithSubjects.id, name: studentWithSubjects.name, email: studentWithSubjects.email }
+            user: { 
+                id: studentWithSubjects.id, 
+                name: studentWithSubjects.name, 
+                email: studentWithSubjects.email,
+                className: studentWithSubjects.className,
+                department: studentWithSubjects.department,
+                collegeName: studentWithSubjects.college?.name || null
+            }
         };
     });
 

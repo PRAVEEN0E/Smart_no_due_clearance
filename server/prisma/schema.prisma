@@ -62,6 +62,7 @@ model User {
   createdUsers    User[]           @relation("UserCreator")
   createdSubjects Subject[]        @relation("SubjectCreator")
   department     String?          // e.g., 'CSE', 'ECE', 'MECH'
+  className      String?          // e.g., 'III Year CSE - A', 'II Year ECE - B'
 }
 
 model AuditLog {
