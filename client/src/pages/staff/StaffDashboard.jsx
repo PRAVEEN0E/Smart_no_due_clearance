@@ -54,7 +54,7 @@ export default function StaffDashboard() {
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [evaluations, setEvaluations] = useState([]);
     const [analytics, setAnalytics] = useState({ distribution: [], trends: [] });
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [activeStudent, setActiveStudent] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
@@ -267,11 +267,7 @@ export default function StaffDashboard() {
         }
     };
 
-    if (loading) return (
-        <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-        </div>
-    );
+
 
     const avgMarks = evaluations.length > 0
         ? evaluations.reduce((acc, curr) => acc + (curr.internalMarksTotal || 0), 0) / evaluations.length

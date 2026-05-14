@@ -6,7 +6,7 @@ import api from '../lib/api';
 
 export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
     const [materials, setMaterials] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [showUpload, setShowUpload] = useState(false);
     const [formData, setFormData] = useState({ title: '', category: 'NOTES' });
@@ -62,7 +62,7 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
         }
     };
 
-    if (loading) return <div className="animate-pulse space-y-3"><div className="h-20 bg-slate-100 rounded-2xl" /></div>;
+
 
     return (
         <div className="space-y-6">
