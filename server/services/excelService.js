@@ -6,11 +6,13 @@ async function parseStudentExcel(buffer) {
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
     // Map Excel columns to our schema
-    // Expected columns: Name, Email, Password
+    // Expected columns: Name, Email, Password, Class/Section, Department
     return data.map(row => ({
-        name: row.Name || row.name,
-        email: row.Email || row.email,
-        password: row.Password || row.password || 'Temporary@123'
+        name: row.Name || row.name || row['Student Name'],
+        email: row.Email || row.email || row['Email ID'],
+        password: row.Password || row.password || row['Initial Password'] || 'Temporary@123',
+        className: row['Class'] || row['Section'] || row['Class/Section'] || row.className || row.class || null,
+        department: row.Department || row.department || row.dept || null
     }));
 }
 
@@ -19,11 +21,38 @@ async function parseFeeExcel(buffer) {
     const sheetName = workbook.SheetNames[0];
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    // Expected columns: Email, Balance
-    return data.map(row => ({
-        email: row.Email || row.email,
-        feeBalance: parseFloat(row.Balance || row.balance || 0)
+    // Enhanced mapping to support various column names
+    return data.map(row => {
+        const email = row.Email || row.email || row['Email ID'] || row['User Email'] || row['Student Email'];
+        const balance = row.Balance || row.balance || row['Fee Balance'] || row['Due Amount'] || row['Amount'] || row['Fee'] || 0;
+        
+        return {
+            email: email ? email.toString().trim() : null,
+            feeBalance: parseFloat(balance)
+        };
+    }).filter(item => item.email); // Only return rows with an email
+}
+
+async function generateFeeExcel(students) {
+    const data = students.map(s => ({
+        'Student Name': s.name,
+        'Email ID': s.email,
+        'Department': s.department || 'N/A',
+        'Class': s.className || 'N/A',
+        'Current Fee Balance': s.feeRecord?.feeBalance || 0,
+        'Payment Status': s.feeRecord?.feeClearedManual ? 'Manually Cleared' : (s.feeRecord?.feeClearedAuto ? 'Cleared' : 'Pending')
     }));
+
+    const ws = xlsx.utils.json_to_sheet(data);
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, "Fee_Balances");
+
+    // Set column widths
+    ws['!cols'] = [
+        { wch: 25 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }
+    ];
+
+    return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }
 
 async function parseMarksExcel(buffer) {
@@ -86,5 +115,6 @@ module.exports = {
     parseStudentExcel,
     parseFeeExcel,
     parseMarksExcel,
-    generateMarksExcel
+    generateMarksExcel,
+    generateFeeExcel
 };

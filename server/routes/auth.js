@@ -134,11 +134,29 @@ async function authRoutes(fastify, opts) {
     fastify.get('/me', { preHandler: [fastify.authenticate] }, async (request) => {
         const user = await prisma.user.findUnique({
             where: { id: request.user.id },
-            select: { id: true, name: true, email: true, role: true, signatureUrl: true, className: true, department: true, college: { select: { name: true } } }
+            select: { 
+                id: true, 
+                name: true, 
+                email: true, 
+                role: true, 
+                signatureUrl: true, 
+                className: true, 
+                department: true, 
+                collegeId: true, 
+                college: { 
+                    select: { 
+                        name: true,
+                        logoUrl: true,
+                        primaryColor: true,
+                        secondaryColor: true
+                    } 
+                } 
+            }
         });
         return {
             ...user,
-            collegeName: user?.college?.name || null
+            collegeName: user?.college?.name || null,
+            branding: user?.college || null
         };
     });
 
@@ -172,10 +190,17 @@ async function authRoutes(fastify, opts) {
     fastify.get('/announcements', { preHandler: [fastify.authenticate] }, async (request) => {
         return prisma.announcement.findMany({
             where: {
-                collegeId: request.user.collegeId,
                 OR: [
-                    { expiresAt: null },
-                    { expiresAt: { gt: new Date() } }
+                    { collegeId: request.user.collegeId },
+                    { collegeId: null } // Global broadcasts
+                ],
+                AND: [
+                    {
+                        OR: [
+                            { expiresAt: null },
+                            { expiresAt: { gt: new Date() } }
+                        ]
+                    }
                 ]
             },
             orderBy: { createdAt: 'desc' },

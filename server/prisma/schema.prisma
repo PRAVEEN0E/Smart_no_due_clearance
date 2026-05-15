@@ -27,6 +27,12 @@ model College {
   domain    String?  // Optional domain routing
   createdAt DateTime @default(now())
 
+  // Branding & Customization
+  logoUrl      String?
+  primaryColor String?  @default("#7c3aed")
+  secondaryColor String? @default("#a855f7")
+  workflow     Json?    // Array of requirement objects {id, label, type, required}
+  
   users        User[]
   subjects     Subject[]
   announcements Announcement[]

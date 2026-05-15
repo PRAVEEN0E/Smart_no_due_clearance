@@ -12,6 +12,7 @@ const Register = lazy(() => import('./pages/auth/Register'));
 const MentorDashboard = lazy(() => import('./pages/mentor/MentorDashboard'));
 const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard'));
 const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard'));
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 const Verification = lazy(() => import('./pages/Verification'));
 const AIChatBubble = lazy(() => import('./components/AIChatBubble'));
 
@@ -26,8 +27,18 @@ const DashboardLayout = ({ children }) => {
             <nav className="border-b border-black/5 bg-white/70 backdrop-blur-xl sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
                     <div className="flex items-center gap-2 md:gap-3">
-                        <div className="w-8 h-8 md:w-10 md:h-10 bg-primary/10 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-primary border border-primary/30 text-xs md:text-base shrink-0">N</div>
-                        <h1 className="text-lg md:text-xl font-black italic tracking-tighter truncate text-slate-800">NO DUE <span className="hidden sm:inline text-primary/60 not-italic font-medium">FRAMEWORK</span></h1>
+                        {user?.branding?.logoUrl ? (
+                            <div className="w-10 h-10 rounded-xl overflow-hidden border border-black/5 bg-white flex items-center justify-center p-1">
+                                <img src={user.branding.logoUrl} alt={user.collegeName} className="w-full h-full object-contain" />
+                            </div>
+                        ) : (
+                            <div className="w-8 h-8 md:w-10 md:h-10 bg-primary/10 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-primary border border-primary/30 text-xs md:text-base shrink-0">
+                                {user?.collegeName ? user.collegeName[0] : 'N'}
+                            </div>
+                        )}
+                        <h1 className="text-lg md:text-xl font-black italic tracking-tighter truncate text-slate-800 uppercase">
+                            {user?.collegeName || 'NO DUE SYSTEM'}
+                        </h1>
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-4">
@@ -87,7 +98,12 @@ function App() {
                     },
                 }}
             />
-            <Suspense fallback={null}>
+            <Suspense fallback={
+                <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+                    <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+                    <p className="text-sm font-black text-primary animate-pulse tracking-widest uppercase italic">Initializing System Core...</p>
+                </div>
+            }>
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
@@ -95,6 +111,7 @@ function App() {
                     <Route path="/mentor/*" element={<ProtectedRoute roles={['MENTOR', 'SUPERADMIN']}><MentorDashboard /></ProtectedRoute>} />
                     <Route path="/staff/*" element={<ProtectedRoute roles={['STAFF']}><StaffDashboard /></ProtectedRoute>} />
                     <Route path="/student/*" element={<ProtectedRoute roles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
+                    <Route path="/superadmin/*" element={<ProtectedRoute roles={['SUPERADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />
                     <Route path="/" element={<Navigate to="/login" />} />
                 </Routes>
             </Suspense>

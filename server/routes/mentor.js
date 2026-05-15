@@ -554,11 +554,17 @@ async function mentorRoutes(fastify, opts) {
         return prisma.announcement.delete({ where: { id: request.params.id } });
     });
 
-    fastify.get('/analytics', async (request) => {
+    fastify.get('/analytics', async (request, reply) => {
         const isSuperAdmin = request.user.role === 'SUPERADMIN';
         const isAdmin = isSuperAdmin || request.user.email === 'admin@college.edu';
+        const collegeId = request.user.collegeId;
 
-        const collegeFilter = isSuperAdmin ? {} : { collegeId: request.user.collegeId };
+        if (!isSuperAdmin && !collegeId) {
+            fastify.log.error(`Analytics Error: No collegeId found for user ${request.user.id}`);
+            return reply.status(400).send({ message: 'Institutional context (College ID) missing from session.' });
+        }
+
+        const collegeFilter = isSuperAdmin ? {} : { collegeId };
         const studentFilter = { role: 'STUDENT', ...collegeFilter, ...(!isAdmin ? { createdById: request.user.id } : {}) };
         const staffFilter = isAdmin
             ? { role: { in: ['STAFF', 'MENTOR'] }, ...collegeFilter }
@@ -567,25 +573,28 @@ async function mentorRoutes(fastify, opts) {
             ? { ...collegeFilter }
             : { ...collegeFilter, createdById: request.user.id };
 
-        // For approvals: count only evaluations for subjects owned by this mentor
-        const mentorSubjectIds = isAdmin
-            ? undefined
-            : (await prisma.subject.findMany({ where: subjectFilter, select: { id: true } })).map(s => s.id);
+        try {
+            // For approvals: count only evaluations for subjects owned by this mentor
+            let mentorSubjectIds = undefined;
+            if (!isAdmin) {
+                const subjects = await prisma.subject.findMany({ where: subjectFilter, select: { id: true } });
+                mentorSubjectIds = subjects.map(s => s.id);
+            }
 
-        const approvalFilter = isAdmin
-            ? { staffApproved: true }
-            : { staffApproved: true, subjectId: { in: mentorSubjectIds } };
+            const approvalFilter = isAdmin
+                ? { staffApproved: true }
+                : { staffApproved: true, subjectId: { in: mentorSubjectIds } };
 
-        const [studentCount, staffCount, subjectCount, totalApprovals, students] = await Promise.all([
-            prisma.user.count({ where: studentFilter }),
-            prisma.user.count({ where: staffFilter }),
-            prisma.subject.count({ where: subjectFilter }),
-            prisma.evaluation.count({ where: approvalFilter }),
-            prisma.user.findMany({ 
-                where: studentFilter, 
-                include: { evaluations: true } 
-            })
-        ]);
+            const [studentCount, staffCount, subjectCount, totalApprovals, students] = await Promise.all([
+                prisma.user.count({ where: studentFilter }),
+                prisma.user.count({ where: staffFilter }),
+                prisma.subject.count({ where: subjectFilter }),
+                prisma.evaluation.count({ where: approvalFilter }),
+                prisma.user.findMany({ 
+                    where: studentFilter, 
+                    include: { evaluations: true } 
+                })
+            ]);
 
         // Group Stats by Class and Department
         const classStats = {};
@@ -632,12 +641,69 @@ async function mentorRoutes(fastify, opts) {
             studentCount: deptStats[name].total
         }));
 
-        return {
-            stats: { studentCount, staffCount, subjectCount, totalApprovals },
-            classStats: formattedClassStats,
-            deptStats: formattedDeptStats,
-            recentActivity: []
-        };
+            return {
+                stats: { studentCount, staffCount, subjectCount, totalApprovals },
+                classStats: formattedClassStats,
+                deptStats: formattedDeptStats,
+                recentActivity: []
+            };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ message: 'Error calculating analytics' });
+        }
+    });
+
+    // --- EXPORT FEES ---
+    fastify.get('/export/fees', async (request, reply) => {
+        const isSuperAdmin = request.user.role === 'SUPERADMIN';
+        const isAdmin = isSuperAdmin || request.user.email === 'admin@college.edu';
+        
+        const where = { role: 'STUDENT' };
+        if (!isSuperAdmin) where.collegeId = request.user.collegeId || null;
+        if (!isAdmin) where.createdById = request.user.id;
+
+        const students = await prisma.user.findMany({
+            where,
+            include: { feeRecord: true }
+        });
+
+        const { generateFeeExcel } = require('../services/excelService');
+        const buffer = await generateFeeExcel(students);
+
+        reply.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        reply.header('Content-Disposition', 'attachment; filename=Student_Fee_Balances.xlsx');
+        return buffer;
+    });
+
+    fastify.get('/export/pdf/fees', async (request, reply) => {
+        const isSuperAdmin = request.user.role === 'SUPERADMIN';
+        const isAdmin = isSuperAdmin || request.user.email === 'admin@college.edu';
+        
+        // Fetch mentor's details for the header
+        const mentor = await prisma.user.findUnique({
+            where: { id: request.user.id },
+            include: { college: true }
+        });
+
+        const where = { role: 'STUDENT' };
+        if (!isSuperAdmin) where.collegeId = request.user.collegeId || null;
+        if (!isAdmin) where.createdById = request.user.id;
+
+        const students = await prisma.user.findMany({
+            where,
+            include: { feeRecord: true }
+        });
+
+        const { generateFeeReportPDF } = require('../services/reportService');
+        const buffer = await generateFeeReportPDF(
+            mentor.college?.name,
+            mentor.department,
+            students
+        );
+
+        reply.type('application/pdf');
+        reply.header('Content-Disposition', 'attachment; filename=Student_Fee_Report.pdf');
+        return buffer;
     });
 
 }

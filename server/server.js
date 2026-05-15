@@ -167,6 +167,7 @@ fastify.register(require('./routes/student'), { prefix: '/api/student' });
 fastify.register(require('./routes/auth'), { prefix: '/api/auth' });
 fastify.register(require('./routes/materials'), { prefix: '/api/materials' });
 fastify.register(require('./routes/notifications'), { prefix: '/api/notifications' });
+fastify.register(require('./routes/superadmin'), { prefix: '/api/superadmin' });
 
 
 // Start Server

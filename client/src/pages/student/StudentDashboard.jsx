@@ -15,7 +15,8 @@ import {
     AlertTriangle,
     Info,
     RefreshCw,
-    CreditCard
+    CreditCard,
+    ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingScreen from '../../components/LoadingScreen';
@@ -220,6 +221,37 @@ export default function StudentDashboard() {
                     </motion.button>
                 </div>
             </div>
+
+            {/* Hall Ticket QR Preview (Only if unlocked) */}
+            {canDownloadTicket && data.hallTicket?.qrCodeData && (
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8 glass p-6 rounded-[2rem] border border-emerald-500/20 bg-emerald-500/5 flex flex-col md:flex-row items-center gap-6"
+                >
+                    <div className="bg-white p-3 rounded-2xl shadow-xl shadow-emerald-500/10">
+                        <img src={data.hallTicket.qrCodeData} alt="Verification QR" className="w-32 h-32" />
+                    </div>
+                    <div className="flex-1 text-center md:text-left">
+                        <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                            <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                            <span className="text-sm font-black text-emerald-600 uppercase tracking-widest">SECURE HALL TICKET UNLOCKED</span>
+                        </div>
+                        <h4 className="text-xl font-bold text-slate-800">Your digital hall ticket is active.</h4>
+                        <p className="text-slate-500 text-sm mt-1 max-w-lg">
+                            The QR code above contains your encrypted verification data. Invigilators can scan this to confirm your eligibility instantly.
+                        </p>
+                        <div className="mt-4 flex items-center justify-center md:justify-start gap-3">
+                            <span className="text-[10px] font-black bg-emerald-500/10 text-emerald-600 px-3 py-1 rounded-full border border-emerald-500/20">
+                                ID: {data.hallTicket.verificationCode}
+                            </span>
+                            <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-full">
+                                ISSUED: {new Date(data.hallTicket.generatedAt).toLocaleDateString()}
+                            </span>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
 
             {/* Performance Analytics Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -510,23 +542,7 @@ export default function StudentDashboard() {
                         </div>
                     </div>
 
-                    <div className="glass p-6 rounded-3xl border border-yellow-500/10 bg-yellow-500/5 space-y-4">
-                        <div className="flex items-center gap-2 text-yellow-500">
-                            <AlertCircle className="w-5 h-5" />
-                            <h4 className="font-bold">Internal Deadlines</h4>
-                        </div>
-                        <div className="space-y-3">
-                            {[
-                                { label: 'CAT 3 Entry', date: 'Oct 24, 2026' },
-                                { label: 'Evaluation Lock', date: 'Oct 30, 2026' },
-                            ].map((d, i) => (
-                                <div key={i} className="flex justify-between text-xs border-b border-white/5 pb-2">
-                                    <span className="text-muted-foreground">{d.label}</span>
-                                    <span className="font-mono">{d.date}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+
                 </div>
             </div>
 

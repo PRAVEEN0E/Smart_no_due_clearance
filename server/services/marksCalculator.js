@@ -54,9 +54,14 @@ function calculateInternalMarks(evalData, subjectType) {
         const labAssignMarks = (assignSum / 50) * 5; // scale 0-50 → 0-5
         total = labModelMarks + labActivityMarks + labAssignMarks + attendanceMarks;
     } else if (subjectType === 'THEORY_WITH_LAB') {
-        // For Hybrid: CATs (20) + Assignments (10) + Activities (5) + Attendance (5) + Model Lab (e.g. 10)
-        // Scaled and capped at 40
-        total = catMarks + assignMarks + activityMarks + attendanceMarks + (modelLabMarks / 10);
+        // For Hybrid (Total 40): 
+        // CATs (15) + Model Lab (10) + Assignments (5) + Activities (5) + Attendance (5)
+        const hybridCatMarks = (bestTwoSum / 100) * 15;
+        const hybridModelMarks = (modelLabMarks / 100) * 10;
+        const hybridAssignMarks = (assignSum / 50) * 5;
+        const hybridActivityMarks = (activitySum / 20) * 5;
+        
+        total = hybridCatMarks + hybridModelMarks + hybridAssignMarks + hybridActivityMarks + attendanceMarks;
     } else {
         // Full Theory
         total = catMarks + assignMarks + activityMarks + attendanceMarks;

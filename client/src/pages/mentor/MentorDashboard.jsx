@@ -14,7 +14,12 @@ import {
     TrendingUp,
     X,
     UserPlus,
-    Wallet
+    Link as LinkIcon,
+    ShieldCheck,
+    Megaphone,
+    AlertCircle,
+    Wallet,
+    FileDown
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -59,18 +64,31 @@ export default function MentorDashboard() {
 
     useEffect(() => {
         fetchData();
+        
+        // Safety timeout: If loading is still true after 15 seconds, force it false
+        const timer = setTimeout(() => {
+            setLoading(prev => {
+                if (prev) console.warn("Dashboard load timed out - forcing display.");
+                return false;
+            });
+        }, 15000);
+
+        return () => clearTimeout(timer);
     }, []);
 
     const fetchData = async () => {
+        console.log("Fetching dashboard data...");
         try {
             const [statsRes, studentsRes, subjectsRes, staffRes, auditRes, annRes] = await Promise.all([
-                api.get('/mentor/analytics'),
-                api.get('/mentor/students'),
-                api.get('/mentor/subjects'),
-                api.get('/mentor/staff'),
-                api.get('/auth/audit-logs'),
-                api.get('/mentor/announcements')
+                api.get('/mentor/analytics').catch(e => { console.error("Analytics Error", e); return { data: { stats: {}, classStats: [], deptStats: [] } }; }),
+                api.get('/mentor/students').catch(e => { console.error("Students Error", e); return { data: [] }; }),
+                api.get('/mentor/subjects').catch(e => { console.error("Subjects Error", e); return { data: [] }; }),
+                api.get('/mentor/staff').catch(e => { console.error("Staff Error", e); return { data: [] }; }),
+                api.get('/auth/audit-logs').catch(e => { console.error("Audit Logs Error", e); return { data: [] }; }),
+                api.get('/mentor/announcements').catch(e => { console.error("Announcements Error", e); return { data: [] }; })
             ]);
+            
+            console.log("Data received, updating state...");
             setStats(statsRes.data.stats);
             setClassStats(statsRes.data.classStats || []);
             setDeptStats(statsRes.data.deptStats || []);
@@ -79,8 +97,10 @@ export default function MentorDashboard() {
             setStaff(staffRes.data);
             setAuditLogs(auditRes.data || []);
             setAnnouncements(annRes.data || []);
+            console.log("Dashboard state updated.");
         } catch (err) {
-            console.error("Failed to fetch dashboard data", err);
+            console.error("Critical failed to fetch dashboard data", err);
+            toast.error("Some data failed to load. Please refresh.");
         } finally {
             setLoading(false);
         }
@@ -109,23 +129,6 @@ export default function MentorDashboard() {
     };
 
 
-
-    const handleSignatureUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', file);
-
-        try {
-            const res = await api.post('/auth/signature', uploadFormData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            toast.success("Digital signature uploaded successfully!");
-        } catch (err) {
-            toast.error("Failed to upload signature.");
-        }
-    };
 
     const handleEditClick = (mode, item) => {
         setModalMode(mode);
@@ -232,6 +235,38 @@ export default function MentorDashboard() {
         }
     };
 
+    const handleExportFees = async () => {
+        try {
+            const res = await api.get('/mentor/export/fees', { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'Student_Fee_Balances.xlsx');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("Fee report exported successfully!");
+        } catch (err) {
+            toast.error("Export failed");
+        }
+    };
+
+    const handleExportFeesPDF = async () => {
+        try {
+            const res = await api.get('/mentor/export/pdf/fees', { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'Student_Fee_Report.pdf');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("Fee report PDF exported!");
+        } catch (err) {
+            toast.error("PDF Export failed");
+        }
+    };
+
     const closeModals = () => {
         setShowAddModal(false);
         setShowAssignModal(false);
@@ -289,7 +324,7 @@ export default function MentorDashboard() {
         });
     };
 
-    if (loading) return <LoadingScreen message="Syncing Institutional Records..." />;
+    // if (loading) return <LoadingScreen message="Syncing Institutional Records..." />;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
@@ -310,17 +345,33 @@ export default function MentorDashboard() {
                         <Megaphone className="w-4 h-4" />
                         Announcement
                     </button>
-                    <label className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl border border-slate-200 cursor-pointer transition-all shadow-sm">
-                        <ShieldCheck className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-bold">Digital Signature</span>
-                        <input type="file" className="hidden" onChange={(e) => handleSignatureUpload(e)} accept="image/*" />
-                    </label>
                     <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
                     <label className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl border border-slate-200 cursor-pointer transition-all shadow-sm">
                         <Upload className="w-4 h-4 text-primary" />
                         <span className="text-sm font-bold">Students Excel</span>
                         <input type="file" className="hidden" onChange={(e) => handleBulkUpload('students', e)} accept=".xlsx,.csv" />
                     </label>
+                    <label className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl border border-slate-200 cursor-pointer transition-all shadow-sm">
+                        <Upload className="w-4 h-4 text-emerald-500" />
+                        <span className="text-sm font-bold">Fees Excel</span>
+                        <input type="file" className="hidden" onChange={(e) => handleBulkUpload('fees', e)} accept=".xlsx,.csv" />
+                    </label>
+                    <button
+                        onClick={handleExportFees}
+                        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl border border-slate-200 transition-all shadow-sm group"
+                        title="Export current fee balances"
+                    >
+                        <TrendingUp className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                        <span className="text-sm font-bold text-slate-700">Export Report</span>
+                    </button>
+                    <button
+                        onClick={handleExportFeesPDF}
+                        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl border border-slate-200 transition-all shadow-sm group"
+                        title="Export PDF fee report"
+                    >
+                        <FileDown className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                        <span className="text-sm font-bold text-slate-700">Export PDF</span>
+                    </button>
                 </div>
 
             </div>
@@ -506,7 +557,7 @@ export default function MentorDashboard() {
                                                             : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white'
                                                             }`}
                                                     >
-                                                        {(item.feeRecord?.feeClearedAuto || item.feeRecord?.feeClearedManual) ? 'CLEARED' : 'MARK PAID'}
+                                                        {(item.feeRecord?.feeClearedAuto || item.feeRecord?.feeClearedManual) ? 'CLEARED' : 'MARK AS PAID'}
                                                     </button>
                                                     <div className="text-[10px] mt-1 text-muted-foreground font-mono">
                                                         Bal: ₹{(item.feeRecord?.feeClearedAuto || item.feeRecord?.feeClearedManual) ? 0 : (item.feeRecord?.feeBalance || 0)}
@@ -566,9 +617,9 @@ export default function MentorDashboard() {
                         )}
                     </div>
                 </div>
-
                 {/* Analytics & Insights */}
                 <div className="space-y-8 text-sm">
+                    {/* Subject Distribution Chart */}
                     <div className="glass p-6 rounded-3xl border border-white/10">
                         <div className="flex items-center gap-2 mb-6 font-bold">
                             <TrendingUp className="w-5 h-5 text-blue-400" />
@@ -591,39 +642,7 @@ export default function MentorDashboard() {
                         </div>
                     </div>
 
-                    {/* Class-wise Performance Chart */}
-                    <div className="glass p-6 rounded-3xl border border-white/10">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-2 font-bold">
-                                <TrendingUp className="w-5 h-5 text-emerald-400" />
-                                <h3>Class Performance</h3>
-                            </div>
-                            <span className="text-[10px] font-black uppercase bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-400/10">Clearance %</span>
-                        </div>
-                        <div className="h-[250px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart layout="vertical" data={classStats}>
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#ffffff05" />
-                                    <XAxis type="number" domain={[0, 100]} hide />
-                                    <YAxis dataKey="name" type="category" stroke="#666" fontSize={9} width={80} />
-                                    <Tooltip 
-                                        contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', fontSize: '10px' }}
-                                        formatter={(value) => [`${value}%`, 'Cleared']}
-                                    />
-                                    <Bar dataKey="clearanceRate" fill="#10b981" radius={[0, 4, 4, 0]} barSize={12} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="mt-4 grid grid-cols-2 gap-2">
-                            {classStats.slice(0, 4).map((c, i) => (
-                                <div key={i} className="bg-white/5 p-2 rounded-xl border border-white/5">
-                                    <div className="text-[8px] text-muted-foreground uppercase font-black">{c.name}</div>
-                                    <div className="text-xs font-bold">{c.clearanceRate}%</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
+                    {/* Quick Management */}
                     <div className="glass p-6 rounded-3xl border border-white/10">
                         <h3 className="font-bold mb-4 opacity-70 uppercase tracking-widest text-[10px]">Quick Management</h3>
                         <div className="grid grid-cols-2 gap-3">
@@ -650,6 +669,7 @@ export default function MentorDashboard() {
                         </div>
                     </div>
 
+                    {/* Bulk Operations */}
                     <div className="glass p-6 rounded-3xl border border-white/10">
                         <h3 className="font-bold mb-4 opacity-70 uppercase tracking-widest text-[10px]">Bulk Operations</h3>
                         <div className="space-y-3">
@@ -672,7 +692,7 @@ export default function MentorDashboard() {
                                 />
                             </label>
 
-                        <label className="flex flex-col p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 hover:bg-emerald-500/10 transition-all cursor-pointer group">
+                            <label className="flex flex-col p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 hover:bg-emerald-500/10 transition-all cursor-pointer group">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-emerald-500/20 rounded-lg group-hover:bg-emerald-500/30 transition-all">
                                         <ShieldCheck className="w-4 h-4 text-emerald-400" />

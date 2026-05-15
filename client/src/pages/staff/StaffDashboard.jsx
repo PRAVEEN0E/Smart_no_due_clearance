@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import {
     Users,
@@ -54,6 +54,7 @@ export default function StaffDashboard() {
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [evaluations, setEvaluations] = useState([]);
     const [analytics, setAnalytics] = useState({ distribution: [], trends: [] });
+    const analyticsTimeoutRef = useRef(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [activeStudent, setActiveStudent] = useState(null);
@@ -141,37 +142,46 @@ export default function StaffDashboard() {
         }
     };
 
+    const refreshAnalyticsDebounced = () => {
+        if (analyticsTimeoutRef.current) clearTimeout(analyticsTimeoutRef.current);
+        analyticsTimeoutRef.current = setTimeout(async () => {
+            try {
+                const res = await api.get('/staff/analytics');
+                setAnalytics(res.data || { distribution: [], trends: [] });
+            } catch (err) {
+                console.error("Background analytics sync failed");
+            }
+        }, 1500); // Sync 1.5s after typing stops
+    };
+
     const handleUpdateMark = async (evalId, field, value) => {
         const numericValue = value === '' ? null : (field === 'attendancePercent' ? parseFloat(value) : parseInt(value));
 
-        const updated = evaluations.map(ev => {
+        // Update local state immediately for responsiveness
+        setEvaluations(prev => prev.map(ev => {
             if (ev.id === evalId) return { ...ev, [field]: numericValue };
             return ev;
-        });
-        setEvaluations(updated);
+        }));
 
         try {
-            await api.put(`/staff/marks/${evalId}`, { [field]: numericValue });
-            fetchData();
+            const res = await api.put(`/staff/marks/${evalId}`, { [field]: numericValue });
+            
+            // Only update the total marks and aiPrediction from the server response
+            // This prevents "flexing" where the active input field is overwritten by stale data
+            setEvaluations(prev => prev.map(ev => {
+                if (ev.id === evalId) return { 
+                    ...ev, 
+                    internalMarksTotal: res.data.internalMarksTotal,
+                    aiPrediction: res.data.aiPrediction
+                };
+                return ev;
+            }));
+
+            // Sync analytics in background with debounce to prevent lag
+            refreshAnalyticsDebounced();
+
         } catch (err) {
             toast.error(err.response?.data?.message || "Failed to update mark");
-        }
-    };
-
-    const handleSignatureUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', file);
-
-        try {
-            await api.post('/auth/signature', uploadFormData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            toast.success("Digital signature uploaded successfully!");
-        } catch (err) {
-            toast.error("Failed to upload signature.");
         }
     };
 
@@ -302,11 +312,6 @@ export default function StaffDashboard() {
                         <span className="text-sm font-bold">Export PDF</span>
                     </button>
 
-                    <label className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl border border-slate-200 cursor-pointer transition-all shadow-sm">
-                        <ShieldCheck className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-bold">Capture Signature</span>
-                        <input type="file" className="hidden" onChange={(e) => handleSignatureUpload(e)} accept="image/*" />
-                    </label>
                     <div className="glass px-6 py-3 rounded-2xl border border-border flex items-center gap-3 shadow-sm">
                         <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                         <span className="text-sm font-bold">Session Active</span>

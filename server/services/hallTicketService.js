@@ -21,14 +21,31 @@ async function checkAndUnlock(studentId, prisma) {
         where: { studentId }
     });
 
-    const allStaffApproved = student.studentSubjects.length > 0 && student.studentSubjects.every(ss => {
-        const ev = evaluations.find(e => e.subjectId === ss.subjectId);
-        return ev && ev.staffApproved;
-    });
+    // --- Dynamic Workflow Logic ---
+    let isCleared = true;
+    const workflow = student.college?.workflow || [
+        { id: 'FEES', label: 'Financial Dues', type: 'FEE', required: true },
+        { id: 'ACADEMICS', label: 'Academic Approvals', type: 'STAFF_APPROVAL', required: true }
+    ];
 
-    const feeCleared = student.feeRecord && (student.feeRecord.feeClearedAuto || student.feeRecord.feeClearedManual);
+    for (const step of workflow) {
+        if (!step.required) continue;
 
-    if (allStaffApproved && feeCleared) {
+        if (step.type === 'FEE') {
+            const feeCleared = student.feeRecord && (student.feeRecord.feeClearedAuto || student.feeRecord.feeClearedManual);
+            if (!feeCleared) { isCleared = false; break; }
+        } else if (step.type === 'STAFF_APPROVAL') {
+            const allStaffApproved = student.studentSubjects.length > 0 && student.studentSubjects.every(ss => {
+                const ev = evaluations.find(e => e.subjectId === ss.subjectId);
+                return ev && ev.staffApproved;
+            });
+            if (!allStaffApproved) { isCleared = false; break; }
+        }
+        // Custom types like 'LIBRARY' can be added here once we have those models.
+        // For now, if unknown, we assume it's true to not block the student.
+    }
+
+    if (isCleared) {
         // let ticket = await prisma.hallTicket.findUnique({ where: { studentId } });
         // if (ticket && ticket.isUnlocked) return ticket;
 

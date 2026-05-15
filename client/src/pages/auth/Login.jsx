@@ -19,7 +19,8 @@ export default function Login() {
             const { data } = await api.post('/auth/login', { email, password });
             setAuth(data.user, data.token);
 
-            if (data.user.role === 'MENTOR' || data.user.role === 'SUPERADMIN') navigate('/mentor');
+            if (data.user.role === 'SUPERADMIN') navigate('/superadmin');
+            else if (data.user.role === 'MENTOR') navigate('/mentor');
             else if (data.user.role === 'STAFF') navigate('/staff');
             else navigate('/student');
         } catch (err) {
@@ -139,6 +140,23 @@ export default function Login() {
                             <div className="text-center pt-2">
                                 <button type="button" onClick={() => navigate('/register')} className="text-xs font-bold text-slate-400 hover:text-primary transition-all">
                                     Need a mentor account? <span className="text-primary underline underline-offset-4">Register Here</span>
+                                </button>
+                            </div>
+
+                            <div className="text-center pt-1">
+                                <button 
+                                    type="button" 
+                                    onClick={async () => {
+                                        try {
+                                            await api.post('/auth/bootstrap');
+                                            alert('System Bootstrapped! You can now log in with the admin credentials.');
+                                        } catch (err) {
+                                            alert('System already bootstrapped or failed.');
+                                        }
+                                    }} 
+                                    className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 hover:text-primary transition-all"
+                                >
+                                    [ Bootstrap System ]
                                 </button>
                             </div>
                         </form>
