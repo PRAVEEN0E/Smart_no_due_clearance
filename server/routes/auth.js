@@ -19,12 +19,21 @@ async function authRoutes(fastify, opts) {
             }
 
             const user = await prisma.user.findUnique({
-                where: { email: email.toLowerCase().trim() }
+                where: { email: email.toLowerCase().trim() },
+                include: { college: true }
             });
 
             if (!user) {
                 fastify.log.warn(`Login attempt for non-existent user: ${email}`);
                 return reply.status(401).send({ message: 'Invalid credentials' });
+            }
+
+            // Check Maintenance Mode (SuperAdmins are exempt)
+            if (user.role !== 'SUPERADMIN' && user.college?.isMaintenanceMode) {
+                return reply.status(503).send({ 
+                    error: 'Maintenance', 
+                    message: 'Your institutional node is currently under maintenance. Please try again later.' 
+                });
             }
 
             const isMatch = await bcrypt.compare(password, user.passwordHash);
@@ -38,10 +47,11 @@ async function authRoutes(fastify, opts) {
                 email: user.email,
                 role: user.role,
                 name: user.name,
-                collegeId: user.collegeId
+                collegeId: user.collegeId,
+                isMaintenance: user.college?.isMaintenanceMode || false
             }, { expiresIn: '7d' });
 
-            return { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+            return { token, user: { id: user.id, name: user.name, email: user.email, role: user.role, isMaintenance: user.college?.isMaintenanceMode || false } };
         } catch (error) {
             fastify.log.error(error);
             return reply.status(500).send({ message: 'Internal server error during login' });
@@ -59,8 +69,8 @@ async function authRoutes(fastify, opts) {
             const result = await prisma.$transaction(async (tx) => {
                 const college = await tx.college.create({
                     data: {
-                        name: 'System Default College',
-                        domain: 'college.edu'
+                        name: 'System Default Department',
+                        domain: 'department.edu'
                     }
                 });
 

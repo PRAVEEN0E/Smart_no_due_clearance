@@ -1,720 +1,634 @@
-
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect } from 'react';
 import { 
-    School, 
+    Building2, 
     Users, 
-    Activity, 
-    ShieldAlert, 
+    GraduationCap, 
+    Shield, 
     Plus, 
-    Trash2, 
     Search, 
+    Trash2, 
+    Settings, 
+    Edit,
     TrendingUp, 
-    BarChart3, 
-    Globe, 
-    Settings,
-    MoreVertical,
+    Megaphone,
+    Palette,
+    ExternalLink,
+    ChevronRight,
+    Globe,
+    Layers,
+    Monitor,
+    Layout,
+    Sparkles,
+    ShieldCheck,
     CheckCircle2,
-    X,
-    Megaphone
+    UserPlus,
+    CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    AreaChart,
+    Area,
+    XAxis, 
+    YAxis, 
+    CartesianGrid, 
+    Tooltip, 
+    ResponsiveContainer
+} from 'recharts';
+import api from '../../lib/api';
 import toast from 'react-hot-toast';
+import useAuth from '../../hooks/useAuth';
+import LoadingScreen from '../../components/LoadingScreen';
 
-const SuperAdminDashboard = () => {
-    const [activeTab, setActiveTab] = useState('colleges');
-    const [colleges, setColleges] = useState([]); // Will now contain {id, name, domain, logoUrl, primaryColor, secondaryColor}
-    const [users, setUsers] = useState([]);
-    const [auditLogs, setAuditLogs] = useState([]);
-    const [stats, setStats] = useState({ colleges: 0, users: 0, students: 0, mentors: 0 });
+export default function SuperAdminDashboard() {
+    const { user } = useAuth();
+    const [stats, setStats] = useState({ colleges: 0, users: 0, students: 0, mentors: 0, growthData: [] });
+    const [colleges, setColleges] = useState([]);
+    const [logs, setLogs] = useState([]);
+    const [allUsers, setAllUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showInitModal, setShowInitModal] = useState(false);
+    const [newCollege, setNewCollege] = useState({ name: '', domain: '', branding: { primaryColor: '#7c3aed' } });
     const [searchQuery, setSearchQuery] = useState('');
-    const [showAddCollege, setShowAddCollege] = useState(false);
-    const [editingCollege, setEditingCollege] = useState(null);
-    const [newCollege, setNewCollege] = useState({ name: '', domain: '', logoUrl: '', primaryColor: '#7c3aed', secondaryColor: '#a855f7' });
-    const [showBroadcastModal, setShowBroadcastModal] = useState(false);
-    const [broadcast, setBroadcast] = useState({ title: '', content: '', type: 'SYSTEM', priority: 1 });
-    const [searchResults, setSearchResults] = useState([]);
-    const [searching, setSearching] = useState(false);
-
-    const token = localStorage.getItem('token');
-    const API = axios.create({
-        baseURL: '/api/superadmin',
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const [isDepartmentView, setIsDepartmentView] = useState(true);
+    const [activeTab, setActiveTab] = useState('institutions');
 
     useEffect(() => {
         fetchData();
-    }, [activeTab]);
+        fetchLogs();
+        fetchUsers();
+    }, []);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            if (activeTab === 'colleges') {
-                const res = await API.get('/colleges');
-                setColleges(res.data);
-            } else if (activeTab === 'users') {
-                const res = await API.get('/users');
-                setUsers(res.data);
-            } else if (activeTab === 'audit') {
-                const res = await API.get('/audit');
-                setAuditLogs(res.data);
-            } else if (activeTab === 'stats') {
-                const res = await API.get('/stats');
-                setStats(res.data);
-            }
-        } catch (error) {
-            toast.error('Failed to sync system data');
+            const [statsRes, collegeRes] = await Promise.all([
+                api.get('/superadmin/stats'),
+                api.get('/superadmin/colleges')
+            ]);
+            setStats(statsRes.data);
+            setColleges(collegeRes.data);
+        } catch (err) {
+            toast.error("Failed to sync system data.");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleOmniSearch = async (query) => {
-        setSearchQuery(query);
-        if (query.length < 2) {
-            setSearchResults([]);
-            return;
-        }
-        setSearching(true);
+    const fetchLogs = async () => {
         try {
-            const res = await API.get(`/search?q=${query}`);
-            setSearchResults(res.data);
-        } catch (err) { /* ignore */ }
-        finally { setSearching(false); }
-    };
-
-    const handleBroadcast = async (e) => {
-        e.preventDefault();
-        try {
-            await API.post('/broadcast', broadcast);
-            toast.success('Global broadcast transmitted');
-            setShowBroadcastModal(false);
-            setBroadcast({ title: '', content: '', type: 'SYSTEM', priority: 1 });
-        } catch (error) {
-            toast.error('Broadcast failed');
+            const res = await api.get('/superadmin/logs');
+            setLogs(res.data);
+        } catch (err) {
+            console.error("Failed to fetch logs");
         }
     };
 
-    const handleCreateCollege = async (e) => {
-        e.preventDefault();
+    const fetchUsers = async () => {
         try {
-            await API.post('/colleges', newCollege);
-            toast.success('New institution integrated');
-            setShowAddCollege(false);
-            setNewCollege({ name: '', domain: '' });
-            fetchData();
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Integration failed');
+            const res = await api.get('/superadmin/users');
+            setAllUsers(res.data);
+        } catch (err) {
+            console.error("Failed to fetch global users");
         }
     };
 
-    const handleUpdateCollege = async (e) => {
-        e.preventDefault();
+    const handleImpersonate = async (userId) => {
         try {
-            await API.put(`/colleges/${editingCollege.id}`, editingCollege);
-            toast.success('Institution profile updated');
-            setEditingCollege(null);
-            fetchData();
-        } catch (error) {
-            toast.error('Update failed');
+            const res = await api.post(`/superadmin/impersonate/${userId}`);
+            // Save admin session to restore later
+            sessionStorage.setItem('adminToken', localStorage.getItem('token'));
+            sessionStorage.setItem('adminUser', localStorage.getItem('user'));
+            
+            // Switch to impersonated user
+            localStorage.setItem('token', res.data.token);
+            localStorage.setItem('user', JSON.stringify(res.data.user));
+            
+            toast.success(`Impersonating ${res.data.user.name}...`);
+            window.location.href = '/'; // Refresh to apply new role
+        } catch (err) {
+            toast.error("Impersonation failed.");
         }
     };
 
     const handleDeleteCollege = async (id) => {
-        if (!window.confirm('This will permanently delete the college and ALL associated data. Proceed?')) return;
+        if (!window.confirm("CRITICAL: This will delete the entire institutional container and all its data. Proceed?")) return;
         try {
-            await API.delete(`/colleges/${id}`);
-            toast.success('Institution offboarded');
+            await api.delete(`/superadmin/colleges/${id}`);
+            toast.success("Institutional partition purged.");
             fetchData();
-        } catch (error) {
-            toast.error('Failed to delete college');
+        } catch (err) {
+            toast.error("Failed to delete container.");
         }
     };
 
-    const filteredData = () => {
-        const query = searchQuery.toLowerCase();
-        if (activeTab === 'colleges') return colleges.filter(c => c.name.toLowerCase().includes(query) || (c.domain || '').toLowerCase().includes(query));
-        if (activeTab === 'users') return users.filter(u => u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query));
-        return [];
+    const handleInitialize = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/superadmin/colleges', newCollege);
+            toast.success("New institutional partition deployed.");
+            setShowInitModal(false);
+            setNewCollege({ name: '', domain: '', branding: { primaryColor: '#7c3aed' } });
+            fetchData();
+        } catch (err) {
+            toast.error("Deployment failed.");
+        }
     };
+
+    const filteredColleges = colleges.filter(c => 
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        c.domain?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const filteredUsers = allUsers.filter(u => 
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.college?.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (loading) return <LoadingScreen message="Accessing Secure Terminal..." />;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
+            {/* Impersonation Banner */}
+            {user?.isImpersonated && (
+                <div className="bg-slate-900 text-white px-6 py-3 rounded-2xl flex items-center justify-between shadow-2xl animate-bounce border border-emerald-500/30">
+                    <div className="flex items-center gap-3">
+                        <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                        <span className="text-sm font-bold tracking-tight">SUPPORT MODE: Impersonating <span className="text-emerald-400 underline">{user.name}</span></span>
+                    </div>
+                    <button 
+                        onClick={() => {
+                            localStorage.setItem('token', sessionStorage.getItem('adminToken'));
+                            localStorage.setItem('user', sessionStorage.getItem('adminUser'));
+                            sessionStorage.removeItem('adminToken');
+                            sessionStorage.removeItem('adminUser');
+                            window.location.href = '/superadmin';
+                        }}
+                        className="bg-white/10 hover:bg-white/20 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                    >
+                        Return to Admin
+                    </button>
+                </div>
+            )}
+
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent italic uppercase">
-                        System Control
+                    <h1 className="text-5xl font-black tracking-tighter bg-gradient-to-r from-slate-900 to-slate-500 bg-clip-text text-transparent uppercase italic">
+                        Control Center
                     </h1>
-                    <p className="text-muted-foreground font-medium italic">Global infrastructure management & multi-tenant oversight.</p>
+                    <p className="text-muted-foreground font-medium italic mt-2 flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        System is operational. Multi-tenant node status: Healthy.
+                    </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => setShowBroadcastModal(true)}
-                        className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl border border-amber-500/20 hover:bg-amber-500 hover:text-white transition-all shadow-lg active:scale-95"
-                        title="Global Broadcast"
-                    >
-                        <Megaphone className="w-5 h-5" />
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('stats')}
-                        className={`p-3 rounded-2xl border transition-all ${activeTab === 'stats' ? 'bg-primary text-white border-primary shadow-lg' : 'bg-white border-black/5 hover:bg-slate-50'}`}
-                    >
-                        <BarChart3 className="w-5 h-5" />
-                    </button>
-                    {activeTab === 'colleges' && (
-                        <button 
-                            onClick={() => setShowAddCollege(true)}
-                            className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-2xl font-black text-sm shadow-xl shadow-primary/20 transition-all flex items-center gap-2 active:scale-95"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Integrate College
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* Omni-Search Area */}
-            <div className="relative z-40">
-                <div className="glass p-2 rounded-3xl border border-border shadow-2xl flex items-center gap-4">
-                    <div className="pl-4">
-                        <Search className="w-5 h-5 text-slate-400" />
+                <div className="flex items-center gap-4">
+                    <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200 shadow-sm">
+                        {['institutions', 'users', 'logs'].map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                                {tab}
+                            </button>
+                        ))}
                     </div>
-                    <input 
-                        type="text" 
-                        placeholder="Global Omni-Search: Find any user, college, or record across the entire platform..."
-                        value={searchQuery}
-                        onChange={(e) => handleOmniSearch(e.target.value)}
-                        className="flex-1 bg-transparent border-none outline-none py-4 font-bold text-slate-700 placeholder:text-slate-400"
-                    />
+                    <button 
+                        onClick={() => setShowInitModal(true)}
+                        className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 flex items-center gap-2 group"
+                    >
+                        <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+                        Init Container
+                    </button>
                 </div>
-
-                <AnimatePresence>
-                    {searchQuery.length >= 2 && (
-                        <motion.div 
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="absolute top-full left-0 right-0 mt-4 glass rounded-[2rem] border border-border shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto z-50 p-4"
-                        >
-                            {searching ? (
-                                <div className="p-8 text-center opacity-30"><Activity className="w-8 h-8 animate-spin mx-auto" /></div>
-                            ) : searchResults.length > 0 ? (
-                                <div className="space-y-2">
-                                    {searchResults.map(user => (
-                                        <div key={user.id} className="p-4 hover:bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all flex items-center justify-between group">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black uppercase">{user.name[0]}</div>
-                                                <div>
-                                                    <div className="font-bold text-slate-800">{user.name}</div>
-                                                    <div className="text-[10px] font-mono text-slate-400">{user.email} • {user.college?.name || 'Central'}</div>
-                                                </div>
-                                            </div>
-                                            <span className="px-3 py-1 rounded-lg bg-slate-100 text-[9px] font-black uppercase text-slate-500">{user.role}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="p-8 text-center text-slate-400 font-medium italic">No matches found in the global index.</div>
-                            )}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </div>
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
-                    { label: 'Active Colleges', value: stats.colleges || colleges.length, icon: School, color: 'text-primary', bg: 'bg-primary/10' },
-                    { label: 'Global Admins', value: stats.mentors || users.length, icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                    { label: 'System Audit', value: 'Live', icon: Activity, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                    { label: 'Cloud Status', value: 'Optimal', icon: Globe, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                    { label: 'Total Nodes', value: stats.colleges, icon: Globe, color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: 'Active Users', value: stats.users, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                    { label: 'Total Mentors', value: stats.mentors, icon: GraduationCap, color: 'text-purple-600', bg: 'bg-purple-50' },
+                    { label: 'Total Students', value: stats.students, icon: UserPlus, color: 'text-rose-600', bg: 'bg-rose-50' },
                 ].map((stat, i) => (
-                    <div key={i} className="glass p-6 rounded-[2rem] border border-border relative overflow-hidden group hover:border-primary/30 transition-all cursor-default shadow-sm">
-                        <div className={`absolute -right-4 -top-4 w-24 h-24 ${stat.bg} rounded-full blur-3xl opacity-50 group-hover:opacity-100 transition-all duration-500`} />
+                    <motion.div 
+                        key={i}
+                        whileHover={{ y: -5 }}
+                        className="glass p-6 rounded-[2.5rem] border border-slate-200 relative overflow-hidden group shadow-sm hover:shadow-xl transition-all"
+                    >
+                        <div className={`absolute -right-4 -top-4 w-24 h-24 ${stat.bg} rounded-full blur-3xl opacity-50 group-hover:opacity-100 transition-all duration-700`} />
                         <stat.icon className={`w-8 h-8 ${stat.color} mb-4 relative z-10`} />
-                        <p className="text-[10px] text-primary/60 uppercase tracking-[0.2em] font-bold relative z-10">{stat.label}</p>
-                        <h2 className="text-4xl font-black mt-2 tabular-nums relative z-10 tracking-tight text-foreground">{stat.value}</h2>
-                    </div>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black relative z-10">{stat.label}</p>
+                        <h2 className="text-4xl font-black mt-2 tabular-nums relative z-10 tracking-tighter">{stat.value}</h2>
+                    </motion.div>
                 ))}
             </div>
 
-            {/* Main Content Area */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                {/* Sidebar Navigation */}
-                <div className="lg:col-span-1 space-y-2">
-                    {[
-                        { id: 'colleges', label: 'Institutions', icon: School },
-                        { id: 'users', label: 'Administrative Users', icon: Users },
-                        { id: 'audit', label: 'Global Logs', icon: ShieldAlert },
-                        { id: 'stats', label: 'Growth & Analytics', icon: TrendingUp },
-                    ].map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all ${activeTab === item.id ? 'bg-primary text-white shadow-xl shadow-primary/20 translate-x-2' : 'hover:bg-white/50 text-slate-500'}`}
-                        >
-                            <item.icon className="w-5 h-5" />
-                            <span className="text-sm">{item.label}</span>
-                        </button>
-                    ))}
-                    
-                    <div className="pt-8 px-6">
-                        <div className="p-6 bg-slate-900 rounded-3xl text-white relative overflow-hidden">
-                            <div className="relative z-10">
-                                <h3 className="font-bold text-sm mb-2">System Version</h3>
-                                <p className="text-[10px] text-white/50 mb-4 font-mono">v2.4.0-Stable</p>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">All Services Operational</span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                    {activeTab === 'institutions' && (
+                        <div className="space-y-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className={`flex p-1 bg-slate-100 rounded-xl border border-slate-200`}>
+                                        <button 
+                                            onClick={() => setIsDepartmentView(true)}
+                                            className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${isDepartmentView ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                                        >
+                                            Department View
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsDepartmentView(false)}
+                                            className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${!isDepartmentView ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                                        >
+                                            Institutional View
+                                        </button>
+                                    </div>
+                                    <div className="h-4 w-[1px] bg-slate-200" />
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                        Showing {filteredColleges.length} Active Partitions
+                                    </p>
                                 </div>
-                            </div>
-                            <Settings className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5" />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Content Pane */}
-                <div className="lg:col-span-3 space-y-6">
-                    <div className="glass rounded-[2.5rem] border border-border shadow-sm overflow-hidden flex flex-col min-h-[600px]">
-                        {/* Pane Header */}
-                        <div className="p-8 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h2 className="text-xl font-black uppercase tracking-widest text-foreground/80">{activeTab}</h2>
-                                <p className="text-xs text-muted-foreground mt-1 font-medium">Manage and monitor global infrastructure.</p>
-                            </div>
-                            {(activeTab === 'colleges' || activeTab === 'users') && (
-                                <div className="relative group">
-                                    <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                <div className="relative group w-full md:w-64">
+                                    <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
                                     <input 
                                         type="text" 
-                                        placeholder="Search records..." 
+                                        placeholder="Search partitions..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="bg-slate-100 border border-slate-200 rounded-2xl pl-12 pr-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all w-full md:w-[300px] font-medium"
+                                        className="w-full bg-slate-100 border border-slate-200 rounded-xl pl-12 pr-4 py-2 text-xs focus:outline-none focus:border-primary/50 transition-all"
                                     />
                                 </div>
-                            )}
-                        </div>
+                            </div>
 
-                        {/* Pane Body */}
-                        <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
-                            {loading ? (
-                                <div className="flex items-center justify-center h-full opacity-30">
-                                    <Activity className="w-12 h-12 animate-spin" />
-                                </div>
-                            ) : activeTab === 'colleges' ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {filteredData().map((college) => (
-                                        <div key={college.id} className="p-6 rounded-3xl bg-white border border-slate-100 hover:border-primary/20 transition-all group">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                                                    <School className="w-6 h-6" />
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button 
-                                                        onClick={() => setEditingCollege(college)}
-                                                        className="p-2 text-slate-300 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
-                                                        title="Edit Branding"
-                                                    >
-                                                        <Settings className="w-4 h-4" />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleDeleteCollege(college.id)}
-                                                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                                        title="Delete College"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                            <div className="grid grid-cols-1 gap-4">
+                                {filteredColleges.map((college, idx) => (
+                                    <motion.div 
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        key={college.id} 
+                                        className="glass p-5 rounded-[2rem] border border-slate-200 flex flex-col md:flex-row md:items-center justify-between group hover:border-slate-400 hover:shadow-2xl transition-all bg-white/50 backdrop-blur-sm gap-4"
+                                    >
+                                        <div className="flex items-center gap-5">
+                                            <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center font-black text-xl text-white shadow-xl group-hover:scale-110 transition-transform">
+                                                {college.name[0]}
                                             </div>
-                                            <h3 className="font-black text-lg text-slate-800">{college.name}</h3>
-                                            <p className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-widest">{college.domain || 'No domain set'}</p>
-                                            
-                                            <div className="grid grid-cols-2 gap-3 mt-6">
-                                                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                                    <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">Users</p>
-                                                    <p className="text-lg font-black text-slate-700">{college._count?.users || 0}</p>
-                                                </div>
-                                                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                                    <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">Courses</p>
-                                                    <p className="text-lg font-black text-slate-700">{college._count?.subjects || 0}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : activeTab === 'users' ? (
-                                <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden">
-                                    <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="border-b border-slate-100 bg-slate-50">
-                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">User Details</th>
-                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Affiliation</th>
-                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Role</th>
-                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50 font-medium">
-                                            {filteredData().map((user) => (
-                                                <tr key={user.id} className="hover:bg-slate-50 transition-colors group">
-                                                    <td className="px-6 py-5">
-                                                        <div className="text-sm font-bold text-slate-800">{user.name}</div>
-                                                        <div className="text-[10px] text-slate-400 font-mono mt-1">{user.email}</div>
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <div className="text-[11px] font-bold text-slate-600">{user.college?.name || 'Central Admin'}</div>
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <span className={`px-2 py-1 rounded-lg text-[9px] font-black border uppercase ${user.role === 'SUPERADMIN' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-primary/5 text-primary border-primary/20'}`}>
-                                                            {user.role}
+                                            <div>
+                                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                    <h4 className="font-bold text-slate-800 text-lg tracking-tight">
+                                                        {isDepartmentView 
+                                                            ? (college.users?.[0]?.department || college.name) 
+                                                            : college.name}
+                                                    </h4>
+                                                    {isDepartmentView && college.users?.[0]?.department && (
+                                                        <span className="text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">
+                                                            {college.name}
                                                         </span>
-                                                    </td>
-                                                    <td className="px-6 py-5 text-right">
-                                                        <button className="p-2 text-slate-300 hover:text-primary transition-all"><MoreVertical className="w-4 h-4" /></button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : activeTab === 'audit' ? (
-                                <div className="space-y-4">
-                                    {auditLogs.map((log) => (
-                                        <div key={log.id} className="p-5 rounded-3xl bg-slate-50 border border-slate-100 flex items-start gap-5 hover:bg-white transition-all group">
-                                            <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-primary transition-all shrink-0 shadow-sm">
-                                                <Activity className="w-5 h-5" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-[10px] font-black px-2 py-1 bg-slate-200 rounded-lg uppercase tracking-widest">{log.action}</span>
-                                                    <span className="text-[10px] text-slate-400 font-medium">{new Date(log.createdAt).toLocaleString()}</span>
+                                                    )}
+                                                    {!college.users?.[0]?.department && isDepartmentView && (
+                                                        <span className="text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full bg-amber-50 text-amber-500 border border-amber-100">
+                                                            Dept Unassigned
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <p className="text-xs text-slate-700 leading-relaxed font-medium truncate">{log.details}</p>
-                                                <div className="flex items-center gap-2 mt-3">
-                                                    <div className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
-                                                    <span className="text-[10px] text-slate-400 font-bold">{log.userEmail}</span>
+                                                <div className="flex flex-wrap items-center gap-4 text-[10px] text-muted-foreground uppercase tracking-widest font-black">
+                                                    <span className="flex items-center gap-1.5"><Globe className="w-3 h-3" /> {college.domain || 'no-domain.com'}</span>
+                                                    <span>•</span>
+                                                    <span className="flex items-center gap-1.5 text-primary"><Users className="w-3 h-3" /> {college._count.users} Users</span>
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="p-12 text-center flex flex-col items-center justify-center gap-6 h-full opacity-40">
-                                    <div className="w-20 h-20 bg-slate-100 rounded-[2.5rem] flex items-center justify-center"><CheckCircle2 className="w-10 h-10" /></div>
-                                    <div>
-                                        <h3 className="font-black text-xl text-slate-800">System Analytics</h3>
-                                        <p className="text-sm font-medium text-slate-500 mt-2 max-w-xs mx-auto">Detailed growth tracking and institutional reports will appear here as the system scales.</p>
-                                    </div>
-                                </div>
-                            )}
+
+                                            <div className="flex items-center gap-3 md:opacity-0 md:group-hover:opacity-100 transition-all justify-end">
+                                                <div className="flex items-center gap-2 mr-4 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                                                    <span className={`text-[8px] font-black uppercase tracking-tighter ${college.isMaintenanceMode ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                                        {college.isMaintenanceMode ? 'Maintenance' : 'Live'}
+                                                    </span>
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            api.post(`/superadmin/colleges/${college.id}/maintenance`, { isMaintenanceMode: !college.isMaintenanceMode })
+                                                                .then(() => {
+                                                                    toast.success(`Node ${college.isMaintenanceMode ? 'Activated' : 'Locked'}`);
+                                                                    fetchData();
+                                                                });
+                                                        }}
+                                                        className={`w-8 h-4 rounded-full p-0.5 transition-all ${college.isMaintenanceMode ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                                    >
+                                                        <div className={`w-3 h-3 bg-white rounded-full shadow-sm transition-all ${college.isMaintenanceMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                    </button>
+                                                </div>
+                                                <button 
+                                                    onClick={() => {
+                                                        const currentWorkflow = college.workflow || [];
+                                                        const label = prompt("Enter new Clearance Step (e.g. Library, Lab):");
+                                                        if (label) {
+                                                            const newWorkflow = [...currentWorkflow, { id: Date.now().toString(), label, required: true }];
+                                                            api.put(`/superadmin/colleges/${college.id}`, { workflow: newWorkflow })
+                                                                .then(() => {
+                                                                    toast.success("Workflow Logic Updated");
+                                                                    fetchData();
+                                                                });
+                                                        }
+                                                    }}
+                                                    className="p-2.5 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 text-slate-400 hover:text-primary transition-all shadow-sm"
+                                                    title="Configure Workflow"
+                                                >
+                                                    <Layers className="w-4 h-4" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => {
+                                                        const newDept = prompt("Enter Department Name for this Mentor:", college.users?.[0]?.department || "");
+                                                        if (newDept !== null && college.users?.[0]?.id) {
+                                                            api.put(`/superadmin/users/${college.users[0].id}`, { department: newDept })
+                                                                .then(() => {
+                                                                    toast.success("Department updated!");
+                                                                    fetchData();
+                                                                })
+                                                                .catch(() => toast.error("Update failed."));
+                                                        }
+                                                    }}
+                                                    className="p-2.5 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-800 transition-all shadow-sm"
+                                                    title="Edit Department"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                {college.users?.[0]?.id && (
+                                                    <button 
+                                                        onClick={() => handleImpersonate(college.users[0].id)}
+                                                        className="p-2.5 hover:bg-emerald-50 rounded-xl border border-transparent hover:border-emerald-100 text-slate-400 hover:text-emerald-600 transition-all shadow-sm"
+                                                        title="Impersonate Mentor"
+                                                    >
+                                                        <ShieldCheck className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <button 
+                                                    onClick={() => handleDeleteCollege(college.id)}
+                                                    className="p-2.5 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-100 text-slate-300 hover:text-red-500 transition-all shadow-sm"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                                <div className="w-[1px] h-6 bg-slate-200 mx-1" />
+                                                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-primary transition-colors" />
+                                            </div>
+                                    </motion.div>
+                                ))}
+                            </div>
                         </div>
+                    )}
+
+                    {activeTab === 'users' && (
+                        <div className="glass rounded-[2rem] border border-slate-200 overflow-hidden bg-white shadow-sm">
+                            <div className="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <Users className="w-5 h-5 text-primary" />
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">Global User Directory</h3>
+                                </div>
+                                <div className="relative group w-64">
+                                    <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Filter users..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full bg-white border border-slate-200 rounded-xl pl-12 pr-4 py-2 text-xs focus:ring-2 focus:ring-primary/10 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                            <th className="px-6 py-4">Identity</th>
+                                            <th className="px-6 py-4">Role</th>
+                                            <th className="px-6 py-4">Institutional Node</th>
+                                            <th className="px-6 py-4">Status</th>
+                                            <th className="px-6 py-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {filteredUsers.map((u, i) => (
+                                            <tr key={i} className="hover:bg-slate-50 transition-all group">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                                            {u.name[0]}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-slate-800 text-sm">{u.name}</div>
+                                                            <div className="text-[10px] text-slate-400 font-medium">{u.email}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
+                                                        u.role === 'SUPERADMIN' ? 'bg-slate-900 text-white' :
+                                                        u.role === 'MENTOR' ? 'bg-purple-100 text-purple-600' :
+                                                        'bg-blue-100 text-blue-600'
+                                                    }`}>
+                                                        {u.role}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-xs font-bold text-slate-600 italic">@{u.college?.name || 'ROOT'}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Active</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <button 
+                                                        onClick={() => handleImpersonate(u.id)}
+                                                        className="p-2 hover:bg-emerald-50 rounded-xl text-slate-300 hover:text-emerald-600 transition-all"
+                                                        title="Impersonate"
+                                                    >
+                                                        <ShieldCheck className="w-4 h-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'logs' && (
+                        <div className="glass rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm bg-white">
+                            <div className="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">System Activity Ledger</h3>
+                                <button onClick={fetchLogs} className="text-[10px] font-black text-primary hover:underline">Refresh Logs</button>
+                            </div>
+                            <div className="divide-y divide-slate-100 max-h-[700px] overflow-y-auto">
+                                {logs.length > 0 ? logs.map((log, i) => (
+                                    <div key={i} className="p-5 hover:bg-slate-50 transition-all group flex items-start justify-between gap-4">
+                                        <div className="flex gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                                                <TrendingUp className="w-4 h-4 text-slate-400" />
+                                            </div>
+                                            <div>
+                                                <div className="flex flex-wrap items-center gap-3 mb-1">
+                                                    <span className="text-sm font-bold text-slate-900">{log.userEmail}</span>
+                                                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-200 text-slate-500 uppercase tracking-tighter">
+                                                        {log.action}
+                                                    </span>
+                                                    <span className="text-[9px] font-bold text-primary italic">
+                                                        @{log.college?.name}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 font-medium font-mono">
+                                                    {typeof log.details === 'string' ? log.details : JSON.stringify(log.details)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-[10px] text-slate-400 font-mono mt-1 whitespace-nowrap">
+                                            {new Date(log.createdAt).toLocaleString()}
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="p-20 text-center text-slate-400 italic text-sm">No activity logs recorded yet.</div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Sidebar Analytics & Tools */}
+                <div className="space-y-6">
+                    <div className="glass p-8 rounded-[2.5rem] border border-slate-200 bg-white">
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="font-bold flex items-center gap-2">
+                                <TrendingUp className="w-5 h-5 text-primary" />
+                                System Health
+                            </h3>
+                            <span className="text-[9px] font-black bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-tighter">Healthy</span>
+                        </div>
+                        <div className="h-[200px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={stats.growthData || []}>
+                                    <defs>
+                                        <linearGradient id="growthGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.2} />
+                                            <stop offset="100%" stopColor="#7c3aed" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                    <XAxis dataKey="name" hide />
+                                    <YAxis hide />
+                                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                                    <Area type="monotone" dataKey="val" stroke="#7c3aed" strokeWidth={3} fill="url(#growthGrad)" dot={{ r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff' }} />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground italic mt-6 text-center">System-wide registration velocity over the last 30 days.</p>
+                    </div>
+
+                    <div className="glass p-8 rounded-[2.5rem] border border-slate-200 bg-slate-900 text-white shadow-2xl">
+                        <h3 className="font-bold mb-6 flex items-center gap-2">
+                            <Megaphone className="w-5 h-5 text-emerald-400" />
+                            Global Alert
+                        </h3>
+                        <p className="text-xs text-slate-400 mb-4 leading-relaxed">Broadcast a priority message to every user across all institutional nodes.</p>
+                        <textarea 
+                            placeholder="Maintenance alert..." 
+                            className="w-full bg-white/10 border border-white/10 rounded-2xl p-4 text-xs outline-none focus:border-emerald-400/50 transition-all placeholder:text-slate-600 min-h-[100px]"
+                        />
+                        <button className="w-full mt-4 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">
+                            Push Broadcast
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* Broadcast Modal */}
+            {/* Initialize Modal */}
             <AnimatePresence>
-                {showBroadcastModal && (
+                {showInitModal && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div 
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            onClick={() => setShowBroadcastModal(false)} 
-                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowInitModal(false)}
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
                         />
                         <motion.div 
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="glass w-full max-w-md p-8 rounded-[2.5rem] border border-white/10 relative z-10 shadow-2xl"
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white rounded-[3rem] p-8 md:p-12 w-full max-w-xl relative z-10 shadow-2xl border border-white/20"
                         >
-                            <div className="flex justify-between items-center mb-8">
-                                <h2 className="text-2xl font-black italic uppercase tracking-tighter">Compose Global Broadcast</h2>
-                                <button onClick={() => setShowBroadcastModal(false)} className="p-2 hover:bg-black/5 rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                            <div className="flex items-center gap-6 mb-10">
+                                <div className="w-20 h-20 bg-primary/10 rounded-[2rem] flex items-center justify-center">
+                                    <Monitor className="w-10 h-10 text-primary" />
+                                </div>
+                                <div>
+                                    <h2 className="text-3xl font-black tracking-tight text-slate-900">Initialize Container</h2>
+                                    <p className="text-slate-500 font-medium italic">Provision a new institutional partition.</p>
+                                </div>
                             </div>
 
-                            <form onSubmit={handleBroadcast} className="space-y-6">
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary block mb-3 ml-1">Title</label>
+                            <form onSubmit={handleInitialize} className="space-y-8">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Entity Name</label>
                                     <input 
-                                        required 
+                                        autoFocus
+                                        required
                                         type="text" 
-                                        value={broadcast.title}
-                                        onChange={(e) => setBroadcast({ ...broadcast, title: e.target.value })}
-                                        placeholder="System-wide Announcement..."
-                                        className="w-full bg-slate-100 border border-slate-200 rounded-[1.25rem] px-6 py-4 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all" 
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary block mb-3 ml-1">Priority</label>
-                                    <select 
-                                        value={broadcast.priority}
-                                        onChange={(e) => setBroadcast({ ...broadcast, priority: parseInt(e.target.value) })}
-                                        className="w-full bg-slate-100 border border-slate-200 rounded-[1.25rem] px-6 py-4 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                                    >
-                                        <option value={1}>Low / Info</option>
-                                        <option value={2}>Medium / Important</option>
-                                        <option value={3}>High / Urgent</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary block mb-3 ml-1">Content</label>
-                                    <textarea 
-                                        required 
-                                        value={broadcast.content}
-                                        onChange={(e) => setBroadcast({ ...broadcast, content: e.target.value })}
-                                        placeholder="Enter the message body..."
-                                        className="w-full bg-slate-100 border border-slate-200 rounded-[1.25rem] px-6 py-4 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all min-h-[120px]" 
-                                    />
-                                </div>
-
-                                <button 
-                                    type="submit" 
-                                    className="w-full bg-amber-500 py-5 rounded-[1.25rem] font-black text-white shadow-xl shadow-amber-500/20 active:scale-95 transition-all mt-4"
-                                >
-                                    Transmit Broadcast
-                                </button>
-                            </form>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* Edit College Branding Modal */}
-            <AnimatePresence>
-                {editingCollege && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div 
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            onClick={() => setEditingCollege(null)} 
-                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
-                        />
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="glass w-full max-w-lg p-8 rounded-[2.5rem] border border-white/10 relative z-10 shadow-2xl overflow-y-auto max-h-[90vh]"
-                        >
-                            <div className="flex justify-between items-center mb-8">
-                                <h2 className="text-2xl font-black italic uppercase tracking-tighter">Customize Institutional Identity</h2>
-                                <button onClick={() => setEditingCollege(null)} className="p-2 hover:bg-black/5 rounded-xl transition-all"><X className="w-5 h-5" /></button>
-                            </div>
-
-                            <form onSubmit={handleUpdateCollege} className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="col-span-full">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary block mb-3 ml-1">College Name</label>
-                                        <input 
-                                            required 
-                                            type="text" 
-                                            value={editingCollege.name}
-                                            onChange={(e) => setEditingCollege({ ...editingCollege, name: e.target.value })}
-                                            className="w-full bg-slate-100 border border-slate-200 rounded-[1.25rem] px-6 py-4 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all" 
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary block mb-3 ml-1">Logo URL</label>
-                                        <input 
-                                            type="text" 
-                                            value={editingCollege.logoUrl || ''}
-                                            onChange={(e) => setEditingCollege({ ...editingCollege, logoUrl: e.target.value })}
-                                            placeholder="https://link-to-logo.png"
-                                            className="w-full bg-slate-100 border border-slate-200 rounded-[1.25rem] px-6 py-4 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all" 
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary block mb-3 ml-1">Domain</label>
-                                        <input 
-                                            type="text" 
-                                            value={editingCollege.domain || ''}
-                                            onChange={(e) => setEditingCollege({ ...editingCollege, domain: e.target.value })}
-                                            className="w-full bg-slate-100 border border-slate-200 rounded-[1.25rem] px-6 py-4 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all" 
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary block mb-3 ml-1">Primary Color</label>
-                                        <div className="flex gap-3">
-                                            <input 
-                                                type="color" 
-                                                value={editingCollege.primaryColor || '#7c3aed'}
-                                                onChange={(e) => setEditingCollege({ ...editingCollege, primaryColor: e.target.value })}
-                                                className="w-14 h-14 rounded-xl border-none cursor-pointer bg-transparent" 
-                                            />
-                                            <input 
-                                                type="text" 
-                                                value={editingCollege.primaryColor || '#7c3aed'}
-                                                onChange={(e) => setEditingCollege({ ...editingCollege, primaryColor: e.target.value })}
-                                                className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold uppercase" 
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary block mb-3 ml-1">Secondary Color</label>
-                                        <div className="flex gap-3">
-                                            <input 
-                                                type="color" 
-                                                value={editingCollege.secondaryColor || '#a855f7'}
-                                                onChange={(e) => setEditingCollege({ ...editingCollege, secondaryColor: e.target.value })}
-                                                className="w-14 h-14 rounded-xl border-none cursor-pointer bg-transparent" 
-                                            />
-                                            <input 
-                                                type="text" 
-                                                value={editingCollege.secondaryColor || '#a855f7'}
-                                                onChange={(e) => setEditingCollege({ ...editingCollege, secondaryColor: e.target.value })}
-                                                className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold uppercase" 
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Dynamic Workflow Builder */}
-                                <div className="p-6 bg-slate-900 rounded-[2rem] border border-white/5 shadow-2xl relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                                        <TrendingUp className="w-16 h-16 text-white" />
-                                    </div>
-                                    <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2 relative z-10">
-                                        <ShieldAlert className="w-4 h-4 text-emerald-400" />
-                                        Clearance Workflow Sequence
-                                    </h3>
-                                    
-                                    <div className="space-y-3 relative z-10">
-                                        {(editingCollege.workflow || [
-                                            { id: 'FEES', label: 'Financial Dues', type: 'FEE', required: true },
-                                            { id: 'ACADEMICS', label: 'Academic Approvals', type: 'STAFF_APPROVAL', required: true }
-                                        ]).map((step, idx) => (
-                                            <div key={step.id} className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl group hover:border-emerald-500/30 transition-all">
-                                                <div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-[10px] font-black text-emerald-400">{idx + 1}</div>
-                                                <div className="flex-1">
-                                                    <div className="text-xs font-bold text-white">{step.label}</div>
-                                                    <div className="text-[9px] text-white/40 uppercase font-black tracking-widest">{step.type}</div>
-                                                </div>
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const wf = [...(editingCollege.workflow || [])];
-                                                            if (idx > 0) {
-                                                                [wf[idx], wf[idx-1]] = [wf[idx-1], wf[idx]];
-                                                                setEditingCollege({...editingCollege, workflow: wf});
-                                                            }
-                                                        }}
-                                                        className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white"
-                                                    >↑</button>
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const wf = [...(editingCollege.workflow || [])];
-                                                            if (idx < wf.length - 1) {
-                                                                [wf[idx], wf[idx+1]] = [wf[idx+1], wf[idx]];
-                                                                setEditingCollege({...editingCollege, workflow: wf});
-                                                            }
-                                                        }}
-                                                        className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white"
-                                                    >↓</button>
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const wf = (editingCollege.workflow || []).filter(s => s.id !== step.id);
-                                                            setEditingCollege({...editingCollege, workflow: wf});
-                                                        }}
-                                                        className="p-1.5 hover:bg-red-500/20 rounded-lg text-red-400"
-                                                    ><Trash2 className="w-3 h-3" /></button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        
-                                        <button 
-                                            type="button"
-                                            onClick={() => {
-                                                const newStep = { id: `STEP_${Date.now()}`, label: 'New Custom Step', type: 'STAFF_APPROVAL', required: true };
-                                                setEditingCollege({...editingCollege, workflow: [...(editingCollege.workflow || []), newStep]});
-                                            }}
-                                            className="w-full py-2 border-2 border-dashed border-white/10 rounded-xl text-[10px] font-black text-white/40 hover:text-white hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all uppercase tracking-widest flex items-center justify-center gap-2"
-                                        >
-                                            <Plus className="w-3 h-3" /> Add Workflow Node
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 bg-slate-50 rounded-[1.5rem] border border-slate-200 flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-slate-100 overflow-hidden">
-                                        {editingCollege.logoUrl ? (
-                                            <img src={editingCollege.logoUrl} alt="Preview" className="w-full h-full object-contain p-1" />
-                                        ) : (
-                                            <School className="w-6 h-6 text-slate-300" />
-                                        )}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-[10px] font-black uppercase text-slate-400">Live Brand Preview</p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: editingCollege.primaryColor }} />
-                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: editingCollege.secondaryColor }} />
-                                            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{editingCollege.name} Branding</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button 
-                                    type="submit" 
-                                    className="w-full premium-gradient py-5 rounded-[1.25rem] font-black text-white shadow-xl shadow-primary/20 active:scale-95 transition-all mt-4"
-                                >
-                                    Save Institutional Theme
-                                </button>
-                            </form>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* Add College Modal */}
-            <AnimatePresence>
-                {showAddCollege && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div 
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            onClick={() => setShowAddCollege(false)} 
-                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
-                        />
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="glass w-full max-w-md p-8 rounded-[2.5rem] border border-white/10 relative z-10 shadow-2xl"
-                        >
-                            <div className="flex justify-between items-center mb-8">
-                                <h2 className="text-2xl font-black italic uppercase tracking-tighter">Integrate Institutional Tenant</h2>
-                                <button onClick={() => setShowAddCollege(false)} className="p-2 hover:bg-black/5 rounded-xl transition-all"><X className="w-5 h-5" /></button>
-                            </div>
-
-                            <form onSubmit={handleCreateCollege} className="space-y-6">
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary block mb-3 ml-1">College Name</label>
-                                    <input 
-                                        required 
-                                        type="text" 
+                                        placeholder="E.g. Tech University"
+                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-lg focus:outline-none focus:border-primary/30 transition-all font-bold"
                                         value={newCollege.name}
-                                        onChange={(e) => setNewCollege({ ...newCollege, name: e.target.value })}
-                                        placeholder="e.g. Stanford University"
-                                        className="w-full bg-slate-100 border border-slate-200 rounded-[1.25rem] px-6 py-4 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all" 
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary block mb-3 ml-1">Domain Handle (Optional)</label>
-                                    <input 
-                                        type="text" 
-                                        value={newCollege.domain}
-                                        onChange={(e) => setNewCollege({ ...newCollege, domain: e.target.value })}
-                                        placeholder="e.g. stanford.edu"
-                                        className="w-full bg-slate-100 border border-slate-200 rounded-[1.25rem] px-6 py-4 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all" 
+                                        onChange={e => setNewCollege({...newCollege, name: e.target.value})}
                                     />
                                 </div>
 
-                                <button 
-                                    type="submit" 
-                                    className="w-full premium-gradient py-5 rounded-[1.25rem] font-black text-white shadow-xl shadow-primary/20 active:scale-95 transition-all mt-4"
-                                >
-                                    Confirm Integration
-                                </button>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Assigned Domain</label>
+                                    <div className="relative">
+                                        <Globe className="w-5 h-5 absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input 
+                                            required
+                                            type="text" 
+                                            placeholder="institution.edu"
+                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-16 pr-6 py-4 text-lg focus:outline-none focus:border-primary/30 transition-all font-bold"
+                                            value={newCollege.domain}
+                                            onChange={e => setNewCollege({...newCollege, domain: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Primary Signature</label>
+                                    <div className="flex items-center gap-4 p-2 bg-slate-50 rounded-2xl border-2 border-slate-100">
+                                        <input 
+                                            type="color" 
+                                            className="w-16 h-16 rounded-xl border-none cursor-pointer bg-transparent"
+                                            value={newCollege.branding.primaryColor}
+                                            onChange={e => setNewCollege({...newCollege, branding: { primaryColor: e.target.value }})}
+                                        />
+                                        <span className="text-slate-400 font-mono font-bold">{newCollege.branding.primaryColor}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4 pt-6">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowInitModal(false)}
+                                        className="flex-1 px-8 py-5 rounded-2xl font-black text-xs uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
+                                    >
+                                        Abort
+                                    </button>
+                                    <button 
+                                        type="submit"
+                                        className="flex-[2] bg-primary text-white px-8 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-dark transition-all shadow-xl shadow-primary/30"
+                                    >
+                                        Deploy Infrastructure
+                                    </button>
+                                </div>
                             </form>
                         </motion.div>
                     </div>
@@ -722,6 +636,4 @@ const SuperAdminDashboard = () => {
             </AnimatePresence>
         </div>
     );
-};
-
-export default SuperAdminDashboard;
+}

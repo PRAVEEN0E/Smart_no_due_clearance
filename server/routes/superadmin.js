@@ -11,6 +11,11 @@ async function superAdminRoutes(fastify, opts) {
             include: {
                 _count: {
                     select: { users: true, subjects: true }
+                },
+                users: {
+                    where: { role: 'MENTOR' },
+                    select: { department: true },
+                    take: 1
                 }
             },
             orderBy: { name: 'asc' }
@@ -34,7 +39,7 @@ async function superAdminRoutes(fastify, opts) {
 
         return prisma.college.update({
             where: { id },
-            data: { name, domain, logoUrl, primaryColor, secondaryColor, workflow }
+            data: { name, domain, logoUrl, primaryColor, secondaryColor, workflow, isMaintenanceMode }
         });
     });
 
@@ -48,23 +53,42 @@ async function superAdminRoutes(fastify, opts) {
     // --- Global User Management ---
 
     // List all administrative users (Mentors/SuperAdmins)
-    fastify.get('/users', { preHandler: auth }, async (request) => {
-        return prisma.user.findMany({
-            where: {
-                role: { in: ['MENTOR', 'SUPERADMIN'] }
-            },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                college: { select: { name: true } },
-                createdAt: true
-            },
-            orderBy: { createdAt: 'desc' }
+
+
+    // Update a user (e.g., change department)
+    fastify.put('/users/:id', { preHandler: auth }, async (request, reply) => {
+        const { id } = request.params;
+        const { name, email, role, department, className } = request.body;
+
+        return prisma.user.update({
+            where: { id },
+            data: { name, email, role, department, className }
         });
     });
 
+
+    // Impersonate a user (Generate a short-lived support token)
+    fastify.post('/impersonate/:userId', { preHandler: auth }, async (request, reply) => {
+        const { userId } = request.params;
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { college: true }
+        });
+
+        if (!user) return reply.status(404).send({ message: 'User not found' });
+
+        const token = fastify.jwt.sign({ 
+            id: user.id, 
+            email: user.email, 
+            role: user.role,
+            collegeId: user.collegeId,
+            collegeName: user.college?.name,
+            isImpersonated: true,
+            adminEmail: request.user.email
+        }, { expiresIn: '15m' });
+
+        return { token, user: { ...user, isImpersonated: true } };
+    });
 
     // --- System Statistics ---
 
@@ -91,6 +115,17 @@ async function superAdminRoutes(fastify, opts) {
             mentors: mentorCount,
             growthData: months.map(m => ({ name: m, val: Math.floor(Math.random() * 50) + 10 })) // Placeholder for growth trends
         };
+    });
+
+    // Toggle Maintenance Mode
+    fastify.post('/colleges/:id/maintenance', { preHandler: auth }, async (request, reply) => {
+        const { id } = request.params;
+        const { isMaintenanceMode } = request.body;
+        
+        return prisma.college.update({
+            where: { id },
+            data: { isMaintenanceMode }
+        });
     });
 
 
@@ -147,6 +182,38 @@ async function superAdminRoutes(fastify, opts) {
                 college: { select: { name: true } }
             },
             take: 20
+        });
+    });
+    // --- Global Audit Ledger ---
+    fastify.get('/logs', { preHandler: auth }, async (request) => {
+        return prisma.auditLog.findMany({
+            include: {
+                college: { select: { name: true } }
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    });
+
+    // --- Global User Directory ---
+    fastify.get('/users', { preHandler: auth }, async (request) => {
+        const { search, role, collegeId } = request.query;
+        
+        return prisma.user.findMany({
+            where: {
+                ...(role ? { role } : {}),
+                ...(collegeId ? { collegeId } : {}),
+                ...(search ? {
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { email: { contains: search, mode: 'insensitive' } }
+                    ]
+                } : {})
+            },
+            include: {
+                college: { select: { name: true } }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 200 // Safety limit
         });
     });
 }

@@ -32,6 +32,7 @@ model College {
   primaryColor String?  @default("#7c3aed")
   secondaryColor String? @default("#a855f7")
   workflow     Json?    // Array of requirement objects {id, label, type, required}
+  isMaintenanceMode Boolean @default(false)
   
   users        User[]
   subjects     Subject[]
@@ -85,7 +86,7 @@ model Subject {
   id          String      @id @default(uuid())
   name        String
   code        String      
-  type        SubjectType
+  type        SubjectType @default(FULL_THEORY)
   createdAt   DateTime    @default(now())
   createdById String?
   createdBy   User?       @relation("SubjectCreator", fields: [createdById], references: [id])

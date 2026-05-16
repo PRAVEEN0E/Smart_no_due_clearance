@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { LogOut, Loader2 } from 'lucide-react';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { LogOut, Loader2, Clock } from 'lucide-react';
 import useAuth from './hooks/useAuth';
 import NotificationBell from './components/NotificationBell';
 import AnnouncementTicker from './components/AnnouncementTicker';
@@ -12,9 +12,10 @@ const Register = lazy(() => import('./pages/auth/Register'));
 const MentorDashboard = lazy(() => import('./pages/mentor/MentorDashboard'));
 const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard'));
 const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard'));
-import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
+const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
 const Verification = lazy(() => import('./pages/Verification'));
 const AIChatBubble = lazy(() => import('./components/AIChatBubble'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 
 // Loading Fallback Component
 
@@ -66,9 +67,33 @@ const DashboardLayout = ({ children }) => {
     );
 };
 
+const MaintenanceScreen = () => (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white p-8 text-center animate-in fade-in duration-700">
+        <div className="w-24 h-24 bg-amber-50 rounded-[2rem] flex items-center justify-center text-amber-500 mb-10 shadow-xl shadow-amber-200">
+            <Clock className="w-12 h-12" />
+        </div>
+        <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-4 uppercase italic">Node Lockdown</h1>
+        <p className="text-slate-500 font-medium max-w-md mx-auto mb-10 leading-relaxed italic">
+            This institutional node is currently under scheduled maintenance. 
+            Access will be restored once the infrastructure updates are complete.
+        </p>
+        <div className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl">
+            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            System Node: Offline
+        </div>
+        <Link to="/" className="mt-12 text-indigo-600 font-black text-[10px] uppercase tracking-widest hover:underline">Return to Home</Link>
+    </div>
+);
+
 const ProtectedRoute = ({ children, roles }) => {
     const { user, token } = useAuth();
     if (!token) return <Navigate to="/login" />;
+    
+    // Check Maintenance Mode (SuperAdmins are exempt)
+    if (user?.role !== 'SUPERADMIN' && user?.isMaintenance) {
+        return <MaintenanceScreen />;
+    }
+
     if (roles && !roles.includes(user.role)) return <Navigate to="/login" />;
     return <DashboardLayout>{children}</DashboardLayout>;
 };
@@ -112,7 +137,7 @@ function App() {
                     <Route path="/staff/*" element={<ProtectedRoute roles={['STAFF']}><StaffDashboard /></ProtectedRoute>} />
                     <Route path="/student/*" element={<ProtectedRoute roles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
                     <Route path="/superadmin/*" element={<ProtectedRoute roles={['SUPERADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />
-                    <Route path="/" element={<Navigate to="/login" />} />
+                    <Route path="/" element={<LandingPage />} />
                 </Routes>
             </Suspense>
         </>

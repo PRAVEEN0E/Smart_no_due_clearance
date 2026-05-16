@@ -29,7 +29,14 @@ async function mentorRoutes(fastify, opts) {
         if (existing) return reply.status(409).send({ message: 'Email already exists' });
 
         const staff = await prisma.user.create({
-            data: { name, email, passwordHash, role: role || 'STAFF', createdById: request.user.id, collegeId: request.user.collegeId }
+            data: { 
+                name, 
+                email, 
+                passwordHash, 
+                role: role || 'STAFF', 
+                createdBy: { connect: { id: request.user.id } },
+                college: request.user.collegeId ? { connect: { id: request.user.collegeId } } : undefined
+            }
         });
 
         // Send Welcome Email
@@ -45,7 +52,8 @@ async function mentorRoutes(fastify, opts) {
         
         const where = { role: 'STUDENT' };
         if (!isSuperAdmin) where.collegeId = request.user.collegeId || null;
-        if (!isAdmin) where.createdById = request.user.id;
+        // Mentors should be able to see all students in their college/department context
+        // if (!isAdmin) where.createdById = request.user.id;
 
         try {
             return await prisma.user.findMany({
@@ -75,10 +83,10 @@ async function mentorRoutes(fastify, opts) {
                         email: s.email,
                         passwordHash,
                         role: 'STUDENT',
-                        createdById: request.user.id,
-                        collegeId: request.user.collegeId,
+                        createdBy: { connect: { id: request.user.id } },
+                        college: request.user.collegeId ? { connect: { id: request.user.collegeId } } : undefined,
                         className: s.className || null,
-                        department: s.department || null
+                        department: typeof s.department === 'object' ? (s.department?.name || null) : (s.department || null)
                     }
                 });
                 await prisma.feeRecord.create({ data: { studentId: user.id, feeBalance: 0 } });
@@ -195,7 +203,16 @@ async function mentorRoutes(fastify, opts) {
 
         const student = await prisma.$transaction(async (tx) => {
             const newUser = await tx.user.create({
-                data: { name, email, passwordHash, role: 'STUDENT', createdById: request.user.id, collegeId: request.user.collegeId, className: className || null, department: studentDept },
+                data: { 
+                    name, 
+                    email, 
+                    passwordHash, 
+                    role: 'STUDENT', 
+                    createdBy: { connect: { id: request.user.id } }, 
+                    college: request.user.collegeId ? { connect: { id: request.user.collegeId } } : undefined,
+                    className: className || null, 
+                    department: typeof studentDept === 'object' ? (studentDept?.name || null) : (studentDept || null)
+                },
                 select: { id: true, name: true, email: true, role: true, collegeId: true, className: true, department: true }
             });
             await tx.feeRecord.create({
@@ -217,8 +234,13 @@ async function mentorRoutes(fastify, opts) {
             return reply.status(403).send({ message: 'Unauthorized: student belongs to a different college' });
         }
 
-        const { name, email, password } = request.body;
-        const updateData = { name, email };
+        const { name, email, password, className, department } = request.body;
+        const updateData = { 
+            name, 
+            email,
+            className: className !== undefined ? className : undefined,
+            department: department !== undefined ? department : undefined
+        };
 
         if (password) {
             updateData.passwordHash = await bcrypt.hash(password, 12);
@@ -227,7 +249,7 @@ async function mentorRoutes(fastify, opts) {
         return prisma.user.update({
             where: { id: request.params.id },
             data: updateData,
-            select: { id: true, name: true, email: true, role: true, collegeId: true }
+            select: { id: true, name: true, email: true, role: true, collegeId: true, className: true, department: true }
         });
     });
 
@@ -271,20 +293,21 @@ async function mentorRoutes(fastify, opts) {
             const existing = await prisma.user.findUnique({ where: { email: s.email } });
 
             if (existing) {
-                // If student exists but has no owner, claim them for this mentor ONLY if collegeId matches
-                if (!existing.createdById) {
-                    if (existing.collegeId === request.user.collegeId) {
-                        const claimed = await prisma.user.update({
-                            where: { id: existing.id },
-                            data: { createdById: request.user.id }
-                        });
-                        results.push(claimed);
-                    } else {
-                        results.push({ ...existing, error: 'Cannot claim: student belongs to different college' });
-                    }
+                // Multi-tenant safety: check if student belongs to the same college
+                if (existing.collegeId === request.user.collegeId) {
+                    const updated = await prisma.user.update({
+                        where: { id: existing.id },
+                        data: { 
+                            name: s.name,
+                            className: s.className || undefined,
+                            department: s.department || undefined,
+                            // Ensure the current mentor has "ownership" if it was null
+                            createdById: existing.createdById || request.user.id 
+                        }
+                    });
+                    results.push(updated);
                 } else {
-                    // Already owned by another mentor — skip
-                    results.push(existing);
+                    results.push({ ...existing, error: 'Cannot update: student belongs to a different institution' });
                 }
                 continue;
             }
@@ -297,8 +320,10 @@ async function mentorRoutes(fastify, opts) {
                     email: s.email,
                     passwordHash,
                     role: 'STUDENT',
-                    createdById: request.user.id,
-                    collegeId: request.user.collegeId,
+                    createdBy: { connect: { id: request.user.id } },
+                    college: request.user.collegeId ? { connect: { id: request.user.collegeId } } : undefined,
+                    className: s.className || null,
+                    department: s.department || null,
                     feeRecord: {
                         create: { feeBalance: 0, feeClearedAuto: true }
                     }
@@ -379,7 +404,11 @@ async function mentorRoutes(fastify, opts) {
 
     fastify.post('/subjects', { schema: mentorSchema.createSubject }, async (request, reply) => {
         return prisma.subject.create({
-            data: { ...request.body, createdById: request.user.id, collegeId: request.user.collegeId }
+            data: { 
+                ...request.body, 
+                createdBy: { connect: { id: request.user.id } }, 
+                college: request.user.collegeId ? { connect: { id: request.user.collegeId } } : undefined
+            }
         });
     });
 

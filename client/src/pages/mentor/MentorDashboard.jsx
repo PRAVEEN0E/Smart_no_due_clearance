@@ -15,6 +15,7 @@ import {
     X,
     UserPlus,
     Link as LinkIcon,
+    CreditCard,
     ShieldCheck,
     Megaphone,
     AlertCircle,
@@ -552,12 +553,16 @@ export default function MentorDashboard() {
                                                 <td className="px-6 py-4">
                                                     <button
                                                         onClick={() => handleToggleFee(item.id, item.feeRecord?.feeClearedManual)}
-                                                        className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${(item.feeRecord?.feeClearedAuto || item.feeRecord?.feeClearedManual)
-                                                            ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                                                            : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white'
+                                                        className={`w-full max-w-[140px] flex items-center justify-between px-4 py-2.5 rounded-2xl transition-all duration-300 font-bold text-[11px] tracking-tight whitespace-nowrap ${(item.feeRecord?.feeClearedAuto || item.feeRecord?.feeClearedManual)
+                                                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200/50 hover:bg-emerald-600'
+                                                            : 'bg-white text-slate-900 border-2 border-slate-900 hover:bg-slate-900 hover:text-white shadow-sm'
                                                             }`}
                                                     >
-                                                        {(item.feeRecord?.feeClearedAuto || item.feeRecord?.feeClearedManual) ? 'CLEARED' : 'MARK AS PAID'}
+                                                        <span>{(item.feeRecord?.feeClearedAuto || item.feeRecord?.feeClearedManual) ? 'PAID' : 'PAY NOW'}</span>
+                                                        {(item.feeRecord?.feeClearedAuto || item.feeRecord?.feeClearedManual) 
+                                                            ? <CheckCircle2 className="w-4 h-4" /> 
+                                                            : <CreditCard className="w-4 h-4 opacity-50" />
+                                                        }
                                                     </button>
                                                     <div className="text-[10px] mt-1 text-muted-foreground font-mono">
                                                         Bal: ₹{(item.feeRecord?.feeClearedAuto || item.feeRecord?.feeClearedManual) ? 0 : (item.feeRecord?.feeBalance || 0)}
