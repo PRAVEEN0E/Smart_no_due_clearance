@@ -32,7 +32,7 @@ fastify.register(require('@fastify/cors'), {
 });
 
 fastify.register(require('@fastify/rate-limit'), {
-    max: 100,
+    max: 1000,
     timeWindow: '1 minute',
     errorResponseBuilder: (request, context) => ({
         statusCode: 429,

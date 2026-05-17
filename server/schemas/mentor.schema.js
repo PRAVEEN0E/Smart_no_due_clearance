@@ -32,7 +32,10 @@ const mentorSchema = {
                 name: { type: 'string' },
                 code: { type: 'string' },
                 type: { type: 'string', enum: ['FULL_THEORY', 'FULL_LAB', 'THEORY_WITH_LAB'] },
-                syllabusText: { type: 'string' }
+                syllabusText: { type: 'string' },
+                semester: { type: 'integer' },
+                examDate: { type: ['string', 'null'] },
+                examSession: { type: 'string', enum: ['FN', 'AN'] }
             }
         }
     },

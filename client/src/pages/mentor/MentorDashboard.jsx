@@ -55,7 +55,7 @@ export default function MentorDashboard() {
     const [commonFeeAmount, setCommonFeeAmount] = useState('');
     const [addingCommonFee, setAddingCommonFee] = useState(false);
     const [modalMode, setModalMode] = useState('student'); // 'student', 'subject', 'staff'
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', syllabusText: '', className: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', syllabusText: '', className: '', semester: '4', examDate: '', examSession: 'FN' });
     const [editingId, setEditingId] = useState(null);
     const [assignData, setAssignData] = useState({ staffId: '', subjectId: '' });
     const [activeStudent, setActiveStudent] = useState(null);
@@ -135,7 +135,15 @@ export default function MentorDashboard() {
         setModalMode(mode);
         setEditingId(item.id);
         if (mode === 'subject') {
-            setFormData({ name: item.name, code: item.code, type: item.type, syllabusText: item.syllabusText || '' });
+            setFormData({ 
+                name: item.name, 
+                code: item.code, 
+                type: item.type, 
+                syllabusText: item.syllabusText || '',
+                semester: item.semester?.toString() || '4',
+                examDate: item.examDate || '',
+                examSession: item.examSession || 'FN'
+            });
         } else if (mode === 'announcement') {
             setFormData({ name: item.title, content: item.content, type: item.type || 'GENERAL', priority: item.priority || 1 });
         } else {
@@ -167,7 +175,15 @@ export default function MentorDashboard() {
                 payload = { title: formData.name, content: formData.content, type: formData.type, priority: formData.priority };
             } else {
                 endpoint = `/mentor/subjects${idPath}`;
-                payload = { name: formData.name, code: formData.code, type: formData.type, syllabusText: formData.syllabusText };
+                payload = { 
+                    name: formData.name, 
+                    code: formData.code, 
+                    type: formData.type, 
+                    syllabusText: formData.syllabusText,
+                    semester: formData.semester ? parseInt(formData.semester) : 4,
+                    examDate: formData.examDate || null,
+                    examSession: formData.examSession || 'FN'
+                };
             }
 
             await api[method](endpoint, payload);
@@ -175,7 +191,7 @@ export default function MentorDashboard() {
             fetchData();
             setShowAddModal(false);
             setEditingId(null);
-            setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '' });
+            setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '', semester: '4', examDate: '', examSession: 'FN' });
             toast.success(`${modalMode} ${isEditing ? 'updated' : 'added'} successfully!`);
         } catch (err) {
             toast.error(err.response?.data?.message || "Failed to process request");
@@ -274,7 +290,7 @@ export default function MentorDashboard() {
         setShowStudentAssignModal(false);
         setShowCommonFeeModal(false);
         setEditingId(null);
-        setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '' });
+        setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '', semester: '4', examDate: '', examSession: 'FN' });
         setCommonFeeAmount('');
     };
 
@@ -743,7 +759,7 @@ export default function MentorDashboard() {
                         <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="glass w-full max-w-md p-8 rounded-3xl border border-white/10 relative z-10 shadow-2xl">
                             <div className="flex justify-between items-center mb-6">
                                 <h1 className="text-xl font-bold">Enroll Student</h1>
-                                <button onClick={closeModals} className="p-2 hover:bg-white/5 rounded-xl"><X className="w-5 h-5" /></button>
+                                <button onClick={closeModals} className="p-2 hover:bg-white/5 rounded-xl" aria-label="Close enroll student modal"><X className="w-5 h-5" /></button>
                             </div>
                             <div className="mb-6 p-4 bg-white/5 rounded-2xl border border-white/10">
                                 <div className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1">Enrolling</div>
@@ -776,7 +792,10 @@ export default function MentorDashboard() {
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeModals} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
                         <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="glass w-full max-w-md p-8 rounded-3xl border border-white/10 relative z-10 shadow-2xl">
-                            <h2 className="text-2xl font-bold mb-6">{editingId ? 'Update' : 'Create New'} {modalMode}</h2>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold">{editingId ? 'Update' : 'Create New'} {modalMode}</h2>
+                                <button type="button" onClick={closeModals} className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-foreground" aria-label="Close form modal"><X className="w-5 h-5" /></button>
+                            </div>
                             <form onSubmit={handleAddItem} className="space-y-4">
                                 {modalMode === 'announcement' ? (
                                     <>
@@ -844,6 +863,42 @@ export default function MentorDashboard() {
                                             </select>
                                         </div>
                                         <div>
+                                            <div className="grid grid-cols-3 gap-3 mb-4">
+                                                <div>
+                                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Sem</label>
+                                                    <input 
+                                                        required 
+                                                        type="number" 
+                                                        min="1" 
+                                                        max="8" 
+                                                        value={formData.semester} 
+                                                        onChange={(e) => setFormData({ ...formData, semester: e.target.value })} 
+                                                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary/20" 
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Exam Date</label>
+                                                    <input 
+                                                        required
+                                                        type="text" 
+                                                        placeholder="DD/MM/YYYY" 
+                                                        value={formData.examDate} 
+                                                        onChange={(e) => setFormData({ ...formData, examDate: e.target.value })} 
+                                                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary/20 font-mono" 
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Session</label>
+                                                    <select 
+                                                        value={formData.examSession} 
+                                                        onChange={(e) => setFormData({ ...formData, examSession: e.target.value })} 
+                                                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary/20"
+                                                    >
+                                                        <option value="FN">FN</option>
+                                                        <option value="AN">AN</option>
+                                                    </select>
+                                                </div>
+                                            </div>
                                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Syllabus Content (For AI Q&A)</label>
                                             <textarea 
                                                 value={formData.syllabusText} 
@@ -870,7 +925,10 @@ export default function MentorDashboard() {
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeModals} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
                         <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="glass w-full max-w-md p-8 rounded-3xl border border-white/10 relative z-10 shadow-2xl">
-                            <h2 className="text-2xl font-bold mb-6">Subject Allocation</h2>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold">Subject Allocation</h2>
+                                <button type="button" onClick={closeModals} className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-foreground" aria-label="Close subject allocation modal"><X className="w-5 h-5" /></button>
+                            </div>
                             <form onSubmit={handleAssignStaff} className="space-y-6">
                                 <div>
                                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Faculty Member</label>
@@ -915,7 +973,7 @@ export default function MentorDashboard() {
                                     <Wallet className="w-5 h-5 text-amber-500" />
                                     Assign Common Fee
                                 </h3>
-                                <button onClick={closeModals} className="p-2 hover:bg-slate-200 rounded-full transition-all text-slate-500">
+                                <button onClick={closeModals} className="p-2 hover:bg-slate-200 rounded-full transition-all text-slate-500" aria-label="Close assign common fee modal">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>

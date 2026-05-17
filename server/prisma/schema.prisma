@@ -63,6 +63,8 @@ model User {
   hallTicket      HallTicket?
   notifications   Notification[]
   materials       Material[] @relation("UploadedMaterials")
+  examAttendances   ExamAttendance[] @relation("StudentAttendance")
+  scannedAttendances ExamAttendance[] @relation("StaffAttendanceScans")
 
   createdById     String?
   createdBy       User?            @relation("UserCreator", fields: [createdById], references: [id])
@@ -101,7 +103,13 @@ model Subject {
   evaluations        Evaluation[]
   assignments        Assignment[]
   materials          Material[]
+  examAttendances    ExamAttendance[]
   syllabusText       String?     @db.Text
+  
+  // Dynamic Exam Scheduling
+  semester    Int?        @default(4)
+  examDate    String?     // e.g. "01/06/2026"
+  examSession String?     @default("FN") // FN or AN
 
   // A subject code is only unique WITHIN a specific college
   @@unique([code, collegeId])
@@ -245,4 +253,21 @@ model Material {
 
   subject    Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   uploadedBy User    @relation("UploadedMaterials", fields: [uploadedById], references: [id])
+}
+
+model ExamAttendance {
+  id            String   @id @default(uuid())
+  studentId     String
+  subjectId     String
+  scannedById   String
+  scannedAt     DateTime @default(now())
+  verified      Boolean  @default(true)
+  session       String   // e.g. "FN" or "AN"
+  date          String   // e.g. "17/05/2026"
+
+  student   User    @relation("StudentAttendance", fields: [studentId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  scannedBy User    @relation("StaffAttendanceScans", fields: [scannedById], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId])
 }

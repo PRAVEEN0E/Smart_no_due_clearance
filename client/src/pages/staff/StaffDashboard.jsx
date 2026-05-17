@@ -22,7 +22,8 @@ import {
     ShieldCheck,
     TrendingUp as TrendingUpIcon,
     LineChart as LineChartIcon,
-    FileSpreadsheet
+    FileSpreadsheet,
+    Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -46,10 +47,12 @@ import {
 } from 'recharts';
 import api from '../../lib/api';
 import CourseMaterials from '../../components/CourseMaterials';
+import ExamQRScanner from './ExamQRScanner';
 import useAuthStore from '../../store/authStore';
 
 export default function StaffDashboard() {
     const { token: authToken } = useAuthStore();
+    const [activeTab, setActiveTab] = useState('performance'); // 'performance', 'scanner'
     const [subjects, setSubjects] = useState([]);
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [evaluations, setEvaluations] = useState([]);
@@ -296,21 +299,27 @@ export default function StaffDashboard() {
                     <p className="text-muted-foreground mt-1 font-medium italic">Review performance & finalize records.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4">
-                    <button
-                        onClick={handleExportExcel}
-                        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-900 px-5 py-3 rounded-2xl border border-slate-200 transition-all group shadow-sm"
-                    >
-                        <FileSpreadsheet className="w-5 h-5 group-hover:scale-110 transition-transform text-primary" />
-                        <span className="text-sm font-bold">Export Excel</span>
-                    </button>
+                    {activeTab === 'performance' && (
+                        <>
+                            <button
+                                onClick={handleExportExcel}
+                                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-900 px-5 py-3 rounded-2xl border border-slate-200 transition-all group shadow-sm"
+                                aria-label="Export student assessment marks to Excel spreadsheet"
+                            >
+                                <FileSpreadsheet className="w-5 h-5 group-hover:scale-110 transition-transform text-primary" />
+                                <span className="text-sm font-bold">Export Excel</span>
+                            </button>
 
-                    <button
-                        onClick={handleExportPDF}
-                        className="flex items-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary px-5 py-3 rounded-2xl border border-primary/20 transition-all group shadow-sm"
-                    >
-                        <FileDown className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                        <span className="text-sm font-bold">Export PDF</span>
-                    </button>
+                            <button
+                                onClick={handleExportPDF}
+                                className="flex items-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary px-5 py-3 rounded-2xl border border-primary/20 transition-all group shadow-sm"
+                                aria-label="Export student assessment marks to PDF report"
+                            >
+                                <FileDown className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                <span className="text-sm font-bold">Export PDF</span>
+                            </button>
+                        </>
+                    )}
 
                     <div className="glass px-6 py-3 rounded-2xl border border-border flex items-center gap-3 shadow-sm">
                         <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -319,8 +328,36 @@ export default function StaffDashboard() {
                 </div>
             </div>
 
-            {/* Top Analytics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Glowing Tab Bar */}
+            <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200/50 max-w-md shadow-sm">
+                <button
+                    onClick={() => setActiveTab('performance')}
+                    className={`flex-1 py-3 px-6 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                        activeTab === 'performance' 
+                            ? 'bg-white text-primary shadow-md' 
+                            : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                >
+                    <TrendingUp className="w-4 h-4" />
+                    Academic Approvals
+                </button>
+                <button
+                    onClick={() => setActiveTab('scanner')}
+                    className={`flex-1 py-3 px-6 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                        activeTab === 'scanner' 
+                            ? 'bg-white text-primary shadow-md' 
+                            : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                >
+                    <Camera className="w-4 h-4" />
+                    QR Exam Scanner
+                </button>
+            </div>
+
+            {activeTab === 'performance' ? (
+                <>
+                    {/* Top Analytics Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass p-8 rounded-[2.5rem] border border-border flex items-center gap-6 shadow-sm">
                     <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                         <TrendingUp className="w-8 h-8" />
@@ -777,6 +814,10 @@ export default function StaffDashboard() {
                     </div>
                 </div>
             </div>
+                </>
+            ) : (
+                <ExamQRScanner subjects={subjects} />
+            )}
 
             <AnimatePresence>
                 {activeStudent && (
@@ -804,7 +845,11 @@ export default function StaffDashboard() {
                                         <p className="text-slate-500 text-sm font-mono">{activeStudent.email}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => { setActiveStudent(null); setPreviewUrl(null); }} className="p-3 hover:bg-slate-200 rounded-2xl border border-slate-200 transition-all text-slate-500 hover:text-slate-800">
+                                <button 
+                                    onClick={() => { setActiveStudent(null); setPreviewUrl(null); }} 
+                                    className="p-3 hover:bg-slate-200 rounded-2xl border border-slate-200 transition-all text-slate-500 hover:text-slate-800"
+                                    aria-label="Close student submissions panel"
+                                >
                                     <X className="w-6 h-6" />
                                 </button>
                             </div>
@@ -952,6 +997,7 @@ export default function StaffDashboard() {
                                                     <button 
                                                         onClick={() => setPreviewUrl(null)}
                                                         className="p-1.5 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-all"
+                                                        aria-label="Close document preview window"
                                                     >
                                                         <X className="w-4 h-4" />
                                                     </button>

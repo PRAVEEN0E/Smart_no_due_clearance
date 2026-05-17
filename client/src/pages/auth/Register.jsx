@@ -190,22 +190,23 @@ export default function Register() {
                                                     value={collegeName}
                                                     onChange={(e) => setCollegeName(e.target.value)}
                                                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-white transition-all text-slate-800 text-sm font-medium"
-                                                    placeholder="E.g. Computer Science"
+                                                    placeholder="E.g. Vellalar College of Engineering (VCET)"
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-slate-700 ml-1">Department</label>
+                                        <label className="text-xs font-bold text-slate-700 ml-1">Your Department</label>
                                         <div className="relative group">
                                             <BookOpen className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" />
                                             <select
+                                                required
                                                 value={department}
                                                 onChange={(e) => setDepartment(e.target.value)}
                                                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-white transition-all text-slate-800 text-sm font-medium appearance-none cursor-pointer"
                                             >
-                                                <option value="">Select Department (Optional)</option>
+                                                <option value="">Select Your Department</option>
                                                 <option value="CSE">CSE - Computer Science</option>
                                                 <option value="ECE">ECE - Electronics & Communication</option>
                                                 <option value="EEE">EEE - Electrical & Electronics</option>

@@ -14,7 +14,7 @@ async function superAdminRoutes(fastify, opts) {
                 },
                 users: {
                     where: { role: 'MENTOR' },
-                    select: { department: true },
+                    select: { id: true, department: true },
                     take: 1
                 }
             },
@@ -32,14 +32,30 @@ async function superAdminRoutes(fastify, opts) {
         });
     });
 
-    // Update college details
+    // Update college details & Mentor department
     fastify.put('/colleges/:id', { preHandler: auth }, async (request, reply) => {
         const { id } = request.params;
-        const { name, domain, logoUrl, primaryColor, secondaryColor, workflow } = request.body;
+        const { name, domain, logoUrl, primaryColor, secondaryColor, workflow, isMaintenanceMode, department } = request.body;
 
-        return prisma.college.update({
-            where: { id },
-            data: { name, domain, logoUrl, primaryColor, secondaryColor, workflow, isMaintenanceMode }
+        return prisma.$transaction(async (tx) => {
+            const college = await tx.college.update({
+                where: { id },
+                data: { name, domain, logoUrl, primaryColor, secondaryColor, workflow, isMaintenanceMode }
+            });
+
+            if (department !== undefined) {
+                const mentor = await tx.user.findFirst({
+                    where: { collegeId: id, role: 'MENTOR' }
+                });
+                if (mentor) {
+                    await tx.user.update({
+                        where: { id: mentor.id },
+                        data: { department }
+                    });
+                }
+            }
+
+            return college;
         });
     });
 

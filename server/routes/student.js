@@ -2,7 +2,12 @@ const { generateFeedback, predictStudentSuccess, chatWithAI, generateAcademicIns
 const { checkAndUnlock } = require('../services/hallTicketService');
 
 async function studentRoutes(fastify, opts) {
-    fastify.addHook('preHandler', fastify.auth([fastify.authenticate, fastify.authorize(['STUDENT'])]));
+    fastify.addHook('preHandler', async (request, reply) => {
+        if (request.url.includes('/verify/')) {
+            return;
+        }
+        await fastify.auth([fastify.authenticate, fastify.authorize(['STUDENT'])])(request, reply);
+    });
 
     const { prisma } = fastify;
 

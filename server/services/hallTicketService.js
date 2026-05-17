@@ -349,20 +349,25 @@ body {
         <tbody>
 
             ${student.studentSubjects.map((ss, index) => {
-            const baseDate = new Date();
-            // Generate exam dates: starting from 15 days out, every 2-3 days
-            const examDates = [];
-            for (let d = 0; d < 6; d++) {
-                const examDate = new Date(baseDate);
-                examDate.setDate(baseDate.getDate() + 15 + (d * 2));
-                examDates.push(examDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+            const semester = ss.subject.semester ?? 4;
+            let date = ss.subject.examDate || '';
+            let session = ss.subject.examSession || 'FN';
+
+            if (!date) {
+                const baseDate = new Date();
+                const examDates = [];
+                for (let d = 0; d < 6; d++) {
+                    const examDate = new Date(baseDate);
+                    examDate.setDate(baseDate.getDate() + 15 + (d * 2));
+                    examDates.push(examDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+                }
+                date = examDates[index % examDates.length];
+                session = (index % 2 === 0) ? 'FN' : 'AN';
             }
-            const session = (index % 2 === 0) ? 'FN' : 'AN';
-            const date = examDates[index % examDates.length];
 
             return `
                 <tr>
-                    <td>4</td>
+                    <td>${semester}</td>
                     <td style="font-family: monospace; font-weight: bold;">${ss.subject.code}</td>
                     <td>${ss.subject.name}</td>
                     <td style="text-align: center; font-weight: bold;">${date} ${session}</td>

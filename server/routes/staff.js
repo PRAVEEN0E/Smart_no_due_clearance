@@ -312,6 +312,144 @@ async function staffRoutes(fastify, opts) {
             return reply.status(500).send({ message: 'PDF export failed: ' + err.message });
         }
     });
+
+    fastify.post('/verify-scan/:studentId', async (request, reply) => {
+        const { studentId } = request.params;
+        const { subjectId } = request.body || {}; // Selected subject currently being examined
+
+        try {
+            const student = await prisma.user.findFirst({
+                where: { id: studentId, role: 'STUDENT' },
+                include: {
+                    feeRecord: true,
+                    hallTicket: true,
+                    studentSubjects: {
+                        include: {
+                            subject: {
+                                include: {
+                                    evaluations: {
+                                        where: { studentId }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (!student) {
+                return reply.status(404).send({ message: 'Student record not found in system.' });
+            }
+
+            // Check Fee Clearance
+            const feeBalance = student.feeRecord?.balance || 0;
+            const feeCleared = (feeBalance <= 0) || !!student.feeRecord?.feeClearedManual;
+
+            // Check Academic Clearance (Evaluations)
+            const evaluations = await prisma.evaluation.findMany({
+                where: { studentId }
+            });
+            
+            const pendingSubjects = [];
+            for (const ss of student.studentSubjects) {
+                const evalRec = evaluations.find(e => e.subjectId === ss.subjectId);
+                if (!evalRec || !evalRec.staffApproved) {
+                    pendingSubjects.push({
+                        name: ss.subject.name,
+                        code: ss.subject.code,
+                        staffApproved: !!evalRec?.staffApproved
+                    });
+                }
+            }
+
+            const academicCleared = pendingSubjects.length === 0;
+            const overallCleared = feeCleared && academicCleared && !!student.hallTicket?.isUnlocked;
+
+            let attendanceResult = null;
+
+            // If a subject is selected, log Exam Attendance!
+            if (subjectId && overallCleared) {
+                const targetSub = student.studentSubjects.find(ss => ss.subjectId === subjectId);
+                if (targetSub) {
+                    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const session = targetSub.subject.examSession || 'FN';
+
+                    // Check if already logged
+                    const existingAttendance = await prisma.examAttendance.findUnique({
+                        where: {
+                            studentId_subjectId: {
+                                studentId,
+                                subjectId
+                            }
+                        }
+                    });
+
+                    if (!existingAttendance) {
+                        const newAttendance = await prisma.examAttendance.create({
+                            data: {
+                                studentId,
+                                subjectId,
+                                scannedById: request.user.id,
+                                date: todayStr,
+                                session,
+                                verified: true
+                            },
+                            include: { subject: true }
+                        });
+
+                        attendanceResult = {
+                            marked: true,
+                            alreadyExists: false,
+                            subjectName: newAttendance.subject.name,
+                            subjectCode: newAttendance.subject.code,
+                            date: newAttendance.date,
+                            session: newAttendance.session
+                        };
+                    } else {
+                        attendanceResult = {
+                            marked: true,
+                            alreadyExists: true,
+                            subjectName: targetSub.subject.name,
+                            subjectCode: targetSub.subject.code,
+                            date: existingAttendance.date,
+                            session: existingAttendance.session
+                        };
+                    }
+                } else {
+                    attendanceResult = {
+                        marked: false,
+                        error: "Student is not enrolled in the selected subject."
+                    };
+                }
+            }
+
+            return {
+                success: true,
+                student: {
+                    id: student.id,
+                    name: student.name,
+                    email: student.email,
+                    className: student.className,
+                    department: student.department
+                },
+                hallTicket: {
+                    isUnlocked: !!student.hallTicket?.isUnlocked,
+                    unlockedAt: student.hallTicket?.unlockedAt
+                },
+                dues: {
+                    cleared: overallCleared,
+                    feeCleared,
+                    feeBalance,
+                    academicCleared,
+                    pendingSubjects
+                },
+                attendance: attendanceResult
+            };
+        } catch (err) {
+            fastify.log.error(err);
+            return reply.status(500).send({ message: 'Failed to verify scanned student: ' + err.message });
+        }
+    });
 }
 
 module.exports = staffRoutes;
