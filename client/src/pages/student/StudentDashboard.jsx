@@ -16,10 +16,12 @@ import {
     Info,
     RefreshCw,
     CreditCard,
-    ShieldCheck
+    ShieldCheck,
+    BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingScreen from '../../components/LoadingScreen';
+import ReactMarkdown from 'react-markdown';
 import {
     ResponsiveContainer,
     BarChart,
@@ -47,6 +49,21 @@ export default function StudentDashboard() {
     const [showTicketModal, setShowTicketModal] = useState(false);
     const [ticketUrl, setTicketUrl] = useState('');
     const [paymentProcessing, setPaymentProcessing] = useState(false);
+    const [generatingPlanId, setGeneratingPlanId] = useState(null);
+    const [activeStudyPlan, setActiveStudyPlan] = useState(null);
+
+    const handleGenerateStudyPlan = async (subjectId, subjectName) => {
+        setGeneratingPlanId(subjectId);
+        try {
+            const res = await api.post('/student/remedial-plan', { subjectId });
+            setActiveStudyPlan({ subjectName, planText: res.data.plan });
+            toast.success("Study plan generated successfully!");
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to generate study plan.");
+        } finally {
+            setGeneratingPlanId(null);
+        }
+    };
 
     const getFileUrl = (url) => {
         if (!url) return '#';
@@ -419,6 +436,17 @@ export default function StudentDashboard() {
                                                     </button>
                                                 </div>
                                             )}
+
+                                            <div className="mt-3 ml-14 flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleGenerateStudyPlan(ev.subjectId, ev.subject.name)}
+                                                    disabled={generatingPlanId === ev.subjectId}
+                                                    className="text-[9px] font-black uppercase tracking-widest text-violet-600 hover:text-white flex items-center gap-2 border border-violet-600/20 px-3 py-1.5 rounded-lg hover:bg-violet-600 transition-all shadow-sm disabled:opacity-50"
+                                                >
+                                                    {generatingPlanId === ev.subjectId ? <RefreshCw className="w-3 h-3 animate-spin" /> : <BookOpen className="w-3 h-3" />}
+                                                    {generatingPlanId === ev.subjectId ? 'Generating Plan...' : 'Remedial Study Plan'}
+                                                </button>
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -600,6 +628,41 @@ export default function StudentDashboard() {
                     </div>
                 )}
             </AnimatePresence>
+
+            <AnimatePresence>
+                {activeStudyPlan && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setActiveStudyPlan(null)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-4xl max-h-[85vh] glass border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col bg-white"
+                        >
+                            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-violet-500/10 rounded-xl">
+                                        <BookOpen className="w-5 h-5 text-violet-600" />
+                                    </div>
+                                    <div>
+                                        <h2 className="font-bold text-lg">AI Remedial Study Plan</h2>
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">{activeStudyPlan.subjectName}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setActiveStudyPlan(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="p-6 overflow-y-auto prose prose-sm prose-slate max-w-none custom-scrollbar pb-10">
+                                <ReactMarkdown>{activeStudyPlan.planText}</ReactMarkdown>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             <AIChatBubble />
         </div>
     );

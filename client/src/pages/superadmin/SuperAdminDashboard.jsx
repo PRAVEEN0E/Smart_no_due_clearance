@@ -75,10 +75,16 @@ export default function SuperAdminDashboard() {
     const [isDepartmentView, setIsDepartmentView] = useState(true);
     const [activeTab, setActiveTab] = useState('institutions');
 
+    // RBAC states
+    const [roles, setRoles] = useState([]);
+    const [showRoleModal, setShowRoleModal] = useState(false);
+    const [newRole, setNewRole] = useState({ name: '', description: '', collegeId: '', permissions: [] });
+
     useEffect(() => {
         fetchData();
         fetchLogs();
         fetchUsers();
+        fetchRoles();
     }, []);
 
     const fetchData = async () => {
@@ -112,6 +118,39 @@ export default function SuperAdminDashboard() {
             setAllUsers(res.data);
         } catch (err) {
             console.error("Failed to fetch global users");
+        }
+    };
+
+    const fetchRoles = async () => {
+        try {
+            const res = await api.get('/superadmin/roles');
+            setRoles(res.data);
+        } catch (err) {
+            console.error("Failed to fetch roles");
+        }
+    };
+
+    const handleCreateRole = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/superadmin/roles', newRole);
+            toast.success("Custom role deployed successfully!");
+            setShowRoleModal(false);
+            setNewRole({ name: '', description: '', collegeId: '', permissions: [] });
+            fetchRoles();
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to create role.");
+        }
+    };
+
+    const handleDeleteRole = async (id) => {
+        if (!window.confirm("Delete this custom role?")) return;
+        try {
+            await api.delete(`/superadmin/roles/${id}`);
+            toast.success("Role purged.");
+            fetchRoles();
+        } catch (err) {
+            toast.error("Failed to delete role.");
         }
     };
 
@@ -267,13 +306,13 @@ export default function SuperAdminDashboard() {
 
                 <div className="flex items-center gap-4">
                     <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200 shadow-sm">
-                        {['institutions', 'users', 'logs'].map(tab => (
+                        {['institutions', 'users', 'logs', 'rbac'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             >
-                                {tab}
+                                {tab === 'rbac' ? 'Access Control' : tab}
                             </button>
                         ))}
                     </div>
@@ -567,6 +606,61 @@ export default function SuperAdminDashboard() {
                             </div>
                         </div>
                     )}
+
+                    {activeTab === 'rbac' && (
+                        <div className="glass rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm bg-white">
+                            <div className="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Shield className="w-5 h-5 text-primary" />
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">Role-Based Access Control</h3>
+                                </div>
+                                <button 
+                                    onClick={() => setShowRoleModal(true)}
+                                    className="bg-primary text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-dark transition-all flex items-center gap-2"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Create Custom Role
+                                </button>
+                            </div>
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[700px] overflow-y-auto">
+                                {roles.length === 0 ? (
+                                    <div className="col-span-full py-12 text-center text-slate-400">
+                                        <Shield className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                                        <p className="text-sm font-bold">No custom roles defined yet.</p>
+                                    </div>
+                                ) : roles.map(role => (
+                                    <div key={role.id} className="p-5 border border-slate-200 rounded-2xl hover:border-primary/30 transition-all bg-slate-50 group flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div>
+                                                    <h4 className="font-bold text-slate-900">{role.name}</h4>
+                                                    <p className="text-xs text-slate-500">{role.description || 'No description'}</p>
+                                                </div>
+                                                <button onClick={() => handleDeleteRole(role.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="mb-4">
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Assigned to Node:</span>
+                                                <div className="text-xs font-medium text-slate-700 mt-0.5">{role.college?.name}</div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5 mb-4">
+                                                {role.permissions?.map((p, i) => (
+                                                    <span key={i} className="px-2 py-1 bg-white border border-slate-200 rounded-md text-[9px] font-black text-slate-600 uppercase tracking-tighter shadow-sm">
+                                                        {p.replace('_', ' ')}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="mt-auto pt-3 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                                            <span>Users Assigned:</span>
+                                            <span className="text-primary">{role._count?.users || 0}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar Analytics & Tools */}
@@ -737,6 +831,81 @@ export default function SuperAdminDashboard() {
                                     >
                                         Deploy Infrastructure
                                     </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+
+                {/* RBAC Role Creation Modal */}
+                {showRoleModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setShowRoleModal(false)}
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white rounded-[3rem] p-8 md:p-12 w-full max-w-2xl relative z-10 shadow-2xl border border-slate-200/50"
+                        >
+                            <div className="flex items-center gap-6 mb-8">
+                                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center">
+                                    <Shield className="w-8 h-8 text-primary" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black tracking-tight text-slate-900">Define Custom Role</h2>
+                                    <p className="text-slate-500 font-medium italic text-sm">Create granular access permissions for a specific partition.</p>
+                                </div>
+                            </div>
+                            <form onSubmit={handleCreateRole} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Role Title</label>
+                                        <input required type="text" placeholder="e.g. Financial Auditor" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-primary/30 transition-all font-bold" value={newRole.name} onChange={e => setNewRole({...newRole, name: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Assign to Node</label>
+                                        <select required className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-primary/30 transition-all font-bold text-slate-700" value={newRole.collegeId} onChange={e => setNewRole({...newRole, collegeId: e.target.value})}>
+                                            <option value="">Select an Institution...</option>
+                                            {colleges.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Description (Optional)</label>
+                                    <input type="text" placeholder="What can this role do?" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-primary/30 transition-all font-medium" value={newRole.description} onChange={e => setNewRole({...newRole, description: e.target.value})} />
+                                </div>
+                                <div className="space-y-3 pt-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center justify-between">
+                                        <span>System Privileges</span>
+                                        <span className="text-primary">{newRole.permissions.length} Selected</span>
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl max-h-[200px] overflow-y-auto">
+                                        {['MANAGE_FEES', 'APPROVE_CLEARANCE', 'MANAGE_USERS', 'VIEW_REPORTS', 'MANAGE_SUBJECTS', 'OVERRIDE_PREDICTIONS'].map(perm => (
+                                            <label key={perm} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${newRole.permissions.includes(perm) ? 'bg-primary/5 border-primary/30 text-primary' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="w-4 h-4 rounded text-primary focus:ring-primary/50"
+                                                    checked={newRole.permissions.includes(perm)}
+                                                    onChange={(e) => {
+                                                        const current = newRole.permissions;
+                                                        setNewRole({
+                                                            ...newRole,
+                                                            permissions: e.target.checked ? [...current, perm] : current.filter(p => p !== perm)
+                                                        });
+                                                    }}
+                                                />
+                                                <span className="text-[10px] font-black uppercase tracking-tight">{perm.replace('_', ' ')}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="flex gap-4 pt-4 border-t border-slate-100">
+                                    <button type="button" onClick={() => setShowRoleModal(false)} className="flex-1 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all">Cancel</button>
+                                    <button type="submit" className="flex-[2] py-4 bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Deploy Role</button>
                                 </div>
                             </form>
                         </motion.div>

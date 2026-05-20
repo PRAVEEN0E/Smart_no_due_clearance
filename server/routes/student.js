@@ -295,6 +295,31 @@ async function studentRoutes(fastify, opts) {
 
         return { response: await chatWithAI(evals, `${message} ${specificContext}`) };
     });
+
+    fastify.post('/remedial-plan', async (request, reply) => {
+        const { subjectId } = request.body;
+        const { generateRemedialPlan } = require('../services/aiService');
+
+        const subject = await prisma.subject.findUnique({
+            where: { id: subjectId }
+        });
+
+        if (!subject) return reply.status(404).send({ message: 'Subject not found' });
+
+        const evaluation = await prisma.evaluation.findFirst({
+            where: {
+                studentId: request.user.id,
+                subjectId: subjectId
+            }
+        });
+
+        if (!evaluation) {
+            return reply.status(404).send({ message: 'No evaluation record found for this subject.' });
+        }
+
+        const plan = await generateRemedialPlan(subject.name, subject.syllabusText, evaluation);
+        return { plan };
+    });
 }
 
 module.exports = studentRoutes;

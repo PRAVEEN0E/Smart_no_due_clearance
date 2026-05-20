@@ -40,9 +40,14 @@ async function checkAndUnlock(studentId, prisma) {
                 return ev && ev.staffApproved;
             });
             if (!allStaffApproved) { isCleared = false; break; }
+        } else {
+            // Custom types (e.g. LIBRARY, SPORTS, HOSTEL) check the student's customClearance JSON
+            const customCleared = student.customClearance && 
+                                  typeof student.customClearance === 'object' && 
+                                  student.customClearance[step.id] && 
+                                  student.customClearance[step.id].cleared === true;
+            if (!customCleared) { isCleared = false; break; }
         }
-        // Custom types like 'LIBRARY' can be added here once we have those models.
-        // For now, if unknown, we assume it's true to not block the student.
     }
 
     if (isCleared) {

@@ -62,6 +62,10 @@ export default function MentorDashboard() {
     const [auditLogs, setAuditLogs] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [collegeWorkflow, setCollegeWorkflow] = useState([]);
+    const [showCustomClearanceModal, setShowCustomClearanceModal] = useState(false);
+    const [isSavingWorkflow, setIsSavingWorkflow] = useState(false);
+    const [newWorkflowStep, setNewWorkflowStep] = useState({ id: '', label: '', type: 'CUSTOM', required: true });
 
     useEffect(() => {
         fetchData();
@@ -80,13 +84,14 @@ export default function MentorDashboard() {
     const fetchData = async () => {
         console.log("Fetching dashboard data...");
         try {
-            const [statsRes, studentsRes, subjectsRes, staffRes, auditRes, annRes] = await Promise.all([
+            const [statsRes, studentsRes, subjectsRes, staffRes, auditRes, annRes, collegeRes] = await Promise.all([
                 api.get('/mentor/analytics').catch(e => { console.error("Analytics Error", e); return { data: { stats: {}, classStats: [], deptStats: [] } }; }),
                 api.get('/mentor/students').catch(e => { console.error("Students Error", e); return { data: [] }; }),
                 api.get('/mentor/subjects').catch(e => { console.error("Subjects Error", e); return { data: [] }; }),
                 api.get('/mentor/staff').catch(e => { console.error("Staff Error", e); return { data: [] }; }),
                 api.get('/auth/audit-logs').catch(e => { console.error("Audit Logs Error", e); return { data: [] }; }),
-                api.get('/mentor/announcements').catch(e => { console.error("Announcements Error", e); return { data: [] }; })
+                api.get('/mentor/announcements').catch(e => { console.error("Announcements Error", e); return { data: [] }; }),
+                api.get('/mentor/college').catch(e => { console.error("College Error", e); return { data: null }; })
             ]);
             
             console.log("Data received, updating state...");
@@ -98,6 +103,12 @@ export default function MentorDashboard() {
             setStaff(staffRes.data);
             setAuditLogs(auditRes.data || []);
             setAnnouncements(annRes.data || []);
+            
+            // Set college workflow or default ones if none configured
+            setCollegeWorkflow(collegeRes?.data?.workflow || [
+                { id: 'FEES', label: 'Financial Dues', type: 'FEE', required: true },
+                { id: 'ACADEMICS', label: 'Academic Approvals', type: 'STAFF_APPROVAL', required: true }
+            ]);
             console.log("Dashboard state updated.");
         } catch (err) {
             console.error("Critical failed to fetch dashboard data", err);
@@ -289,6 +300,7 @@ export default function MentorDashboard() {
         setShowAssignModal(false);
         setShowStudentAssignModal(false);
         setShowCommonFeeModal(false);
+        setShowCustomClearanceModal(false);
         setEditingId(null);
         setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '', semester: '4', examDate: '', examSession: 'FN' });
         setCommonFeeAmount('');
@@ -310,6 +322,51 @@ export default function MentorDashboard() {
             toast.error(err.response?.data?.message || "Failed to add common fee");
         } finally {
             setAddingCommonFee(false);
+        }
+    };
+
+    const handleSaveWorkflow = async (updatedWorkflow) => {
+        try {
+            setIsSavingWorkflow(true);
+            await api.put('/mentor/college/workflow', { workflow: updatedWorkflow });
+            setCollegeWorkflow(updatedWorkflow);
+            toast.success("Workflow updated successfully!");
+        } catch (err) {
+            toast.error("Failed to update workflow.");
+        } finally {
+            setIsSavingWorkflow(false);
+        }
+    };
+
+    const handleToggleCustomClearance = async (stepId, currentClearedStatus) => {
+        if (!activeStudent) return;
+        try {
+            const nextStatus = !currentClearedStatus;
+            await api.put(`/mentor/students/${activeStudent.id}/custom-clearance`, {
+                stepId,
+                cleared: nextStatus
+            });
+            toast.success("Clearance toggled successfully!");
+
+            // Update student in main list
+            setStudents(prev => prev.map(s => {
+                if (s.id === activeStudent.id) {
+                    const clearances = { ...(s.customClearance || {}) };
+                    clearances[stepId] = { cleared: nextStatus, updatedAt: new Date().toISOString(), updatedBy: user.name };
+                    return { ...s, customClearance: clearances };
+                }
+                return s;
+            }));
+
+            // Update active student
+            setActiveStudent(prev => {
+                const clearances = { ...(prev.customClearance || {}) };
+                clearances[stepId] = { cleared: nextStatus, updatedAt: new Date().toISOString(), updatedBy: user.name };
+                return { ...prev, customClearance: clearances };
+            });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update student clearance.");
         }
     };
 
@@ -423,7 +480,7 @@ export default function MentorDashboard() {
                 <div className="lg:col-span-2 glass rounded-3xl border border-border shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200 backdrop-blur-md overflow-x-auto scrollbar-hide shrink-0">
-                            {['students', 'staff', 'subjects', 'audit', 'announcements'].map((tab) => (
+                            {['students', 'staff', 'subjects', 'workflow', 'audit', 'announcements'].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
@@ -437,41 +494,51 @@ export default function MentorDashboard() {
                             ))}
                         </div>
                     </div>
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-slate-50 border-b border-border">
-                        <div className="flex items-center gap-4">
-                            <h2 className="text-sm font-black uppercase tracking-[0.3em] text-foreground/50">{activeTab}</h2>
-                            <div className="h-4 w-[1px] bg-slate-200" />
-                            <div className="text-[10px] font-mono text-slate-400 uppercase opacity-80">
-                                {getFilteredData().length} Records found
+                    {activeTab !== 'workflow' && (
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-slate-50 border-b border-border">
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-sm font-black uppercase tracking-[0.3em] text-foreground/50">{activeTab}</h2>
+                                <div className="h-4 w-[1px] bg-slate-200" />
+                                <div className="text-[10px] font-mono text-slate-400 uppercase opacity-80">
+                                    {getFilteredData().length} Records found
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="relative group">
+                                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                    <input
+                                        type="text"
+                                        placeholder={`Filter ${activeTab}...`}
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="bg-slate-100 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs focus:outline-none focus:border-primary/50 transition-all w-full md:w-[220px]"
+                                    />
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const mode = activeTab === 'students' ? 'student' : (activeTab === 'staff' ? 'staff' : (activeTab === 'subjects' ? 'subject' : 'announcement'));
+                                        setModalMode(mode);
+                                        setShowAddModal(true);
+                                    }}
+                                    className="bg-primary/20 hover:bg-primary p-2 rounded-xl text-primary hover:text-white transition-all shadow-lg active:scale-95"
+                                    title={`Add ${activeTab}`}
+                                >
+                                    <Plus className="w-5 h-5" />
+                                </button>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="relative group">
-                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder={`Filter ${activeTab}...`}
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="bg-slate-100 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs focus:outline-none focus:border-primary/50 transition-all w-full md:w-[220px]"
-                                />
-                            </div>
-                            <button
-                                onClick={() => {
-                                    const mode = activeTab === 'students' ? 'student' : (activeTab === 'staff' ? 'staff' : (activeTab === 'subjects' ? 'subject' : 'announcement'));
-                                    setModalMode(mode);
-                                    setShowAddModal(true);
-                                }}
-                                className="bg-primary/20 hover:bg-primary p-2 rounded-xl text-primary hover:text-white transition-all shadow-lg active:scale-95"
-                                title={`Add ${activeTab}`}
-                            >
-                                <Plus className="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
+                    )}
 
                     <div className="overflow-x-auto text-sm">
-                        {activeTab === 'audit' ? (
+                        {activeTab === 'workflow' ? (
+                            <WorkflowCustomizer 
+                                workflow={collegeWorkflow} 
+                                onSave={handleSaveWorkflow} 
+                                isSaving={isSavingWorkflow}
+                                newStep={newWorkflowStep}
+                                setNewStep={setNewWorkflowStep}
+                            />
+                        ) : activeTab === 'audit' ? (
                             <div className="divide-y divide-border max-h-[600px] overflow-y-auto custom-scrollbar">
                                 {getFilteredData().length > 0 ? getFilteredData().map((log, i) => (
                                     <div key={i} className="p-6 hover:bg-slate-50 transition-all group">
@@ -597,6 +664,18 @@ export default function MentorDashboard() {
                                                             title="Enroll in Subject"
                                                         >
                                                             <ShieldCheck className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    {activeTab === 'students' && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setActiveStudent(item);
+                                                                setShowCustomClearanceModal(true);
+                                                            }}
+                                                            className="p-1.5 hover:bg-slate-100 rounded-lg text-violet-600 transition-all shadow-sm active:scale-95"
+                                                            title="Custom Clearance Checklist"
+                                                        >
+                                                            <CheckCircle2 className="w-4 h-4" />
                                                         </button>
                                                     )}
                                                     {activeTab === 'subjects' && (
@@ -750,6 +829,61 @@ export default function MentorDashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* Custom Clearance Modal */}
+            <AnimatePresence>
+                {showCustomClearanceModal && activeStudent && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeModals} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="glass w-full max-w-md p-8 rounded-3xl border border-white/10 relative z-10 shadow-2xl">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold">Clearance Checklist</h2>
+                                <button type="button" onClick={closeModals} className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-foreground" aria-label="Close custom clearance modal"><X className="w-5 h-5" /></button>
+                            </div>
+                            <div className="mb-6 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                                <div className="text-xs text-primary font-bold uppercase tracking-wider mb-1">Student</div>
+                                <div className="text-lg font-bold text-slate-800">{activeStudent.name}</div>
+                                <div className="text-[10px] font-mono text-slate-500">{activeStudent.email}</div>
+                            </div>
+                            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                {collegeWorkflow.filter(step => step.type !== 'FEE' && step.type !== 'STAFF_APPROVAL').map(step => {
+                                    const clearanceRecord = activeStudent.customClearance?.[step.id] || {};
+                                    const isCleared = !!clearanceRecord.cleared;
+                                    return (
+                                        <div key={step.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                                            <div>
+                                                <div className="font-bold text-sm text-slate-800">{step.label}</div>
+                                                <div className="text-[9px] text-slate-400 font-mono uppercase">ID: {step.id}</div>
+                                                {clearanceRecord.updatedAt && (
+                                                    <div className="text-[8px] text-slate-400 mt-1">
+                                                        Cleared by {clearanceRecord.updatedBy || 'System'} on {new Date(clearanceRecord.updatedAt).toLocaleDateString()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleToggleCustomClearance(step.id, isCleared)}
+                                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                                                    isCleared
+                                                        ? 'bg-emerald-500 text-white shadow-emerald-100 hover:bg-emerald-600'
+                                                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                                                }`}
+                                            >
+                                                {isCleared ? 'Cleared' : 'Pending'}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                                {collegeWorkflow.filter(step => step.type !== 'FEE' && step.type !== 'STAFF_APPROVAL').length === 0 && (
+                                    <div className="text-center py-6 text-slate-400 text-xs italic">
+                                        No custom clearance steps configured in your workflow.
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Student Enrollment Modal */}
             <AnimatePresence>
@@ -1009,6 +1143,138 @@ export default function MentorDashboard() {
                     </div>
                 )}
             </AnimatePresence>
+        </div>
+    );
+}
+
+function WorkflowCustomizer({ workflow, onSave, isSaving, newStep, setNewStep }) {
+    const [localWorkflow, setLocalWorkflow] = useState([...workflow]);
+
+    useEffect(() => {
+        setLocalWorkflow([...workflow]);
+    }, [workflow]);
+
+    const handleToggleRequired = (index) => {
+        const next = [...localWorkflow];
+        next[index].required = !next[index].required;
+        setLocalWorkflow(next);
+    };
+
+    const handleDeleteStep = (index) => {
+        const step = localWorkflow[index];
+        if (step.type === 'FEE' || step.type === 'STAFF_APPROVAL') {
+            toast.error("Core steps (Financial/Academic) cannot be deleted.");
+            return;
+        }
+        const next = localWorkflow.filter((_, i) => i !== index);
+        setLocalWorkflow(next);
+    };
+
+    const handleAddStep = (e) => {
+        e.preventDefault();
+        if (!newStep.id || !newStep.label) {
+            toast.error("ID and Label are required.");
+            return;
+        }
+        
+        const cleanId = newStep.id.toUpperCase().replace(/[^A-Z0-9_]/g, '');
+        if (localWorkflow.some(s => s.id === cleanId)) {
+            toast.error("A step with this ID already exists.");
+            return;
+        }
+
+        const updated = [...localWorkflow, { ...newStep, id: cleanId }];
+        setLocalWorkflow(updated);
+        setNewStep({ id: '', label: '', type: 'CUSTOM', required: true });
+        toast.success("New clearance step added to draft.");
+    };
+
+    return (
+        <div className="p-6 space-y-6">
+            <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl">
+                <h3 className="font-bold text-slate-800 text-sm mb-1">Clearance Workflow Designer</h3>
+                <p className="text-xs text-slate-500">Configure the sequence of approvals required before a student's hall ticket is unlocked.</p>
+            </div>
+
+            <div className="space-y-3">
+                {localWorkflow.map((step, idx) => (
+                    <div key={step.id || idx} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-800 text-sm">{step.label}</span>
+                                <span className="text-[9px] font-mono uppercase bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">
+                                    {step.type}
+                                </span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-mono">ID: {step.id}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={step.required}
+                                    onChange={() => handleToggleRequired(idx)}
+                                    className="rounded border-slate-300 text-primary focus:ring-primary w-4 h-4"
+                                />
+                                <span className="text-xs font-bold text-slate-600">Required</span>
+                            </label>
+                            {step.type !== 'FEE' && step.type !== 'STAFF_APPROVAL' && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeleteStep(idx)}
+                                    className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Add custom step form */}
+            <form onSubmit={handleAddStep} className="p-4 bg-white border border-slate-200 rounded-2xl space-y-4">
+                <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider">Add Custom Clearance Step</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Unique Step ID</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. LIBRARY, SPORTS"
+                            value={newStep.id}
+                            onChange={(e) => setNewStep({ ...newStep, id: e.target.value })}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-primary font-mono"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Display Label</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. Library Books Return"
+                            value={newStep.label}
+                            onChange={(e) => setNewStep({ ...newStep, label: e.target.value })}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
+                            required
+                        />
+                    </div>
+                </div>
+                <button
+                    type="submit"
+                    className="flex items-center justify-center gap-2 bg-slate-900 text-white font-bold py-2 px-4 rounded-xl text-xs hover:bg-slate-800 transition-all"
+                >
+                    <Plus className="w-4 h-4" /> Add Step to Draft
+                </button>
+            </form>
+
+            <button
+                type="button"
+                onClick={() => onSave(localWorkflow)}
+                disabled={isSaving}
+                className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-primary/20 disabled:opacity-50 text-sm"
+            >
+                {isSaving ? "Saving changes..." : "Save and Deploy Workflow"}
+            </button>
         </div>
     );
 }

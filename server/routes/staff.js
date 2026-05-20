@@ -6,7 +6,25 @@ const { sendMarksUpdateEmail, sendSubjectApprovedEmail } = require('../services/
 const { sendNotification } = require('../services/notificationService');
 
 async function staffRoutes(fastify, opts) {
-    fastify.addHook('preHandler', fastify.auth([fastify.authenticate, fastify.authorize(['STAFF'])]));
+    const sseClients = new Set();
+
+    function broadcastScanEvent(eventData) {
+        const payload = `data: ${JSON.stringify(eventData)}\n\n`;
+        for (const client of sseClients) {
+            try {
+                client.write(payload);
+            } catch (err) {
+                sseClients.delete(client);
+            }
+        }
+    }
+
+    fastify.addHook('preHandler', async (request, reply) => {
+        if (request.url.includes('/scan-stream')) {
+            return; // Skip standard bearer token check for SSE stream
+        }
+        await fastify.auth([fastify.authenticate, fastify.authorize(['STAFF', 'MENTOR', 'SUPERADMIN'])])(request, reply);
+    });
 
     const { prisma } = fastify;
 
@@ -423,7 +441,7 @@ async function staffRoutes(fastify, opts) {
                 }
             }
 
-            return {
+            const responseData = {
                 success: true,
                 student: {
                     id: student.id,
@@ -445,10 +463,49 @@ async function staffRoutes(fastify, opts) {
                 },
                 attendance: attendanceResult
             };
+
+            // Broadcast real-time scan event to live listeners
+            broadcastScanEvent({
+                type: 'SCAN',
+                timestamp: new Date().toISOString(),
+                data: responseData
+            });
+
+            return responseData;
         } catch (err) {
             fastify.log.error(err);
             return reply.status(500).send({ message: 'Failed to verify scanned student: ' + err.message });
         }
+    });
+
+    // --- LIVE SCAN STREAM (SSE) ---
+    fastify.get('/scan-stream', async (request, reply) => {
+        const token = request.query.token;
+        if (token) {
+            try {
+                fastify.jwt.verify(token);
+            } catch (err) {
+                return reply.status(401).send({ message: 'Unauthorized stream request' });
+            }
+        }
+
+        const headers = {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*'
+        };
+        reply.raw.writeHead(200, headers);
+        reply.raw.write(`data: ${JSON.stringify({ type: 'PING', message: 'Connected' })}\n\n`);
+
+        const client = reply.raw;
+        sseClients.add(client);
+
+        request.raw.on('close', () => {
+            sseClients.delete(client);
+        });
+
+        return reply;
     });
 }
 

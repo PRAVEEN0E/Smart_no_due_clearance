@@ -735,6 +735,57 @@ async function mentorRoutes(fastify, opts) {
         return buffer;
     });
 
+    // --- CUSTOM WORKFLOW & DYNAMIC CLEARANCE ENDPOINTS ---
+    fastify.get('/college', async (request, reply) => {
+        if (!request.user.collegeId) {
+            return reply.status(400).send({ message: 'No college associated with user session.' });
+        }
+        return prisma.college.findUnique({ where: { id: request.user.collegeId } });
+    });
+
+    fastify.put('/college/workflow', async (request, reply) => {
+        if (!request.user.collegeId) {
+            return reply.status(400).send({ message: 'No college associated with user session.' });
+        }
+        const { workflow } = request.body;
+        return prisma.college.update({
+            where: { id: request.user.collegeId },
+            data: { workflow }
+        });
+    });
+
+    fastify.put('/students/:studentId/custom-clearance', async (request, reply) => {
+        const { studentId } = request.params;
+        const { stepId, cleared } = request.body;
+
+        const student = await prisma.user.findUnique({ where: { id: studentId } });
+        if (!student || student.collegeId !== request.user.collegeId) {
+            return reply.status(403).send({ message: 'Access denied or student not found.' });
+        }
+
+        let currentClearance = student.customClearance || {};
+        if (typeof currentClearance !== 'object' || Array.isArray(currentClearance)) {
+            currentClearance = {};
+        }
+
+        currentClearance[stepId] = {
+            cleared: !!cleared,
+            updatedAt: new Date().toISOString(),
+            updatedBy: request.user.name
+        };
+
+        const updatedStudent = await prisma.user.update({
+            where: { id: studentId },
+            data: { customClearance: currentClearance }
+        });
+
+        // Re-evaluate eligibility for hall ticket unlocking
+        const { checkAndUnlock } = require('../services/hallTicketService');
+        await checkAndUnlock(studentId, prisma);
+
+        return updatedStudent;
+    });
+
 }
 
 module.exports = mentorRoutes;

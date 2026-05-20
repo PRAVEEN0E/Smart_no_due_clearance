@@ -37,6 +37,7 @@ model College {
   users        User[]
   subjects     Subject[]
   announcements Announcement[]
+  customRoles  CustomRole[]
 }
 
 model User {
@@ -52,6 +53,10 @@ model User {
   // MULTI-TENANT RELATION
   collegeId    String?
   college      College? @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  // RBAC Extension
+  customRoleId String?
+  customRole   CustomRole? @relation(fields: [customRoleId], references: [id], onDelete: SetNull)
 
   // Relations
   staffSubjects   StaffSubject[]   @relation("StaffToSubjects")
@@ -72,6 +77,7 @@ model User {
   createdSubjects Subject[]        @relation("SubjectCreator")
   department     String?          // e.g., 'CSE', 'ECE', 'MECH'
   className      String?          // e.g., 'III Year CSE - A', 'II Year ECE - B'
+  customClearance Json?           // Clearance checklist status e.g. { "LIBRARY": { cleared: true, updatedAt: "..." } }
 }
 
 model AuditLog {
@@ -271,3 +277,20 @@ model ExamAttendance {
 
   @@unique([studentId, subjectId])
 }
+
+// RBAC: Custom Roles per College
+model CustomRole {
+  id          String   @id @default(uuid())
+  name        String   // e.g., "Library Auditor", "Fee Manager"
+  description String?
+  permissions Json     // Array of permission keys, e.g., ["MANAGE_FEES", "VIEW_STUDENTS"]
+  createdAt   DateTime @default(now())
+
+  collegeId   String
+  college     College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  users       User[]
+
+  @@unique([name, collegeId])
+}
+

@@ -273,10 +273,71 @@ async function generateImportantQA(subjectName, syllabusText, studentPerformance
     }
 }
 
+async function generateRemedialPlan(subjectName, syllabusText, studentPerformance) {
+    try {
+        const c1 = (studentPerformance?.remedial1 !== null && studentPerformance?.remedial1 !== undefined) ? studentPerformance.remedial1 : (studentPerformance?.cat1 || 0);
+        const c2 = (studentPerformance?.remedial2 !== null && studentPerformance?.remedial2 !== undefined) ? studentPerformance.remedial2 : (studentPerformance?.cat2 || 0);
+        const c3 = (studentPerformance?.remedial3 !== null && studentPerformance?.remedial3 !== undefined) ? studentPerformance.remedial3 : (studentPerformance?.cat3 || 0);
+
+        const prompt = `
+        You are an elite academic counselor and subject tutor for the course: "${subjectName}".
+        
+        This student has been flagged as needing academic remediation (e.g., failed one or more CAT exams or has poor attendance).
+        
+        Student's Current Performance Context:
+        - Attendance: ${studentPerformance?.attendancePercent || 0}%
+        - CAT Scores: CAT 1: ${c1}/50, CAT 2: ${c2}/50, CAT 3: ${c3}/50
+        
+        Syllabus Outline:
+        ${syllabusText || "Standard university curriculum for " + subjectName}
+        
+        Task:
+        Design a highly tailored, step-by-step 5-day study plan to help this student pass their exams.
+        Ensure it is written in Markdown format, with encouraging language.
+        
+        Structure your response with:
+        # AI-Generated Remedial Study Plan: ${subjectName}
+        
+        ## 📊 Status Review
+        * (State the core problem: which CAT scores were low, or if attendance was the blocker, and what they need to focus on to get cleared).
+        
+        ## 📅 Day-by-Day Focus
+        ### Day 1: [Core Topic name]
+        * **Key Areas to Cover**: (List 2-3 specific concepts based on the syllabus)
+        * **Recommended Activity**: (e.g., Write a simple program, review specific diagram, solve standard problem)
+        
+        ### Day 2: [Core Topic name]
+        ...
+        (Generate for all 5 days)
+        
+        ## 💡 Expert Tips for the Exam
+        * (Give 2-3 specific exam tips for this subject)
+        
+        Keep it supportive, actionable, and extremely clear.
+        `;
+
+        const completion = await groq.chat.completions.create({
+            messages: [
+                {
+                    role: "user",
+                    content: prompt,
+                },
+            ],
+            model: "llama-3.3-70b-versatile",
+        });
+
+        return completion.choices[0]?.message?.content || "Remedial study plan is currently unavailable.";
+    } catch (error) {
+        console.error("Groq AI Remedial Plan Error:", error.message);
+        return "I am having trouble creating your study plan right now. Please try again in a moment.";
+    }
+}
+
 module.exports = {
     generateFeedback,
     predictStudentSuccess,
     chatWithAI,
     generateAcademicInsights,
-    generateImportantQA
+    generateImportantQA,
+    generateRemedialPlan
 };

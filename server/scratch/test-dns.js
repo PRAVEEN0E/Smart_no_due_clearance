@@ -1,5 +1,11 @@
 const dns = require('dns');
-dns.lookup('ep-bold-wind-amv35hfr-pooler.c-5.us-east-1.aws.neon.tech', (err, address, family) => {
-  console.log('address: %j family: IPv%s', address, family);
-  if (err) console.error(err);
+
+const host = 'ep-bold-wind-amv35hfr.c-5.us-east-1.aws.neon.tech';
+
+dns.lookup(host, (err, address, family) => {
+  if (err) {
+    console.error(`❌ FAILED to resolve direct host ${host}:`, err.message);
+  } else {
+    console.log(`✅ SUCCESS resolving direct host ${host} -> Address:`, address);
+  }
 });

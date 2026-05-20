@@ -232,6 +232,69 @@ async function superAdminRoutes(fastify, opts) {
             take: 200 // Safety limit
         });
     });
+
+    // --- RBAC: Custom Role Management ---
+
+    // Get all custom roles
+    fastify.get('/roles', { preHandler: auth }, async (request) => {
+        return prisma.customRole.findMany({
+            include: {
+                college: { select: { name: true } },
+                _count: { select: { users: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+    });
+
+    // Create a new custom role
+    fastify.post('/roles', { preHandler: auth }, async (request, reply) => {
+        const { name, description, permissions, collegeId } = request.body;
+        if (!name || !collegeId || !permissions) {
+            return reply.status(400).send({ message: 'Name, collegeId, and permissions are required' });
+        }
+
+        try {
+            return await prisma.customRole.create({
+                data: {
+                    name,
+                    description,
+                    permissions, // Should be an array of strings
+                    collegeId
+                }
+            });
+        } catch (error) {
+            if (error.code === 'P2002') return reply.status(400).send({ message: 'Role name already exists for this college' });
+            throw error;
+        }
+    });
+
+    // Update a custom role
+    fastify.put('/roles/:id', { preHandler: auth }, async (request, reply) => {
+        const { id } = request.params;
+        const { name, description, permissions } = request.body;
+
+        return prisma.customRole.update({
+            where: { id },
+            data: { name, description, permissions }
+        });
+    });
+
+    // Delete a custom role
+    fastify.delete('/roles/:id', { preHandler: auth }, async (request) => {
+        const { id } = request.params;
+        return prisma.customRole.delete({ where: { id } });
+    });
+
+    // Assign a custom role to a user
+    fastify.post('/users/:id/assign-role', { preHandler: auth }, async (request, reply) => {
+        const { id } = request.params;
+        const { customRoleId } = request.body;
+
+        return prisma.user.update({
+            where: { id },
+            data: { customRoleId } // Can be null to remove custom role
+        });
+    });
 }
 
 module.exports = superAdminRoutes;
