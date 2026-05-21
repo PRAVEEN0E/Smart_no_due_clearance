@@ -1,47 +1,19 @@
 const nodemailer = require('nodemailer');
-const axios = require('axios');
 
 // ============================================================
-// STRATEGY 1: Resend HTTP API (works on Render, Vercel, etc.)
-// Uses HTTPS (port 443) — never blocked by hosting providers.
-// Get a free API key at https://resend.com (100 emails/day free)
+// Gmail SMTP Transporter (Nodemailer)
+// NOTE: Render.com free tier blocks outbound SMTP (ports 465/587).
+// Emails will work on: localhost, Railway, DigitalOcean, VPS, paid Render.
 // ============================================================
-async function sendViaResend(to, subject, html) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return null;
 
-    const toArray = Array.isArray(to) ? to : [to];
-
-    try {
-        const response = await axios.post('https://api.resend.com/emails', {
-            from: process.env.RESEND_FROM || 'InstiSync <onboarding@resend.dev>',
-            to: toArray,
-            subject: subject,
-            html: html
-        }, {
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            timeout: 15000
-        });
-
-        console.log(`📧 Resend sent to ${toArray.join(', ')}: ${response.data.id}`);
-        return response.data;
-    } catch (error) {
-        const errMsg = error.response?.data?.message || error.message;
-        console.error('❌ Resend API Error:', errMsg);
-        return null;
-    }
-}
-
-// ============================================================
-// STRATEGY 2: Nodemailer/Gmail SMTP (local dev fallback only)
-// Will NOT work on Render free tier (SMTP ports blocked).
-// ============================================================
 let transporter = null;
-if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+
+function createTransporter() {
+    if (transporter) return transporter;
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return null;
+
     transporter = nodemailer.createTransport({
+        service: 'gmail',
         host: 'smtp.gmail.com',
         port: 465,
         secure: true,
@@ -49,42 +21,28 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS
         },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
+        // Force IPv4 to prevent ENETUNREACH on IPv6-only networks
         family: 4,
+        // Timeouts
+        connectionTimeout: 30000,
+        greetingTimeout: 30000,
+        socketTimeout: 45000,
+        dnsTimeout: 15000,
+        // Pool connections for better throughput
+        pool: true,
+        maxConnections: 3,
+        maxMessages: 100,
         tls: {
             rejectUnauthorized: false,
             minVersion: 'TLSv1.2'
         }
     });
-}
 
-async function sendViaNodemailer(to, subject, html, attachments = []) {
-    if (!transporter) return null;
-
-    try {
-        const mailOptions = {
-            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-            to: to,
-            subject: subject,
-            html: html,
-            attachments: attachments
-                .map(att => ({ filename: att.filename, path: att.path, content: att.content }))
-                .filter(a => a.path || a.content)
-        };
-
-        const info = await transporter.sendMail(mailOptions);
-        console.log(`📧 Nodemailer sent to ${to}: ${info.messageId}`);
-        return info;
-    } catch (error) {
-        console.error('❌ Nodemailer/Gmail SMTP Error:', error.message);
-        return null;
-    }
+    return transporter;
 }
 
 // ============================================================
-// MAIN: sendEmail — tries Resend first, then Nodemailer fallback
+// MAIN: sendEmail with retry logic
 // ============================================================
 async function sendEmail(to, subject, html, attachments = []) {
     const actualTo = process.env.DEV_EMAIL_OVERRIDE || to;
@@ -100,18 +58,53 @@ async function sendEmail(to, subject, html, attachments = []) {
         `;
     }
 
-    // --- Try Resend HTTP API first (works on cloud hosts) ---
-    const resendResult = await sendViaResend(actualTo, subject, finalHtml);
-    if (resendResult) return resendResult;
+    const smtp = createTransporter();
+    if (!smtp) {
+        console.warn('⚠️ Email skipped: EMAIL_USER or EMAIL_PASS not configured.');
+        return null;
+    }
 
-    // --- Fallback to Nodemailer SMTP (works locally) ---
-    const nodemailerResult = await sendViaNodemailer(actualTo, subject, finalHtml, attachments);
-    if (nodemailerResult) return nodemailerResult;
+    const mailOptions = {
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        to: actualTo,
+        subject: subject,
+        html: finalHtml,
+        attachments: attachments
+            .map(att => ({ filename: att.filename, path: att.path, content: att.content }))
+            .filter(a => a.path || a.content)
+    };
 
-    // --- Both failed ---
-    console.warn('⚠️ Email could not be sent via any provider. Skipping silently.');
-    console.warn('   → Set RESEND_API_KEY for cloud hosting (https://resend.com)');
-    console.warn('   → Or set EMAIL_USER + EMAIL_PASS for local SMTP.');
+    // Retry up to 2 times (total 3 attempts)
+    const MAX_RETRIES = 2;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const info = await smtp.sendMail(mailOptions);
+            console.log(`📧 Email sent to ${actualTo}: ${info.messageId}`);
+            return info;
+        } catch (error) {
+            const isLastAttempt = attempt === MAX_RETRIES;
+            const isRetryable = ['ETIMEDOUT', 'ECONNREFUSED', 'ENETUNREACH', 'ESOCKET', 'ECONNECTION'].some(
+                code => error.message?.includes(code) || error.code === code
+            );
+
+            if (!isRetryable || isLastAttempt) {
+                console.error(`❌ Email dispatch failed (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`, error.message);
+
+                // Helpful hint for Render users
+                if (error.message?.includes('ENETUNREACH') || error.message?.includes('timeout') || error.message?.includes('ETIMEDOUT')) {
+                    console.error('   💡 Hint: Your hosting provider may be blocking SMTP ports (465/587).');
+                    console.error('   💡 This is common on Render free tier. Consider upgrading or using a different host.');
+                }
+                return null;
+            }
+
+            // Wait before retry (exponential backoff: 2s, 4s)
+            const delay = Math.pow(2, attempt + 1) * 1000;
+            console.warn(`⚠️ Email attempt ${attempt + 1} failed: ${error.message}. Retrying in ${delay / 1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
     return null;
 }
 
@@ -225,8 +218,6 @@ async function sendAnnouncementEmail(emails, title, content, priority) {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const highlightColor = priority === 3 ? '#ef4444' : '#f59e0b';
     
-    // For multiple emails, Nodemailer handles arrays in the 'to' or 'bcc' fields.
-    // We pass the email(s) directly to the sendEmail function.
     const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
         <h2 style="color: ${highlightColor};">📢 Important Announcement</h2>
@@ -239,7 +230,6 @@ async function sendAnnouncementEmail(emails, title, content, priority) {
         <p style="font-size: 11px; color: #999;">InstiSync | Digital College Notice Board</p>
     </div>
     `;
-    // If it's single email or multiple
     return sendEmail(emails, `📢 ${title}`, html); 
 }
 
