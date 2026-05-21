@@ -1,53 +1,94 @@
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 
-// Setup Nodemailer for Gmail
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, 
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    // Increased timeouts for stable cloud dispatch
-    connectionTimeout: 20000, 
-    greetingTimeout: 20000,
-    socketTimeout: 30000,
-    dnsTimeout: 10000,
-    // Force IPv4 to prevent ENETUNREACH errors on cloud networks
-    family: 4,
-    tls: {
-        // Essential for some SMTP handshakes in serverless/container environments
-        rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
+// ============================================================
+// STRATEGY 1: Resend HTTP API (works on Render, Vercel, etc.)
+// Uses HTTPS (port 443) — never blocked by hosting providers.
+// Get a free API key at https://resend.com (100 emails/day free)
+// ============================================================
+async function sendViaResend(to, subject, html) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return null;
+
+    const toArray = Array.isArray(to) ? to : [to];
+
+    try {
+        const response = await axios.post('https://api.resend.com/emails', {
+            from: process.env.RESEND_FROM || 'InstiSync <onboarding@resend.dev>',
+            to: toArray,
+            subject: subject,
+            html: html
+        }, {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 15000
+        });
+
+        console.log(`📧 Resend sent to ${toArray.join(', ')}: ${response.data.id}`);
+        return response.data;
+    } catch (error) {
+        const errMsg = error.response?.data?.message || error.message;
+        console.error('❌ Resend API Error:', errMsg);
+        return null;
     }
-});
+}
 
-// Fallback transporter (port 587, TLS) – used when primary fails
-const fallbackTransporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // STARTTLS
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    // Increase timeouts for fallback as well
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 30000,
-    dnsTimeout: 10000,
-    family: 4,
-    requireTLS: true,
-    tls: {
-        rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
+// ============================================================
+// STRATEGY 2: Nodemailer/Gmail SMTP (local dev fallback only)
+// Will NOT work on Render free tier (SMTP ports blocked).
+// ============================================================
+let transporter = null;
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+        family: 4,
+        tls: {
+            rejectUnauthorized: false,
+            minVersion: 'TLSv1.2'
+        }
+    });
+}
+
+async function sendViaNodemailer(to, subject, html, attachments = []) {
+    if (!transporter) return null;
+
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+            to: to,
+            subject: subject,
+            html: html,
+            attachments: attachments
+                .map(att => ({ filename: att.filename, path: att.path, content: att.content }))
+                .filter(a => a.path || a.content)
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`📧 Nodemailer sent to ${to}: ${info.messageId}`);
+        return info;
+    } catch (error) {
+        console.error('❌ Nodemailer/Gmail SMTP Error:', error.message);
+        return null;
     }
-});
+}
 
+// ============================================================
+// MAIN: sendEmail — tries Resend first, then Nodemailer fallback
+// ============================================================
 async function sendEmail(to, subject, html, attachments = []) {
     const actualTo = process.env.DEV_EMAIL_OVERRIDE || to;
-    
+
     // Add override notice if in development mode
     let finalHtml = html;
     if (process.env.DEV_EMAIL_OVERRIDE && process.env.DEV_EMAIL_OVERRIDE !== to) {
@@ -59,43 +100,18 @@ async function sendEmail(to, subject, html, attachments = []) {
         `;
     }
 
-    // --- STRATEGY: Nodemailer (Gmail) ---
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        try {
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-                to: actualTo,
-                subject: subject,
-                html: finalHtml,
-                attachments: attachments.map(att => ({
-                    filename: att.filename,
-                    path: att.path,
-                    content: att.content
-                })).filter(a => a.path || a.content)
-            };
+    // --- Try Resend HTTP API first (works on cloud hosts) ---
+    const resendResult = await sendViaResend(actualTo, subject, finalHtml);
+    if (resendResult) return resendResult;
 
-            let info;
-            try {
-                info = await transporter.sendMail(mailOptions);
-                console.log(`📧 Nodemailer sent to ${to}: ${info.messageId}`);
-            } catch (primaryErr) {
-                console.warn('Primary transporter failed, attempting fallback:', primaryErr.message);
-                try {
-                    info = await fallbackTransporter.sendMail(mailOptions);
-                    console.log(`📧 Fallback Nodemailer sent to ${to}: ${info.messageId}`);
-                } catch (fallbackErr) {
-                    console.error('Fallback transporter also failed:', fallbackErr.message);
-                    throw fallbackErr;
-                }
-            }
-            return info;
-        } catch (error) {
-            console.error('❌ Nodemailer/Gmail Dispatch Error:', error.message);
-            return null;
-        }
-    }
+    // --- Fallback to Nodemailer SMTP (works locally) ---
+    const nodemailerResult = await sendViaNodemailer(actualTo, subject, finalHtml, attachments);
+    if (nodemailerResult) return nodemailerResult;
 
-    console.error('❌ No email provider configured (EMAIL_USER or EMAIL_PASS missing).');
+    // --- Both failed ---
+    console.warn('⚠️ Email could not be sent via any provider. Skipping silently.');
+    console.warn('   → Set RESEND_API_KEY for cloud hosting (https://resend.com)');
+    console.warn('   → Or set EMAIL_USER + EMAIL_PASS for local SMTP.');
     return null;
 }
 
@@ -257,4 +273,3 @@ module.exports = {
     sendAnnouncementEmail,
     sendSubjectApprovedEmail
 };
-
