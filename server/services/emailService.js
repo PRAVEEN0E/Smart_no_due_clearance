@@ -23,6 +23,28 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Fallback transporter (port 587, TLS) – used when primary fails
+const fallbackTransporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // STARTTLS
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+    // Increase timeouts for fallback as well
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
+    dnsTimeout: 10000,
+    family: 4,
+    requireTLS: true,
+    tls: {
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
+    }
+});
+
 async function sendEmail(to, subject, html, attachments = []) {
     const actualTo = process.env.DEV_EMAIL_OVERRIDE || to;
     
@@ -52,8 +74,20 @@ async function sendEmail(to, subject, html, attachments = []) {
                 })).filter(a => a.path || a.content)
             };
 
-            const info = await transporter.sendMail(mailOptions);
-            console.log(`📧 Nodemailer sent to ${to}: ${info.messageId}`);
+            let info;
+            try {
+                info = await transporter.sendMail(mailOptions);
+                console.log(`📧 Nodemailer sent to ${to}: ${info.messageId}`);
+            } catch (primaryErr) {
+                console.warn('Primary transporter failed, attempting fallback:', primaryErr.message);
+                try {
+                    info = await fallbackTransporter.sendMail(mailOptions);
+                    console.log(`📧 Fallback Nodemailer sent to ${to}: ${info.messageId}`);
+                } catch (fallbackErr) {
+                    console.error('Fallback transporter also failed:', fallbackErr.message);
+                    throw fallbackErr;
+                }
+            }
             return info;
         } catch (error) {
             console.error('❌ Nodemailer/Gmail Dispatch Error:', error.message);
