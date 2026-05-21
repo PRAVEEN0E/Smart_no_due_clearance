@@ -1,11 +1,68 @@
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 
 // ============================================================
-// Gmail SMTP Transporter (Nodemailer)
-// NOTE: Render.com free tier blocks outbound SMTP (ports 465/587).
-// Emails will work on: localhost, Railway, DigitalOcean, VPS, paid Render.
+// STRATEGY 1: EmailJS HTTP API (works on Render, Vercel, etc.)
+// Uses HTTPS (port 443) — never blocked by hosting providers.
+// Setup: https://www.emailjs.com
+//   1. Create free account at emailjs.com
+//   2. Add Gmail as an email service
+//   3. Create a template with these variables:
+//        Subject: {{subject}}
+//        To Email: {{to_email}}
+//        Content:  {{{html_content}}}
+//   4. Set env vars: EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID,
+//      EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY
 // ============================================================
+async function sendViaEmailJS(to, subject, html) {
+    const serviceId = process.env.EMAILJS_SERVICE_ID;
+    const templateId = process.env.EMAILJS_TEMPLATE_ID;
+    const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+    const privateKey = process.env.EMAILJS_PRIVATE_KEY;
 
+    if (!serviceId || !templateId || !publicKey) return null;
+
+    const toAddress = Array.isArray(to) ? to.join(', ') : to;
+
+    try {
+        const payload = {
+            service_id: serviceId,
+            template_id: templateId,
+            user_id: publicKey,
+            template_params: {
+                to_email: toAddress,
+                subject: subject,
+                html_content: html
+            }
+        };
+
+        // Add private key for server-side auth (if provided)
+        if (privateKey) {
+            payload.accessToken = privateKey;
+        }
+
+        const response = await axios.post(
+            'https://api.emailjs.com/api/v1.0/email/send',
+            payload,
+            {
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 15000
+            }
+        );
+
+        console.log(`📧 EmailJS sent to ${toAddress} (status: ${response.status})`);
+        return { messageId: `emailjs-${Date.now()}`, status: response.status };
+    } catch (error) {
+        const errMsg = error.response?.data || error.message;
+        console.error('❌ EmailJS API Error:', errMsg);
+        return null;
+    }
+}
+
+// ============================================================
+// STRATEGY 2: Nodemailer/Gmail SMTP (local dev fallback)
+// Will NOT work on Render free tier (SMTP ports blocked).
+// ============================================================
 let transporter = null;
 
 function createTransporter() {
@@ -21,14 +78,11 @@ function createTransporter() {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS
         },
-        // Force IPv4 to prevent ENETUNREACH on IPv6-only networks
         family: 4,
-        // Timeouts
         connectionTimeout: 30000,
         greetingTimeout: 30000,
         socketTimeout: 45000,
         dnsTimeout: 15000,
-        // Pool connections for better throughput
         pool: true,
         maxConnections: 3,
         maxMessages: 100,
@@ -42,7 +96,7 @@ function createTransporter() {
 }
 
 // ============================================================
-// MAIN: sendEmail with retry logic
+// MAIN: sendEmail — tries EmailJS first, then Nodemailer fallback
 // ============================================================
 async function sendEmail(to, subject, html, attachments = []) {
     const actualTo = process.env.DEV_EMAIL_OVERRIDE || to;
@@ -58,53 +112,33 @@ async function sendEmail(to, subject, html, attachments = []) {
         `;
     }
 
+    // --- Try EmailJS HTTP API first (works on cloud hosts) ---
+    const emailjsResult = await sendViaEmailJS(actualTo, subject, finalHtml);
+    if (emailjsResult) return emailjsResult;
+
+    // --- Fallback to Nodemailer SMTP (works locally) ---
     const smtp = createTransporter();
-    if (!smtp) {
-        console.warn('⚠️ Email skipped: EMAIL_USER or EMAIL_PASS not configured.');
-        return null;
-    }
-
-    const mailOptions = {
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-        to: actualTo,
-        subject: subject,
-        html: finalHtml,
-        attachments: attachments
-            .map(att => ({ filename: att.filename, path: att.path, content: att.content }))
-            .filter(a => a.path || a.content)
-    };
-
-    // Retry up to 2 times (total 3 attempts)
-    const MAX_RETRIES = 2;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (smtp) {
         try {
+            const mailOptions = {
+                from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+                to: actualTo,
+                subject: subject,
+                html: finalHtml,
+                attachments: attachments
+                    .map(att => ({ filename: att.filename, path: att.path, content: att.content }))
+                    .filter(a => a.path || a.content)
+            };
             const info = await smtp.sendMail(mailOptions);
-            console.log(`📧 Email sent to ${actualTo}: ${info.messageId}`);
+            console.log(`📧 Nodemailer sent to ${actualTo}: ${info.messageId}`);
             return info;
         } catch (error) {
-            const isLastAttempt = attempt === MAX_RETRIES;
-            const isRetryable = ['ETIMEDOUT', 'ECONNREFUSED', 'ENETUNREACH', 'ESOCKET', 'ECONNECTION'].some(
-                code => error.message?.includes(code) || error.code === code
-            );
-
-            if (!isRetryable || isLastAttempt) {
-                console.error(`❌ Email dispatch failed (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`, error.message);
-
-                // Helpful hint for Render users
-                if (error.message?.includes('ENETUNREACH') || error.message?.includes('timeout') || error.message?.includes('ETIMEDOUT')) {
-                    console.error('   💡 Hint: Your hosting provider may be blocking SMTP ports (465/587).');
-                    console.error('   💡 This is common on Render free tier. Consider upgrading or using a different host.');
-                }
-                return null;
-            }
-
-            // Wait before retry (exponential backoff: 2s, 4s)
-            const delay = Math.pow(2, attempt + 1) * 1000;
-            console.warn(`⚠️ Email attempt ${attempt + 1} failed: ${error.message}. Retrying in ${delay / 1000}s...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            console.error('❌ Nodemailer SMTP Error:', error.message);
         }
     }
 
+    // --- Both failed ---
+    console.warn('⚠️ Email could not be sent. Configure EMAILJS_* or EMAIL_USER/EMAIL_PASS env vars.');
     return null;
 }
 
