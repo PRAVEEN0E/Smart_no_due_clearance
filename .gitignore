@@ -1,9 +1,11 @@
 # Dependencies
 node_modules/
 
-# Environment variables
+# Environment variables (track .env.example as template)
 .env
-.env.*
+.env.local
+.env.production
+.env.development
 
 # Build outputs
 client/dist/

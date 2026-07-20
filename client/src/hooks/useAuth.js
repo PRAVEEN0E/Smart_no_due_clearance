@@ -4,7 +4,7 @@ import { useEffect, useCallback } from 'react';
 import api from '../lib/api';
 
 export default function useAuth() {
-    const { user, token, setAuth, logout } = useAuthStore();
+    const { user, setAuth, logout } = useAuthStore();
     const navigate = useNavigate();
 
     const isAdmin = user?.role === 'MENTOR' || user?.role === 'SUPERADMIN';
@@ -35,7 +35,6 @@ export default function useAuth() {
 
     return {
         user,
-        token,
         setAuth,
         logout: handleLogout,
         isAdmin,

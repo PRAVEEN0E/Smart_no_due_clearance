@@ -1,17 +1,20 @@
 import axios from 'axios';
 import useAuthStore from '../store/authStore';
+import { getToken as getCsrfToken, fetchToken } from './csrf';
+
+// Pre-fetch CSRF token on first import
+fetchToken();
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
     timeout: 15000,
-    withCredentials: true, // Send cookies (httpOnly JWT) with every request
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json'
     }
 });
 
-api.interceptors.request.use((config) => {
-    // Skip API calls entirely if browser is offline
+api.interceptors.request.use(async (config) => {
     if (!navigator.onLine) {
         return Promise.reject({
             response: {
@@ -22,16 +25,15 @@ api.interceptors.request.use((config) => {
         });
     }
 
-    // Get CSRF token from meta tag or store
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    if (csrfToken && !config.headers['X-CSRF-Token']) {
-        config.headers['X-CSRF-Token'] = csrfToken;
-    }
-
-    // Attach auth token as fallback for WebSocket/SSE connections
-    const token = useAuthStore.getState().token;
-    if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`;
+    // Attach CSRF token for state-changing requests (method != GET/HEAD/OPTIONS)
+    if (config.method && !['get', 'head', 'options'].includes(config.method)) {
+        let token = getCsrfToken();
+        if (!token) {
+            token = await fetchToken();
+        }
+        if (token) {
+            config.headers['X-CSRF-Token'] = token;
+        }
     }
 
     return config;
@@ -42,23 +44,22 @@ api.interceptors.response.use(
     (error) => {
         // Handle 401 Unauthorized - clear auth state
         if (error.response?.status === 401) {
-            const authStore = useAuthStore.getState();
-            if (authStore.user) {
-                authStore.logout();
-                // Only redirect if not already on login page
+            const store = useAuthStore.getState();
+            if (store.user) {
+                store.logout();
                 if (!window.location.pathname.includes('/login')) {
                     window.location.href = '/login';
                 }
             }
         }
 
-        // Handle CSRF errors
+        // Handle CSRF errors — refetch token and reload
         if (error.response?.status === 403 && error.response?.data?.code === 'CSRF_INVALID_TOKEN') {
-            console.warn('CSRF token validation failed. Refreshing page.');
+            console.warn('[CSRF] Token rejected — refetching and reloading');
+            fetchToken();
             window.location.reload();
         }
 
-        // Detect network/offline errors
         if (!error.response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK')) {
             error.response = {
                 data: { message: 'Unable to connect to server. Please check your internet connection.', code: 'NETWORK_ERROR' },
@@ -66,7 +67,6 @@ api.interceptors.response.use(
             };
         }
 
-        // Handle 408 Request Timeout
         if (error.response?.status === 408) {
             error.response.data = {
                 message: 'Request timed out. The server may be unreachable.',

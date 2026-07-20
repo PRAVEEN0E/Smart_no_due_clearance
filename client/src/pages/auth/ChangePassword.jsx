@@ -10,7 +10,7 @@ export default function ChangePassword() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const { user, setAuth, navigate, token } = useAuth();
+    const { user, setAuth, navigate } = useAuth();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -29,7 +29,7 @@ export default function ChangePassword() {
             
             // Update auth state so needsPasswordChange becomes false
             const updatedUser = { ...user, needsPasswordChange: false };
-            setAuth(updatedUser, token);
+            setAuth(updatedUser);
 
             // Redirect to appropriate dashboard
             if (updatedUser.role === 'SUPERADMIN') navigate('/superadmin');

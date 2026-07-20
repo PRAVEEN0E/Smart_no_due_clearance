@@ -74,7 +74,7 @@ async function authRoutes(fastify, opts) {
                 isMaintenance: user.college?.isMaintenanceMode || false
             });
 
-            // Set httpOnly cookie
+            // Set httpOnly cookie (JWT not returned in body — not accessible from JS)
             fastify.setAuthCookie(reply, token);
 
             const userData = {
@@ -86,10 +86,7 @@ async function authRoutes(fastify, opts) {
                 needsPasswordChange: !user.passwordChangedAt && user.role !== 'SUPERADMIN'
             };
 
-            return {
-                token,
-                user: userData
-            };
+            return { user: userData };
         } catch (error) {
             request.log.error({ err: error }, 'Login error');
             return reply.status(500).send({
@@ -376,29 +373,15 @@ async function authRoutes(fastify, opts) {
             });
         }
 
-        const data = await request.file();
-        if (!data) {
-            return reply.status(400).send({
-                error: 'Bad Request',
-                message: 'No signature image uploaded.',
-                code: 'VALIDATION_ERROR'
-            });
-        }
-
-        // File type validation for signatures
-        const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/webp'];
-        if (!allowedMimeTypes.includes(data.mimetype)) {
-            return reply.status(400).send({
-                error: 'Bad Request',
-                message: 'Invalid file type. Only PNG, JPEG, and WebP images are allowed.',
-                code: 'VALIDATION_ERROR'
-            });
-        }
+        const { validateUploadedFile } = require('../lib/uploadPlugin');
+        const raw = await request.file();
+        const uploadInfo = validateUploadedFile(raw, request, reply);
+        if (!uploadInfo) return; // reply already sent
 
         const { uploadStream } = require('../services/cloudinaryService');
 
         try {
-            const result = await uploadStream(data.file, 'signatures', `sig_${request.user.id}`);
+            const result = await uploadStream(uploadInfo.file, 'signatures', `sig_${request.user.id}`);
             if (!result || !result.secure_url) {
                 throw new Error('Upload failed');
             }

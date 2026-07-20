@@ -1,7 +1,8 @@
 require('dotenv').config();
 const cluster = require('cluster');
 const { validateEnv } = require('./lib/env');
-const { initSentry } = require('./lib/sentry');
+const { initSentry, captureError } = require('./lib/sentry');
+const { sanitizeBody } = require('./lib/sanitizePlugin');
 initSentry();
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -134,9 +135,7 @@ fastify.register(require('@fastify/csrf-protection'), {
         path: '/'
     },
     csrfOpts: {
-        getToken: (request) => {
-            return request.headers['x-csrf-token'];
-        }
+        getToken: (request) => request.headers['x-csrf-token']
     }
 });
 
@@ -212,6 +211,9 @@ fastify.setErrorHandler(async (error, request, reply) => {
         method: request.method,
         requestId: request.id
     }, 'Request error');
+
+    // Send to Sentry (captures all 400+ errors with context)
+    captureError(error, request);
 
     // Prisma Unique Constraint Error
     if (error.code === 'P2002') {
@@ -338,6 +340,15 @@ fastify.addHook('onRequest', async (request, reply) => {
     }
 });
 
+// Global input sanitization — strips HTML/script from all unsafe method bodies
+fastify.addHook('preHandler', (request, reply, done) => {
+    const unsafeMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    if (unsafeMethods.includes(request.method)) {
+        return sanitizeBody(request, reply, done);
+    }
+    done();
+});
+
 fastify.addHook('onSend', async (request, reply, payload) => {
     reply.header('X-Worker-Id', workerMetrics.workerId.toString());
     reply.header('X-Worker-PID', workerMetrics.pid.toString());
@@ -382,6 +393,11 @@ fastify.register(async (instance) => {
             is_clustered: cluster.isWorker,
             timestamp: new Date().toISOString()
         };
+    });
+
+    // CSRF token endpoint — returns a fresh token for the current session
+    instance.get('/csrf-token', async (request) => {
+        return { csrfToken: request.csrfToken() };
     });
 
     // Logout endpoint - clears auth cookie

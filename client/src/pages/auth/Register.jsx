@@ -31,7 +31,7 @@ export default function Register() {
             logout();
 
             const { data } = await api.post('/auth/login', { email, password });
-            setAuth(data.user, data.token);
+            setAuth(data.user);
 
             setSuccess(true);
             setTimeout(() => navigate('/mentor'), 1500);

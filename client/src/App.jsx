@@ -96,8 +96,8 @@ const MaintenanceScreen = () => (
 );
 
 const ProtectedRoute = ({ children, roles, isPasswordRoute = false }) => {
-    const { user, token } = useAuth();
-    if (!token) return <Navigate to="/login" />;
+    const { user } = useAuth();
+    if (!user) return <Navigate to="/login" />;
 
     if (user?.role !== 'SUPERADMIN' && user?.isMaintenance) {
         return <MaintenanceScreen />;

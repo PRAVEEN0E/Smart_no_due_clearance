@@ -109,11 +109,13 @@ async function studentRoutes(fastify, opts) {
 
     fastify.post('/assignments', async (request, reply) => {
         try {
-            const data = await request.file();
-            if (!data) return reply.status(400).send({ message: 'No file uploaded' });
+            const { validateUploadedFile } = require('../lib/uploadPlugin');
+            const raw = await request.file();
+            const uploadInfo = validateUploadedFile(raw, request, reply);
+            if (!uploadInfo) return; // reply already sent
 
-            const subjectId = data.fields.subjectId ? data.fields.subjectId.value : null;
-            if (!subjectId) return reply.status(400).send({ message: 'subjectId is required and must be sent before the file' });
+            const subjectId = uploadInfo.fields?.subjectId?.value || uploadInfo.fields?.subjectId || null;
+            if (!subjectId) return reply.status(400).send({ message: 'subjectId is required' });
 
             const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
             if (!subject) return reply.status(404).send({ message: 'Subject not found' });
@@ -129,17 +131,14 @@ async function studentRoutes(fastify, opts) {
             
             let fileUrl;
             try {
-                // Save locally to bypass Cloudinary PDF restrictions
-                const ext = data.filename.split('.').pop()?.toLowerCase() || 'pdf';
-                const allowedExtensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
-                if (!allowedExtensions.includes(ext)) {
-                    return reply.status(400).send({ message: 'Invalid file type. Only PDF, DOC, and Images are allowed.' });
+                const fileName = uploadInfo.filename;
+                const dirPath = path.join(__dirname, '../uploads/assignments');
+                if (!fs.existsSync(dirPath)) {
+                    fs.mkdirSync(dirPath, { recursive: true });
                 }
-
-                const fileName = `asgn_${request.user.id}_${subjectId}_${Date.now()}.${ext}`;
-                const filePath = path.join(__dirname, '../uploads/assignments', fileName);
+                const filePath = path.join(dirPath, fileName);
                 
-                await pipeline(data.file, fs.createWriteStream(filePath));
+                await pipeline(uploadInfo.file, fs.createWriteStream(filePath));
                 fileUrl = `/uploads/assignments/${fileName}`;
             } catch (err) {
                 fastify.log.error(`Local Assignment Save Error: ${err.message}`);

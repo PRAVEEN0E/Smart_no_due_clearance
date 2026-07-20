@@ -83,8 +83,11 @@ async function mentorRoutes(fastify, opts) {
     });
 
     fastify.post('/bulk-students', async (request, reply) => {
-        const file = await request.file();
-        if (!file) return reply.status(400).send({ message: 'No file uploaded' });
+        const { validateUploadedFile } = require('../lib/uploadPlugin');
+        const raw = await request.file();
+        const uploadInfo = validateUploadedFile(raw, request, reply);
+        if (!uploadInfo) return; // reply already sent
+        const file = uploadInfo;
 
         const buffer = await file.toBuffer();
         const students = await parseStudentExcel(buffer);
@@ -145,10 +148,12 @@ async function mentorRoutes(fastify, opts) {
     });
 
     fastify.post('/bulk-fees', async (request, reply) => {
-        const file = await request.file();
-        if (!file) return reply.status(400).send({ message: 'No file uploaded' });
+        const { validateUploadedFile } = require('../lib/uploadPlugin');
+        const raw = await request.file();
+        const uploadInfo = validateUploadedFile(raw, request, reply);
+        if (!uploadInfo) return; // reply already sent
 
-        const buffer = await file.toBuffer();
+        const buffer = await uploadInfo.toBuffer();
         const feeUpdates = await parseFeeExcel(buffer);
         const results = [];
 

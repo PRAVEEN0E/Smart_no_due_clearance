@@ -4,8 +4,10 @@ import App from './App.jsx'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
 import { initSentry } from './lib/sentry'
+import { fetchToken } from './lib/csrf'
 
 initSentry()
+fetchToken()
 
 console.log("main.jsx executing, mounting to #root...");
 ReactDOM.createRoot(document.getElementById('root')).render(
