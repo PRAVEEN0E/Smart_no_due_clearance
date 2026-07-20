@@ -49,7 +49,7 @@ function calculateInternalMarks(evalData, subjectType) {
 
     if (subjectType === 'FULL_LAB') {
         // For Labs (Max 40): Model Lab (20) + Activities scaled (10) + Assignments scaled (5) + Attendance (5)
-        const labModelMarks = Math.min((modelLabMarks || 0), 20); // cap at 20
+        const labModelMarks = ((modelLabMarks || 0) / 100) * 20; // scale to 20
         const labActivityMarks = (activitySum / 20) * 10; // scale 0-20 → 0-10
         const labAssignMarks = (assignSum / 50) * 5; // scale 0-50 → 0-5
         total = labModelMarks + labActivityMarks + labAssignMarks + attendanceMarks;

@@ -96,10 +96,10 @@ export default function NotificationBell() {
                                             )}
                                             <div className="flex gap-4">
                                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border transition-all ${
-                                                    n.type === 'SUCCESS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 group-hover:bg-emerald-100' :
-                                                    n.type === 'WARNING' ? 'bg-amber-50 text-amber-600 border-amber-100 group-hover:bg-amber-100' :
-                                                    n.type === 'URGENT' ? 'bg-red-50 text-red-600 border-red-100 group-hover:bg-red-100' :
-                                                    'bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-100'
+                                                    n.type === 'SUCCESS' ? 'bg-success/10 text-success border-success/20 group-hover:bg-success/20' :
+                                                    n.type === 'WARNING' ? 'bg-warning/10 text-warning border-warning/20 group-hover:bg-warning/20' :
+                                                    n.type === 'URGENT' ? 'bg-destructive/10 text-destructive border-destructive/20 group-hover:bg-destructive/20' :
+                                                    'bg-info/10 text-info border-info/20 group-hover:bg-info/20'
                                                 }`}>
                                                     {n.type === 'SUCCESS' ? <CheckCircle2 className="w-5 h-5" /> :
                                                         n.type === 'WARNING' ? <AlertTriangle className="w-5 h-5" /> :

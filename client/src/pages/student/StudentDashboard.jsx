@@ -20,7 +20,8 @@ import {
     BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import LoadingScreen from '../../components/LoadingScreen';
+import { SkeletonStats, SkeletonTable } from '../../components/Skeletons';
+import EmptyState from '../../components/EmptyState';
 import ReactMarkdown from 'react-markdown';
 import {
     ResponsiveContainer,
@@ -154,7 +155,12 @@ export default function StudentDashboard() {
         }
     };
 
-    if (loading) return <LoadingScreen message="Unlocking Academic Portal..." />;
+    if (loading) return (
+        <div className="space-y-8 p-4 max-w-6xl mx-auto">
+            <SkeletonStats count={3} />
+            <SkeletonTable rows={4} cols={4} />
+        </div>
+    );
 
     const isAllApproved = data.evaluations.length > 0 && data.evaluations.every(e => e.staffApproved);
     const isFeeCleared = data.feeRecord?.feeClearedAuto || data.feeRecord?.feeClearedManual;
@@ -361,7 +367,15 @@ export default function StudentDashboard() {
                         </div>
                         <div className="p-2">
                             <div className="divide-y divide-slate-100">
-                                {data.evaluations.map((ev, i) => {
+                                {data.evaluations.length === 0 ? (
+                                    <div className="col-span-full">
+                                        <EmptyState 
+                                            icon="subjects"
+                                            title="No evaluations found"
+                                            description="You have not been assigned to any subjects yet."
+                                        />
+                                    </div>
+                                ) : data.evaluations.map((ev, i) => {
                                     let prediction = null;
                                     try {
                                         prediction = ev.aiPrediction ? JSON.parse(ev.aiPrediction) : null;

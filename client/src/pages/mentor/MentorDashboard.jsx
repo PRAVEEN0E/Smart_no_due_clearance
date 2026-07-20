@@ -27,6 +27,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
 import useAuth from '../../hooks/useAuth';
 import LoadingScreen from '../../components/LoadingScreen';
+import { SkeletonStats, SkeletonTable } from '../../components/Skeletons';
+import EmptyState from '../../components/EmptyState';
 import {
     BarChart,
     Bar,
@@ -55,7 +57,7 @@ export default function MentorDashboard() {
     const [commonFeeAmount, setCommonFeeAmount] = useState('');
     const [addingCommonFee, setAddingCommonFee] = useState(false);
     const [modalMode, setModalMode] = useState('student'); // 'student', 'subject', 'staff'
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', syllabusText: '', className: '', semester: '4', examDate: '', examSession: 'FN' });
+    const [formData, setFormData] = useState({ name: '', email: '', registerNumber: '', password: '', code: '', type: 'FULL_THEORY', syllabusText: '', className: '', semester: '4', examDate: '', examSession: 'FN' });
     const [editingId, setEditingId] = useState(null);
     const [assignData, setAssignData] = useState({ staffId: '', subjectId: '' });
     const [activeStudent, setActiveStudent] = useState(null);
@@ -98,10 +100,10 @@ export default function MentorDashboard() {
             setStats(statsRes.data.stats);
             setClassStats(statsRes.data.classStats || []);
             setDeptStats(statsRes.data.deptStats || []);
-            setStudents(studentsRes.data);
+            setStudents(studentsRes.data?.data || studentsRes.data || []);
             setSubjects(subjectsRes.data);
             setStaff(staffRes.data);
-            setAuditLogs(auditRes.data || []);
+            setAuditLogs(auditRes.data?.data || auditRes.data || []);
             setAnnouncements(annRes.data || []);
             
             // Set college workflow or default ones if none configured
@@ -122,19 +124,34 @@ export default function MentorDashboard() {
         const file = e.target.files[0];
         if (!file) return;
 
+        // Reset input so same file can be re-uploaded
+        e.target.value = '';
+
         const uploadFormData = new FormData();
         uploadFormData.append('file', file);
 
         setUploadLoading(true);
+        const toastId = toast.loading(`Uploading ${type}...`);
         try {
             const endpoint = type === 'students' ? '/mentor/bulk-students' : '/mentor/bulk-fees';
-            await api.post(endpoint, uploadFormData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            // Do NOT set Content-Type manually — browser must set it with the correct multipart boundary
+            const res = await api.post(endpoint, uploadFormData);
             fetchData();
-            toast.success(`Bulk ${type} upload successful!`);
+            const results = res.data?.results || [];
+            const updated = results.filter(r => r.status === 'Updated').length;
+            const created = results.filter(r => r.status === 'Created').length;
+            const failed = results.filter(r => r.status === 'Failed');
+            if (failed.length > 0) {
+                failed.forEach(f => toast.error(`Failed [${f.email}]: ${f.reason}`, { duration: 8000 }));
+            }
+            toast.success(
+                `Upload done! Created: ${created}, Updated: ${updated}${failed.length > 0 ? `, Failed: ${failed.length}` : ''}`,
+                { id: toastId, duration: 5000 }
+            );
         } catch (err) {
-            toast.error("Upload failed. Please check file format.");
+            const msg = err.response?.data?.message || err.message || 'Unknown error';
+            console.error('Bulk upload error:', err.response?.data || err);
+            toast.error(`Upload failed: ${msg}`, { id: toastId });
         } finally {
             setUploadLoading(false);
         }
@@ -158,7 +175,7 @@ export default function MentorDashboard() {
         } else if (mode === 'announcement') {
             setFormData({ name: item.title, content: item.content, type: item.type || 'GENERAL', priority: item.priority || 1 });
         } else {
-            setFormData({ name: item.name, email: item.email, password: '' });
+            setFormData({ name: item.name, email: item.email, registerNumber: item.registerNumber || '', password: '' });
         }
         setShowAddModal(true);
     };
@@ -175,7 +192,7 @@ export default function MentorDashboard() {
 
             if (modalMode === 'student') {
                 endpoint = `/mentor/students${idPath}`;
-                payload = { name: formData.name, email: formData.email, className: formData.className || undefined };
+                payload = { name: formData.name, email: formData.email, registerNumber: formData.registerNumber || undefined, className: formData.className || undefined };
                 if (formData.password) payload.password = formData.password;
             } else if (modalMode === 'staff') {
                 endpoint = `/mentor/staff${idPath}`;
@@ -202,7 +219,7 @@ export default function MentorDashboard() {
             fetchData();
             setShowAddModal(false);
             setEditingId(null);
-            setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '', semester: '4', examDate: '', examSession: 'FN' });
+            setFormData({ name: '', email: '', registerNumber: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '', semester: '4', examDate: '', examSession: 'FN' });
             toast.success(`${modalMode} ${isEditing ? 'updated' : 'added'} successfully!`);
         } catch (err) {
             toast.error(err.response?.data?.message || "Failed to process request");
@@ -302,7 +319,7 @@ export default function MentorDashboard() {
         setShowCommonFeeModal(false);
         setShowCustomClearanceModal(false);
         setEditingId(null);
-        setFormData({ name: '', email: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '', semester: '4', examDate: '', examSession: 'FN' });
+        setFormData({ name: '', email: '', registerNumber: '', password: '', code: '', type: 'FULL_THEORY', content: '', priority: 1, syllabusText: '', className: '', semester: '4', examDate: '', examSession: 'FN' });
         setCommonFeeAmount('');
     };
 
@@ -383,7 +400,7 @@ export default function MentorDashboard() {
         const query = searchQuery.toLowerCase();
         return items.filter(item => {
             if (activeTab === 'students' || activeTab === 'staff') {
-                return (item.name || '').toLowerCase().includes(query) || (item.email || '').toLowerCase().includes(query);
+                return (item.name || '').toLowerCase().includes(query) || (item.email || '').toLowerCase().includes(query) || (activeTab === 'students' && (item.registerNumber || '').toLowerCase().includes(query));
             }
             if (activeTab === 'subjects') {
                 return (item.name || '').toLowerCase().includes(query) || (item.code || '').toLowerCase().includes(query);
@@ -398,7 +415,12 @@ export default function MentorDashboard() {
         });
     };
 
-    // if (loading) return <LoadingScreen message="Syncing Institutional Records..." />;
+    if (loading) return (
+        <div className="space-y-8 p-4">
+            <SkeletonStats count={4} />
+            <SkeletonTable rows={6} cols={4} />
+        </div>
+    );
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
@@ -589,7 +611,15 @@ export default function MentorDashboard() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border font-medium">
-                                    {getFilteredData().map((item, i) => (
+                                    {getFilteredData().length === 0 ? (
+                                        <tr><td colSpan={5}>
+                                            <EmptyState 
+                                                icon={activeTab === 'students' ? 'users' : activeTab === 'subjects' ? 'subjects' : 'default'}
+                                                title={`No ${activeTab} found`}
+                                                description={searchQuery ? `No ${activeTab} match your search "${searchQuery}".` : `No ${activeTab} have been added yet.`}
+                                            />
+                                        </td></tr>
+                                    ) : getFilteredData().map((item, i) => (
                                         <tr key={i} className="hover:bg-slate-50 transition-colors group">
                                             <td className="px-6 py-4">
                                                 <div className="text-foreground font-bold">
@@ -598,7 +628,12 @@ export default function MentorDashboard() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-muted-foreground font-mono text-[11px]">
-                                                {item.email || item.code || item.type}
+                                                {activeTab === 'students' ? (
+                                                    <div className="flex flex-col">
+                                                        <span>{item.email}</span>
+                                                        {item.registerNumber && <span className="text-[10px] text-slate-400">Reg: {item.registerNumber}</span>}
+                                                    </div>
+                                                ) : item.email || item.code || item.type}
                                             </td>
                                             <td className="px-6 py-4">
                                                 {activeTab === 'students' ? (
@@ -957,6 +992,9 @@ export default function MentorDashboard() {
                                     <>
                                         <div><label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">{modalMode === 'student' ? 'Student Name' : 'Faculty Name'}</label><input required type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary/20" /></div>
                                         <div><label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">College Email</label><input required type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary/20" /></div>
+                                        {modalMode === 'student' && (
+                                            <div><label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Register Number</label><input required type="text" value={formData.registerNumber || ''} onChange={(e) => setFormData({ ...formData, registerNumber: e.target.value })} className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary/20" /></div>
+                                        )}
                                         <div>
                                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">
                                                 {editingId ? 'New Password (Optional)' : 'Password'}

@@ -54,7 +54,12 @@ async function sendViaEmailJS(to, subject, html) {
         return { messageId: `emailjs-${Date.now()}`, status: response.status };
     } catch (error) {
         const errMsg = error.response?.data || error.message;
-        console.error('❌ EmailJS API Error:', errMsg);
+        const status = error.response?.status;
+        if (status === 412) {
+            console.error('❌ EmailJS Error 412: Gmail OAuth token expired. Go to https://dashboard.emailjs.com/admin/services and click "Reconnect Account".');
+        } else {
+            console.error('❌ EmailJS API Error:', errMsg);
+        }
         return null;
     }
 }
@@ -96,7 +101,7 @@ function createTransporter() {
 }
 
 // ============================================================
-// MAIN: sendEmail — tries EmailJS first, then Nodemailer fallback
+// MAIN: sendEmail — tries EmailJS first, then Gmail SMTP fallback
 // ============================================================
 async function sendEmail(to, subject, html, attachments = []) {
     const actualTo = process.env.DEV_EMAIL_OVERRIDE || to;
@@ -116,12 +121,12 @@ async function sendEmail(to, subject, html, attachments = []) {
     const emailjsResult = await sendViaEmailJS(actualTo, subject, finalHtml);
     if (emailjsResult) return emailjsResult;
 
-    // --- Fallback to Nodemailer SMTP (works locally) ---
+    // --- Fallback: Gmail SMTP (App Password — never expires) ---
     const smtp = createTransporter();
     if (smtp) {
         try {
             const mailOptions = {
-                from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+                from: `"InstiSync" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
                 to: actualTo,
                 subject: subject,
                 html: finalHtml,
@@ -130,7 +135,7 @@ async function sendEmail(to, subject, html, attachments = []) {
                     .filter(a => a.path || a.content)
             };
             const info = await smtp.sendMail(mailOptions);
-            console.log(`📧 Nodemailer sent to ${actualTo}: ${info.messageId}`);
+            console.log(`📧 SMTP fallback sent to ${actualTo}: ${info.messageId}`);
             return info;
         } catch (error) {
             console.error('❌ Nodemailer SMTP Error:', error.message);
@@ -138,7 +143,7 @@ async function sendEmail(to, subject, html, attachments = []) {
     }
 
     // --- Both failed ---
-    console.warn('⚠️ Email could not be sent. Configure EMAILJS_* or EMAIL_USER/EMAIL_PASS env vars.');
+    console.warn('⚠️ Email could not be sent. Check EmailJS connection and EMAIL_USER/EMAIL_PASS in .env');
     return null;
 }
 
@@ -264,7 +269,9 @@ async function sendAnnouncementEmail(emails, title, content, priority) {
         <p style="font-size: 11px; color: #999;">InstiSync | Digital College Notice Board</p>
     </div>
     `;
-    return sendEmail(emails, `📢 ${title}`, html); 
+
+    const emailList = Array.isArray(emails) ? emails : [emails];
+    return Promise.allSettled(emailList.map(email => sendEmail(email, `📢 ${title}`, html)));
 }
 
 /**

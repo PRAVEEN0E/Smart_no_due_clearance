@@ -31,6 +31,9 @@ model College {
   logoUrl      String?
   primaryColor String?  @default("#7c3aed")
   secondaryColor String? @default("#a855f7")
+  affiliationText String? @default("(An Autonomous Institution, affiliated to Anna University)")
+  controllerName  String? @default("M. Arulselvan")
+  principalName   String? @default("P. Velavan")
   workflow     Json?    // Array of requirement objects {id, label, type, required}
   isMaintenanceMode Boolean @default(false)
   
@@ -38,14 +41,17 @@ model College {
   subjects     Subject[]
   announcements Announcement[]
   customRoles  CustomRole[]
+  auditLogs    AuditLog[]
 }
 
 model User {
   id           String   @id @default(uuid())
   name         String
   email        String   @unique // Keep global for login purposes
+  registerNumber String? @unique // New field for student login
   passwordHash String
   role         Role
+  dob          String?  // e.g. "12/04/2004"
   signatureUrl String?  // For digital signatures (Staff/Mentor)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -70,6 +76,8 @@ model User {
   materials       Material[] @relation("UploadedMaterials")
   examAttendances   ExamAttendance[] @relation("StudentAttendance")
   scannedAttendances ExamAttendance[] @relation("StaffAttendanceScans")
+  auditLogs       AuditLog[]
+  announcements   Announcement[]
 
   createdById     String?
   createdBy       User?            @relation("UserCreator", fields: [createdById], references: [id])
@@ -78,6 +86,10 @@ model User {
   department     String?          // e.g., 'CSE', 'ECE', 'MECH'
   className      String?          // e.g., 'III Year CSE - A', 'II Year ECE - B'
   customClearance Json?           // Clearance checklist status e.g. { "LIBRARY": { cleared: true, updatedAt: "..." } }
+  passwordChangedAt DateTime?     // Track if user has changed their initial password
+
+  @@index([collegeId])
+  @@index([role])
 }
 
 model AuditLog {
@@ -85,9 +97,14 @@ model AuditLog {
   action    String   // e.g., 'MARK_UPDATE', 'APPROVAL', 'USER_MANAGEMENT'
   details   String   @db.Text
   userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userEmail String
   collegeId String?
+  college   College? @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([collegeId])
 }
 
 model Subject {
@@ -205,6 +222,9 @@ model Assignment {
 
   student User    @relation(fields: [studentId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([subjectId])
 }
 
 model HallTicket {
@@ -229,6 +249,8 @@ model Notification {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model Announcement {
@@ -238,12 +260,16 @@ model Announcement {
   type        String   // 'CAMPUS', 'DEPARTMENT', 'EXAM'
   priority    Int      @default(1) // 1: Low, 2: Medium, 3: High
   createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   expiresAt   DateTime?
   
   // MULTI-TENANT RELATION
   collegeId   String?
   college     College? @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+  @@index([createdById])
 }
 
 model Material {
@@ -259,6 +285,9 @@ model Material {
 
   subject    Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   uploadedBy User    @relation("UploadedMaterials", fields: [uploadedById], references: [id])
+
+  @@index([subjectId])
+  @@index([uploadedById])
 }
 
 model ExamAttendance {
@@ -275,7 +304,7 @@ model ExamAttendance {
   subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   scannedBy User    @relation("StaffAttendanceScans", fields: [scannedById], references: [id], onDelete: Cascade)
 
-  @@unique([studentId, subjectId])
+  @@unique([studentId, subjectId, date, session])
 }
 
 // RBAC: Custom Roles per College
@@ -293,4 +322,3 @@ model CustomRole {
 
   @@unique([name, collegeId])
 }
-

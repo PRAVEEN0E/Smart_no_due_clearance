@@ -1,10 +1,12 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { LogOut, Loader2, Clock } from 'lucide-react';
+import { LogOut, Clock, Sparkles } from 'lucide-react';
 import useAuth from './hooks/useAuth';
+import useAuthStore from './store/authStore';
 import NotificationBell from './components/NotificationBell';
 import AnnouncementTicker from './components/AnnouncementTicker';
 import { Toaster } from 'react-hot-toast';
+import api from './lib/api';
 
 // Lazy load pages for performance
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -15,15 +17,13 @@ const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard'));
 const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
 const Verification = lazy(() => import('./pages/Verification'));
 const AIChatBubble = lazy(() => import('./components/AIChatBubble'));
-const LandingPage = lazy(() => import('./pages/LandingPage'));
-
-// Loading Fallback Component
-
+import ErrorBoundary from './components/ErrorBoundary';
+const ChangePassword = lazy(() => import('./pages/auth/ChangePassword'));
 
 const DashboardLayout = ({ children }) => {
     const { logout, user } = useAuth();
     return (
-        <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+        <div className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col">
             <AnnouncementTicker />
             <nav className="border-b border-black/5 bg-white/70 backdrop-blur-xl sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
@@ -54,6 +54,7 @@ const DashboardLayout = ({ children }) => {
 
                         <button
                             onClick={logout}
+                            aria-label="Logout"
                             className="p-2 md:p-2.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg md:rounded-xl border border-black/5 transition-all group"
                         >
                             <LogOut className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
@@ -61,7 +62,16 @@ const DashboardLayout = ({ children }) => {
                     </div>
                 </div>
             </nav>
-            <main className="max-w-7xl mx-auto p-4 md:p-8">{children}</main>
+            <main className="max-w-7xl w-full mx-auto p-4 md:p-8 flex-1">{children}</main>
+
+            <footer className="mt-auto py-6 text-center border-t border-black/5 bg-white/30 backdrop-blur-sm">
+                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary/60" />
+                    Made by TalentNest
+                    <Sparkles className="w-4 h-4 text-primary/60" />
+                </p>
+            </footer>
+
             {user?.role === 'STUDENT' && <AIChatBubble />}
         </div>
     );
@@ -74,7 +84,7 @@ const MaintenanceScreen = () => (
         </div>
         <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-4 uppercase italic">Node Lockdown</h1>
         <p className="text-slate-500 font-medium max-w-md mx-auto mb-10 leading-relaxed italic">
-            This institutional node is currently under scheduled maintenance. 
+            This institutional node is currently under scheduled maintenance.
             Access will be restored once the infrastructure updates are complete.
         </p>
         <div className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl">
@@ -85,13 +95,16 @@ const MaintenanceScreen = () => (
     </div>
 );
 
-const ProtectedRoute = ({ children, roles }) => {
+const ProtectedRoute = ({ children, roles, isPasswordRoute = false }) => {
     const { user, token } = useAuth();
     if (!token) return <Navigate to="/login" />;
-    
-    // Check Maintenance Mode (SuperAdmins are exempt)
+
     if (user?.role !== 'SUPERADMIN' && user?.isMaintenance) {
         return <MaintenanceScreen />;
+    }
+
+    if (user?.needsPasswordChange && !isPasswordRoute) {
+        return <Navigate to="/change-password" />;
     }
 
     if (roles && !roles.includes(user.role)) return <Navigate to="/login" />;
@@ -99,8 +112,25 @@ const ProtectedRoute = ({ children, roles }) => {
 };
 
 function App() {
+    const [isReady, setIsReady] = useState(false);
+    const hydrate = useAuthStore((state) => state.hydrate);
+
+    useEffect(() => {
+        hydrate();
+        setIsReady(true);
+    }, [hydrate]);
+
+    if (!isReady) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+                <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+                <p className="text-sm font-black text-primary animate-pulse tracking-widest uppercase italic">Initializing System Core...</p>
+            </div>
+        );
+    }
+
     return (
-        <>
+        <ErrorBoundary>
             <Toaster
                 position="top-center"
                 reverseOrder={false}
@@ -133,14 +163,15 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/verify/hallticket/:studentId" element={<Verification />} />
+                    <Route path="/change-password" element={<ProtectedRoute isPasswordRoute={true}><ChangePassword /></ProtectedRoute>} />
                     <Route path="/mentor/*" element={<ProtectedRoute roles={['MENTOR', 'SUPERADMIN']}><MentorDashboard /></ProtectedRoute>} />
                     <Route path="/staff/*" element={<ProtectedRoute roles={['STAFF']}><StaffDashboard /></ProtectedRoute>} />
                     <Route path="/student/*" element={<ProtectedRoute roles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
                     <Route path="/superadmin/*" element={<ProtectedRoute roles={['SUPERADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />
-                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/" element={<Navigate to="/login" replace />} />
                 </Routes>
             </Suspense>
-        </>
+        </ErrorBoundary>
     );
 }
 

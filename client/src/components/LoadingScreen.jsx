@@ -7,7 +7,7 @@ export default function LoadingScreen({ message = "Booting System..." }) {
             {/* Background elements for depth */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
                 <div className="absolute top-1/4 -left-20 w-80 h-80 bg-primary/30 rounded-full blur-[100px]" />
-                <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-purple-400/30 rounded-full blur-[100px]" />
+                <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-secondary/50 rounded-full blur-[100px]" />
             </div>
 
             <div className="relative flex flex-col items-center">
@@ -24,7 +24,7 @@ export default function LoadingScreen({ message = "Booting System..." }) {
                     }}
                     className="relative mb-10"
                 >
-                    <div className="w-24 h-24 bg-gradient-to-br from-primary to-purple-600 rounded-[2.5rem] shadow-[0_20px_50px_rgba(124,58,237,0.3)] flex items-center justify-center relative z-10">
+                    <div className="w-24 h-24 premium-gradient rounded-[2.5rem] shadow-[0_20px_50px_rgba(124,58,237,0.3)] flex items-center justify-center relative z-10">
                         <Shield className="w-10 h-10 text-white" />
                     </div>
                     

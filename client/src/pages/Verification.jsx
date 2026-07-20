@@ -37,7 +37,7 @@ export default function VerificationPage() {
                 </div>
 
                 <div className="text-center relative z-10">
-                    <div className={`mx-auto w-20 h-20 rounded-3xl flex items-center justify-center mb-6 border ${status === 'valid' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
+                    <div className={`mx-auto w-20 h-20 rounded-3xl flex items-center justify-center mb-6 border ${status === 'valid' ? 'bg-success/10 border-success/20 text-success' : 'bg-destructive/10 border-destructive/20 text-destructive'
                         }`}>
                         {status === 'valid' ? <ShieldCheck className="w-10 h-10" /> : <ShieldAlert className="w-10 h-10" />}
                     </div>
@@ -75,9 +75,9 @@ export default function VerificationPage() {
                             </h3>
                             <div className="grid grid-cols-1 gap-2">
                                 {data.subjects.map((sub, i) => (
-                                    <div key={i} className="flex items-center justify-between p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
-                                        <span className="text-sm font-semibold text-emerald-100">{sub.name}</span>
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                    <div key={i} className="flex items-center justify-between p-3 bg-success/5 border border-success/10 rounded-xl">
+                                        <span className="text-sm font-semibold text-success">{sub.name}</span>
+                                        <CheckCircle2 className="w-4 h-4 text-success" />
                                     </div>
                                 ))}
                             </div>

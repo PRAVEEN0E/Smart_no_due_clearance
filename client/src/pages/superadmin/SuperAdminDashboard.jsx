@@ -41,6 +41,7 @@ import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import useAuth from '../../hooks/useAuth';
 import LoadingScreen from '../../components/LoadingScreen';
+import { SkeletonStats, SkeletonTable } from '../../components/Skeletons';
 
 export default function SuperAdminDashboard() {
     const { user } = useAuth();
@@ -127,6 +128,33 @@ export default function SuperAdminDashboard() {
             setRoles(res.data);
         } catch (err) {
             console.error("Failed to fetch roles");
+        }
+    };
+
+    const handleImpersonate = async (userId) => {
+        try {
+            const res = await api.post(`/superadmin/impersonate/${userId}`);
+            const { token, user: impersonatedUser } = res.data;
+            
+            sessionStorage.setItem('adminToken', localStorage.getItem('token'));
+            sessionStorage.setItem('adminUser', localStorage.getItem('user'));
+            
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(impersonatedUser));
+            
+            toast.success(`Assuming session of ${impersonatedUser.name}`);
+            
+            if (impersonatedUser.role === 'MENTOR') {
+                window.location.href = '/mentor';
+            } else if (impersonatedUser.role === 'STAFF') {
+                window.location.href = '/staff';
+            } else if (impersonatedUser.role === 'STUDENT') {
+                window.location.href = '/student';
+            } else {
+                window.location.href = '/';
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to impersonate user");
         }
     };
 
@@ -266,7 +294,12 @@ export default function SuperAdminDashboard() {
         u.college?.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    if (loading) return <LoadingScreen message="Accessing Secure Terminal..." />;
+    if (loading) return (
+        <div className="space-y-8 p-4 bg-slate-950 min-h-screen text-slate-100">
+            <SkeletonStats count={3} />
+            <SkeletonTable rows={4} cols={4} />
+        </div>
+    );
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">

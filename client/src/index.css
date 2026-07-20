@@ -4,26 +4,32 @@
 
 @layer base {
   :root {
-    --background: 270 50% 99%;    /* Extremely clean light purple background */
-    --foreground: 224 71% 4%;     /* Slate 950 */
+    --background: 210 40% 98%;    /* Light background #F8FAFC */
+    --foreground: 215 16% 27%;     /* Primary text #334155 */
     --card: 0 0% 100%;            /* Pure White */
-    --card-foreground: 224 71% 4%;
+    --card-foreground: 215 16% 27%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
-    --primary: 262 83% 58%;       /* Vibrant Purple/Violet */
+    --popover-foreground: 215 16% 27%;
+    --primary: 214 68% 14%;       /* Dark Blue #0B1F3A */
     --primary-foreground: 210 40% 98%;
-    --secondary: 262 30% 96%;     /* Very soft purple */
-    --secondary-foreground: 262 83% 30%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 262 83% 58%;
+    --secondary: 21 89% 54%;     /* Vibrant Orange #F26A21 */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 21 89% 54%;         /* Vibrant Orange #F26A21 */
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 60%;     /* Error #EF4444 */
     --destructive-foreground: 210 40% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 262 83% 58%;
-    --radius: 1.25rem;            /* More rounded for modern feel */
+    --success: 160 84% 39%;       /* Success #10B981 */
+    --success-foreground: 210 40% 98%;
+    --warning: 38 92% 50%;        /* Warning #F59E0B */
+    --warning-foreground: 210 40% 98%;
+    --info: 214 68% 14%;
+    --info-foreground: 210 40% 98%;
+    --border: 215 16% 94%;        /* Borders #E2E8F0 */
+    --input: 215 16% 94%;
+    --ring: 214 68% 14%;
+    --radius: 1rem;               /* Rounded corners 16px */
   }
 }
 
@@ -36,9 +42,9 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
     background-image: 
-      radial-gradient(at 0% 0%, hsla(262, 83%, 94%, 0.5) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(270, 80%, 94%, 0.3) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, hsla(280, 70%, 96%, 0.4) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, hsla(214, 68%, 95%, 0.5) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(214, 68%, 94%, 0.3) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, hsla(21, 89%, 95%, 0.4) 0px, transparent 50%);
     background-attachment: fixed;
   }
 }
@@ -49,15 +55,15 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 10px 40px -10px rgba(124, 58, 237, 0.1);
+  box-shadow: 0 10px 40px -10px rgba(11, 31, 58, 0.1);
 }
 
 .premium-gradient {
-  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #0B1F3A 0%, #173b6b 100%);
 }
 
 .premium-gradient-soft {
-  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
 }
 
 /* Animations */
@@ -88,17 +94,30 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(124, 58, 237, 0.15);
+  background: rgba(11, 31, 58, 0.15);
   border-radius: 20px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(124, 58, 237, 0.3);
+  background: rgba(11, 31, 58, 0.3);
 }
 
 .input-modern {
-  @apply w-full bg-white/50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all text-slate-800;
+  @apply w-full bg-white/50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all text-slate-800;
 }
 
 .card-hover {
   @apply transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/20 hover:-translate-y-1;
+}
+
+/* Typography utilities */
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.font-heading {
+  font-family: 'Sora', sans-serif;
+}
+
+.font-body {
+  font-family: 'Inter', sans-serif;
 }

@@ -51,8 +51,8 @@ async function checkAndUnlock(studentId, prisma) {
     }
 
     if (isCleared) {
-        // let ticket = await prisma.hallTicket.findUnique({ where: { studentId } });
-        // if (ticket && ticket.isUnlocked) return ticket;
+        let ticket = await prisma.hallTicket.findUnique({ where: { studentId } });
+        if (ticket && ticket.isUnlocked) return ticket;
 
         console.log(`🎫 Generating Secure Hall Ticket for ${student.name}...`);
 
@@ -249,7 +249,7 @@ body {
         </div>
 
         <div class="affiliation">
-            (An Autonomous Institution, affiliated to Anna University)
+            ${student.college?.affiliationText || '(An Autonomous Institution)'}
         </div>
 
         <div class="doc-type">
@@ -281,7 +281,7 @@ body {
                         <td class="label">Reg No</td>
                         <td class="sep">:</td>
                         <td class="value">
-                            ${student.email.toUpperCase()}
+                            ${(student.registerNumber || student.email).toUpperCase()}
                         </td>
                     </tr>
 
@@ -305,7 +305,7 @@ body {
                         <td class="label">DOB</td>
                         <td class="sep">:</td>
                         <td class="value">
-                            ${student.dob || '12/04/2004'}
+                            ${student.dob || 'Not Provided'}
                         </td>
                     </tr>
 
@@ -418,7 +418,7 @@ body {
         <div class="sig-item">
 
             <div class="sig-box">
-                <span class="signature-font">M. Arulselvan</span>
+                <span class="signature-font">${student.college?.controllerName || 'Controller of Examinations'}</span>
             </div>
 
             <div class="sig-title">
@@ -432,7 +432,7 @@ body {
 
             <div class="sig-box">
 
-                ${mentorSignature ? `<img src="${mentorSignature}" />` : '<span class="signature-font">P. Velavan</span>'}
+                ${mentorSignature ? `<img src="${mentorSignature}" />` : `<span class="signature-font">${student.college?.principalName || 'Principal'}</span>`}
 
             </div>
 

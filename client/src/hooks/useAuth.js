@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
+import api from '../lib/api';
 
 export default function useAuth() {
     const { user, token, setAuth, logout } = useAuthStore();
@@ -14,8 +15,6 @@ export default function useAuth() {
         if (user?.branding) {
             const root = document.documentElement;
             if (user.branding.primaryColor) {
-                // Convert hex to HSL if possible, or just use hex (Tailwind might need HSL for opacity)
-                // For simplicity now, we'll just set the variables
                 root.style.setProperty('--primary', user.branding.primaryColor);
             }
             if (user.branding.secondaryColor) {
@@ -24,5 +23,25 @@ export default function useAuth() {
         }
     }, [user]);
 
-    return { user, token, setAuth, logout, isAdmin, isStaff, isStudent, navigate, branding: user?.branding };
+    const handleLogout = useCallback(async () => {
+        try {
+            await api.post('/auth/logout');
+        } catch (e) {
+            // Ignore logout API errors
+        }
+        logout();
+        navigate('/login');
+    }, [logout, navigate]);
+
+    return {
+        user,
+        token,
+        setAuth,
+        logout: handleLogout,
+        isAdmin,
+        isStaff,
+        isStudent,
+        navigate,
+        branding: user?.branding
+    };
 }

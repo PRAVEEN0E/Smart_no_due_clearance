@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
+import { initSentry } from './lib/sentry'
+
+initSentry()
 
 console.log("main.jsx executing, mounting to #root...");
 ReactDOM.createRoot(document.getElementById('root')).render(

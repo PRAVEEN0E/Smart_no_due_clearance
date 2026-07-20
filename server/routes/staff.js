@@ -37,6 +37,10 @@ async function staffRoutes(fastify, opts) {
     });
 
     fastify.get('/students', async (request) => {
+        const page = parseInt(request.query.page) || 1;
+        const limit = parseInt(request.query.limit) || 50;
+        const skip = (page - 1) * limit;
+
         // Get all subjects assigned to this staff
         const assignedSubjects = await prisma.staffSubject.findMany({
             where: { staffId: request.user.id },
@@ -44,21 +48,35 @@ async function staffRoutes(fastify, opts) {
         });
         const subIds = assignedSubjects.map(s => s.subjectId);
 
-        return prisma.studentSubject.findMany({
-            where: { subjectId: { in: subIds } },
-            include: {
-                student: {
-                    select: { id: true, name: true, email: true, role: true, signatureUrl: true, collegeId: true }
-                },
-                subject: {
-                    include: {
-                        evaluations: {
-                            where: { staffId: request.user.id }
+        const where = { subjectId: { in: subIds } };
+
+        const [data, total] = await Promise.all([
+            prisma.studentSubject.findMany({
+                where,
+                skip,
+                take: limit,
+                include: {
+                    student: {
+                        select: { id: true, name: true, email: true, role: true, signatureUrl: true, collegeId: true }
+                    },
+                    subject: {
+                        include: {
+                            evaluations: {
+                                where: { staffId: request.user.id }
+                            }
                         }
                     }
                 }
-            }
-        });
+            }),
+            prisma.studentSubject.count({ where })
+        ]);
+
+        return {
+            data,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit)
+        };
     });
 
     // Get evaluations for this staff — includes evaluations where staffId matches
@@ -360,7 +378,7 @@ async function staffRoutes(fastify, opts) {
             }
 
             // Check Fee Clearance
-            const feeBalance = student.feeRecord?.balance || 0;
+            const feeBalance = student.feeRecord?.feeBalance || 0;
             const feeCleared = (feeBalance <= 0) || !!student.feeRecord?.feeClearedManual;
 
             // Check Academic Clearance (Evaluations)

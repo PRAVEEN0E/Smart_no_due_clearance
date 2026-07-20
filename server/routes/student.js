@@ -130,7 +130,12 @@ async function studentRoutes(fastify, opts) {
             let fileUrl;
             try {
                 // Save locally to bypass Cloudinary PDF restrictions
-                const ext = data.filename.split('.').pop() || 'pdf';
+                const ext = data.filename.split('.').pop()?.toLowerCase() || 'pdf';
+                const allowedExtensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+                if (!allowedExtensions.includes(ext)) {
+                    return reply.status(400).send({ message: 'Invalid file type. Only PDF, DOC, and Images are allowed.' });
+                }
+
                 const fileName = `asgn_${request.user.id}_${subjectId}_${Date.now()}.${ext}`;
                 const filePath = path.join(__dirname, '../uploads/assignments', fileName);
                 

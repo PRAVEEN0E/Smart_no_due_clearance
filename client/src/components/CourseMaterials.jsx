@@ -175,7 +175,7 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
                                     {role !== 'STUDENT' && (
                                         <button
                                             onClick={() => handleDelete(m.id)}
-                                            className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all"
+                                            className="p-1.5 hover:bg-destructive/10 text-slate-400 hover:text-destructive rounded-lg transition-colors"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
                                         </button>

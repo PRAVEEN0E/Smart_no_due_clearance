@@ -5,15 +5,24 @@ async function parseStudentExcel(buffer) {
     const sheetName = workbook.SheetNames[0];
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    // Map Excel columns to our schema
-    // Expected columns: Name, Email, Password, Class/Section, Department
-    return data.map(row => ({
-        name: row.Name || row.name || row['Student Name'],
-        email: row.Email || row.email || row['Email ID'],
-        password: row.Password || row.password || row['Initial Password'] || 'Temporary@123',
-        className: row['Class'] || row['Section'] || row['Class/Section'] || row.className || row.class || null,
-        department: row.Department || row.department || row.dept || null
-    }));
+    // Map Excel columns to our schema by also checking normalized keys
+    return data.map(row => {
+        const normalizedRow = {};
+        for (let key in row) {
+            if (Object.prototype.hasOwnProperty.call(row, key)) {
+                normalizedRow[key.toLowerCase().replace(/[\s_]+/g, '')] = row[key];
+            }
+        }
+        
+        return {
+            name: row.Name || row.name || row['Student Name'] || normalizedRow.name || normalizedRow.studentname || null,
+            email: row.Email || row.email || row['Email ID'] || normalizedRow.email || normalizedRow.emailid || null,
+            registerNumber: row.RegisterNumber || row.registerNumber || row['Register Number'] || row['Reg No'] || normalizedRow.registernumber || normalizedRow.registerno || normalizedRow.regno || normalizedRow.registern || null,
+            password: row.Password || row.password || row['Initial Password'] || normalizedRow.password || normalizedRow.initialpassword || 'Temporary@123',
+            className: row['Class'] || row['Section'] || row['Class/Section'] || row.className || row.class || normalizedRow.class || normalizedRow.section || normalizedRow['class/section'] || null,
+            department: row.Department || row.department || row.dept || normalizedRow.department || normalizedRow.dept || null
+        };
+    });
 }
 
 async function parseFeeExcel(buffer) {

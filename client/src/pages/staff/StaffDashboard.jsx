@@ -46,6 +46,8 @@ import {
     Area
 } from 'recharts';
 import api from '../../lib/api';
+import { SkeletonStats, SkeletonTable } from '../../components/Skeletons';
+import EmptyState from '../../components/EmptyState';
 import CourseMaterials from '../../components/CourseMaterials';
 import ExamQRScanner from './ExamQRScanner';
 import useAuthStore from '../../store/authStore';
@@ -129,6 +131,7 @@ export default function StaffDashboard() {
 
     const fetchData = async () => {
         if (!selectedSubject) return;
+        setLoading(true);
         try {
             const [evalRes, analyticsRes] = await Promise.all([
                 api.get('/staff/evaluations'),
@@ -142,6 +145,8 @@ export default function StaffDashboard() {
             setAnalytics(analyticsRes.data || { distribution: [], trends: [] });
         } catch (err) {
             console.error("Failed to fetch dashboard data", err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -287,6 +292,13 @@ export default function StaffDashboard() {
         : 0;
 
     const approvedCount = evaluations.filter(e => e.staffApproved).length;
+
+    if (loading) return (
+        <div className="space-y-8 p-4">
+            <SkeletonStats count={4} />
+            <SkeletonTable rows={6} cols={4} />
+        </div>
+    );
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700 max-w-7xl mx-auto pb-20">
@@ -571,7 +583,15 @@ export default function StaffDashboard() {
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
                                     <AnimatePresence mode="popLayout">
-                                        {evaluations.map((ev) => (
+                                        {evaluations.length === 0 ? (
+                                            <tr><td colSpan={8}>
+                                                <EmptyState 
+                                                    icon="users"
+                                                    title="No students assigned"
+                                                    description="There are no students to display for this subject."
+                                                />
+                                            </td></tr>
+                                        ) : evaluations.map((ev) => (
                                             <motion.tr
                                                 layout
                                                 initial={{ opacity: 0 }}

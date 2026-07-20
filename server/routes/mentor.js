@@ -50,16 +50,32 @@ async function mentorRoutes(fastify, opts) {
         const isSuperAdmin = request.user.role === 'SUPERADMIN';
         const isAdmin = isSuperAdmin || request.user.email === 'admin@college.edu';
         
+        const page = parseInt(request.query.page) || 1;
+        const limit = parseInt(request.query.limit) || 50;
+        const skip = (page - 1) * limit;
+
         const where = { role: 'STUDENT' };
         if (!isSuperAdmin) where.collegeId = request.user.collegeId || null;
         // Mentors should be able to see all students in their college/department context
         // if (!isAdmin) where.createdById = request.user.id;
 
         try {
-            return await prisma.user.findMany({
-                where,
-                include: { feeRecord: true, studentSubjects: { include: { subject: true } } }
-            });
+            const [data, total] = await Promise.all([
+                prisma.user.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    include: { feeRecord: true, studentSubjects: { include: { subject: true } } }
+                }),
+                prisma.user.count({ where })
+            ]);
+
+            return {
+                data,
+                total,
+                page,
+                totalPages: Math.ceil(total / limit)
+            };
         } catch (error) {
             fastify.log.error(`Students Fetch Error: ${error.message}`);
             throw error;
@@ -76,11 +92,32 @@ async function mentorRoutes(fastify, opts) {
 
         for (const s of students) {
             try {
+                const existing = await prisma.user.findUnique({ where: { email: s.email } });
+
+                if (existing) {
+                    if (existing.collegeId === request.user.collegeId) {
+                        await prisma.user.update({
+                            where: { id: existing.id },
+                            data: { 
+                                name: s.name,
+                                registerNumber: s.registerNumber ? String(s.registerNumber) : undefined,
+                                className: s.className || undefined,
+                                department: s.department || undefined
+                            }
+                        });
+                        results.push({ email: s.email, status: 'Updated' });
+                    } else {
+                        results.push({ email: s.email, status: 'Failed', reason: 'Belongs to different college' });
+                    }
+                    continue;
+                }
+
                 const passwordHash = await bcrypt.hash(s.password, 12);
                 const user = await prisma.user.create({
                     data: {
                         name: s.name,
                         email: s.email,
+                        registerNumber: s.registerNumber ? String(s.registerNumber) : null,
                         passwordHash,
                         role: 'STUDENT',
                         createdBy: { connect: { id: request.user.id } },
@@ -89,14 +126,19 @@ async function mentorRoutes(fastify, opts) {
                         department: typeof s.department === 'object' ? (s.department?.name || null) : (s.department || null)
                     }
                 });
-                await prisma.feeRecord.create({ data: { studentId: user.id, feeBalance: 0 } });
+                await prisma.feeRecord.create({ data: { studentId: user.id, feeBalance: 0, feeClearedAuto: true } });
 
                 // Send Welcome Email
                 sendWelcomeEmail(s.email, s.name, s.password);
 
-                results.push({ email: s.email, status: 'Success' });
+                results.push({ email: s.email, status: 'Created' });
             } catch (err) {
-                results.push({ email: s.email, status: 'Failed', reason: err.message });
+                let reason = err.message;
+                if (err.code === 'P2002') {
+                    const fields = err.meta?.target || ['unknown'];
+                    reason = `Duplicate value: ${Array.isArray(fields) ? fields.join(', ') : fields} already exists`;
+                }
+                results.push({ email: s.email || 'unknown', status: 'Failed', reason });
             }
         }
         return { message: 'Bulk import completed', results };
@@ -191,7 +233,7 @@ async function mentorRoutes(fastify, opts) {
     });
 
     fastify.post('/students', { schema: mentorSchema.createStudent }, async (request, reply) => {
-        const { name, email, password, className, department } = request.body;
+        const { name, email, registerNumber, password, className, department } = request.body;
         const passwordHash = await bcrypt.hash(password, 12);
 
         // Auto-inherit mentor's department if not explicitly set
@@ -206,6 +248,7 @@ async function mentorRoutes(fastify, opts) {
                 data: { 
                     name, 
                     email, 
+                    registerNumber: registerNumber || null,
                     passwordHash, 
                     role: 'STUDENT', 
                     createdBy: { connect: { id: request.user.id } }, 
@@ -213,7 +256,7 @@ async function mentorRoutes(fastify, opts) {
                     className: className || null, 
                     department: typeof studentDept === 'object' ? (studentDept?.name || null) : (studentDept || null)
                 },
-                select: { id: true, name: true, email: true, role: true, collegeId: true, className: true, department: true }
+                select: { id: true, name: true, email: true, registerNumber: true, role: true, collegeId: true, className: true, department: true }
             });
             await tx.feeRecord.create({
                 data: { studentId: newUser.id, feeBalance: 0, feeClearedAuto: true }
@@ -234,10 +277,11 @@ async function mentorRoutes(fastify, opts) {
             return reply.status(403).send({ message: 'Unauthorized: student belongs to a different college' });
         }
 
-        const { name, email, password, className, department } = request.body;
+        const { name, email, registerNumber, password, className, department } = request.body;
         const updateData = { 
             name, 
             email,
+            registerNumber: registerNumber !== undefined ? registerNumber || null : undefined,
             className: className !== undefined ? className : undefined,
             department: department !== undefined ? department : undefined
         };
@@ -249,7 +293,7 @@ async function mentorRoutes(fastify, opts) {
         return prisma.user.update({
             where: { id: request.params.id },
             data: updateData,
-            select: { id: true, name: true, email: true, role: true, collegeId: true, className: true, department: true }
+            select: { id: true, name: true, email: true, registerNumber: true, role: true, collegeId: true, className: true, department: true }
         });
     });
 
@@ -299,6 +343,7 @@ async function mentorRoutes(fastify, opts) {
                         where: { id: existing.id },
                         data: { 
                             name: s.name,
+                            registerNumber: s.registerNumber || undefined,
                             className: s.className || undefined,
                             department: s.department || undefined,
                             // Ensure the current mentor has "ownership" if it was null
@@ -318,6 +363,7 @@ async function mentorRoutes(fastify, opts) {
                 data: {
                     name: s.name,
                     email: s.email,
+                    registerNumber: s.registerNumber || null,
                     passwordHash,
                     role: 'STUDENT',
                     createdBy: { connect: { id: request.user.id } },

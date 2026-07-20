@@ -94,7 +94,7 @@ export default function AIChatBubble() {
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-bold">Academic Assistant</h3>
-                                    <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Online</span>
+                                    <span className="text-[10px] text-success font-bold bg-success/10 px-2 py-0.5 rounded-full">System Active</span>
                                 </div>
                             </div>
                             <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/5 rounded-xl transition-all">
@@ -179,8 +179,8 @@ export default function AIChatBubble() {
                 {isOpen ? <X className="w-6 h-6" /> : <Bot className="w-7 h-7" />}
                 {!isOpen && (
                     <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-black"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-4 w-4 bg-success text-white text-[10px] font-bold flex items-center justify-center">AI</span>
                     </span>
                 )}
             </motion.button>
