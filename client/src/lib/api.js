@@ -18,6 +18,11 @@ api.interceptors.request.use(async (config) => {
         });
     }
 
+    const token = sessionStorage.getItem('auth_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+
     return config;
 });
 

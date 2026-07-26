@@ -507,6 +507,7 @@ require('./lib/cache').setMetrics(fastify.metrics);
 // Track queue depths periodically
 setInterval(async () => {
     try {
+        if (!process.env.REDIS_URL) return;
         const { QUEUES, getQueueStatus } = require('./lib/queue');
         for (const name of Object.values(QUEUES)) {
             const status = await getQueueStatus(name);

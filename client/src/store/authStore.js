@@ -18,9 +18,8 @@ const useAuthStore = create((set) => ({
         set({ isHydrated: true });
     },
 
-    setAuth: (user) => {
+    setAuth: (user, token) => {
         // Store minimal non-sensitive user info in sessionStorage for tab persistence
-        // JWT is ONLY in httpOnly cookie — never accessible from JavaScript
         const safeUser = user
             ? {
                 id: user.id,
@@ -43,6 +42,9 @@ const useAuthStore = create((set) => ({
             } else {
                 sessionStorage.removeItem('auth_user');
             }
+            if (token) {
+                sessionStorage.setItem('auth_token', token);
+            }
         } catch (e) {
             // Storage full or unavailable — ignore
         }
@@ -52,6 +54,7 @@ const useAuthStore = create((set) => ({
     logout: () => {
         try {
             sessionStorage.removeItem('auth_user');
+            sessionStorage.removeItem('auth_token');
         } catch (e) {
             // Ignore
         }

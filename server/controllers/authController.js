@@ -67,7 +67,7 @@ class AuthController {
 
         await this.recordLogin(result.user, true, null, request);
         this.fastify.setAuthCookie(reply, result.token);
-        return res.success(reply, { user: result.user });
+        return res.success(reply, { user: result.user, token: result.token });
     }
 
     async changePassword(request, reply) {

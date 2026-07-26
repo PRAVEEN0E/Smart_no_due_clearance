@@ -123,7 +123,7 @@ async function authPlugin(fastify, opts) {
             path: '/',
             httpOnly: true,
             secure: isProduction,
-            sameSite: 'lax',
+            sameSite: isProduction ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60, // 7 days
             signed: false
         });
@@ -131,11 +131,12 @@ async function authPlugin(fastify, opts) {
 
     // Helper to clear auth cookie
     fastify.decorate('clearAuthCookie', function (reply) {
+        const isProduction = process.env.NODE_ENV === 'production';
         reply.clearCookie('token', {
             path: '/',
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+            secure: isProduction,
+            sameSite: isProduction ? 'none' : 'lax'
         });
     });
 }
