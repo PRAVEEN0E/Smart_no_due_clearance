@@ -1,19 +1,30 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const fp = require('fastify-plugin');
+const { createContainer } = require('../lib/container');
 
 async function prismaPlugin(fastify, opts) {
-  const prisma = new PrismaClient();
 
-  // Try to connect but don't crash if it fails
-  prisma.$connect().catch(err => {
-    fastify.log.error(`Prisma initial connection failed: ${err.message}`);
-  });
+    if (process.env.NODE_ENV === 'development') {
+        prisma.$on('query', (e) => {
+            if (e.duration > 100) {
+                fastify.log.warn({ query: e.query, duration: e.duration }, 'Slow query detected');
+            }
+        });
+    }
 
-  fastify.decorate('prisma', prisma);
+    prisma.$connect().catch(err => {
+        fastify.log.error(`Prisma initial connection failed: ${err.message}`);
+    });
 
-  fastify.addHook('onClose', async (fastify) => {
-    await fastify.prisma.$disconnect();
-  });
+    fastify.decorate('prisma', prisma);
+
+    const { repos, services } = createContainer(prisma);
+    fastify.decorate('repos', repos);
+    fastify.decorate('services', services);
+
+    fastify.addHook('onClose', async (fastify) => {
+        await fastify.prisma.$disconnect();
+    });
 }
 
 module.exports = fp(prismaPlugin);

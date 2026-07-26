@@ -8,13 +8,6 @@
 - Tokens expire after 7 days
 - No refresh tokens are used (short session window reduces attack surface)
 
-## CSRF Protection
-
-- All state-changing requests (POST, PUT, PATCH, DELETE) require a CSRF token
-- The CSRF token is obtained from `GET /api/csrf-token`
-- Sent as `X-CSRF-Token` header
-- CSRF secret is stored in an httpOnly cookie
-
 ## XSS Prevention
 
 - All user input is sanitized server-side before processing

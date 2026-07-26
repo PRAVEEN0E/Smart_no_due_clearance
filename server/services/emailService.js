@@ -50,7 +50,6 @@ async function sendViaEmailJS(to, subject, html) {
             }
         );
 
-        console.log(`📧 EmailJS sent to ${toAddress} (status: ${response.status})`);
         return { messageId: `emailjs-${Date.now()}`, status: response.status };
     } catch (error) {
         const errMsg = error.response?.data || error.message;
@@ -135,7 +134,6 @@ async function sendEmail(to, subject, html, attachments = []) {
                     .filter(a => a.path || a.content)
             };
             const info = await smtp.sendMail(mailOptions);
-            console.log(`📧 SMTP fallback sent to ${actualTo}: ${info.messageId}`);
             return info;
         } catch (error) {
             console.error('❌ Nodemailer SMTP Error:', error.message);
@@ -206,8 +204,9 @@ async function sendMarksUpdateEmail(userEmail, userName, subjectName) {
 /**
  * Template for New Account / Welcome
  */
-async function sendWelcomeEmail(userEmail, userName, password) {
+async function sendWelcomeEmail(userEmail, userName, setupToken) {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const setupUrl = `${frontendUrl}/setup-password?token=${setupToken}&email=${encodeURIComponent(userEmail)}`;
     const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
         <h2 style="color: #15803d;">🎓 Welcome to InstiSync</h2>
@@ -216,17 +215,16 @@ async function sendWelcomeEmail(userEmail, userName, password) {
         <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
             <p style="margin: 0; color: #374151;"><b>Portal Link:</b> ${frontendUrl}</p>
             <p style="margin: 10px 0 0 0; color: #374151;"><b>Username:</b> ${userEmail}</p>
-            <p style="margin: 5px 0 0 0; color: #374151;"><b>Temporary Password:</b> <span style="font-family: monospace; background: #eee; padding: 2px 5px;">${password}</span></p>
         </div>
-        <p style="color: #6b7280; font-size: 14px;">Please change your password after your first login.</p>
+        <p style="color: #6b7280; font-size: 14px;">To activate your account, please set up your password using the link below. This link will expire in 24 hours.</p>
         <div style="text-align: center; margin: 30px 0;">
-            <a href="${frontendUrl}/login" style="background-color: #15803d; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Portal</a>
+            <a href="${setupUrl}" style="background-color: #15803d; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Set Up Password</a>
         </div>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 11px; color: #999;">InstiSync | Academic Transparency Platform</p>
     </div>
     `;
-    return sendEmail(userEmail, '🎓 Your Institutional Account is Ready', html);
+    return sendEmail(userEmail, '🎓 Set Up Your Institutional Account Password', html);
 }
 
 /**

@@ -1,80 +1,92 @@
-const CACHE_NAME = 'nodue-v3'; 
-const ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    '/logo192.png',
-    '/logo512.png'
-];
+const CACHE = 'sndc-v1';
+const STATIC_ASSETS = ['/', '/login', '/register'];
+const API_CACHE = 'sndc-api-v1';
+const API_TIMEOUT = 60000;
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-    );
+    event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(STATIC_ASSETS)));
 });
 
 self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((keys) => {
-            return Promise.all(
-                keys.filter(key => key !== CACHE_NAME)
-                    .map(key => caches.delete(key))
-            );
-        })
-    );
+    event.waitUntil(clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
-    
-    // ONLY intercept requests to our own origin
-    if (url.origin !== self.location.origin) {
+    const { request } = event;
+    const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/')) {
+        event.respondWith(networkFirstWithTimeout(request, API_CACHE));
         return;
     }
-
-    // API requests should NOT be cached by the service worker by default
-    if (url.pathname.startsWith('/api')) {
+    if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?)$/)) {
+        event.respondWith(cacheFirst(request, CACHE));
         return;
     }
-
-    // Navigation fallback for SPA: Return index.html for navigation requests
-    if (event.request.mode === 'navigate') {
-        event.respondWith(
-            fetch(event.request).catch(() => {
-                return caches.match('/index.html') || caches.match('/');
-            })
-        );
+    if (request.mode === 'navigate') {
+        event.respondWith(networkFirstWithTimeout(request, CACHE));
         return;
     }
-
-    // Cache First for static assets
-    event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-
-            return fetch(event.request).then((response) => {
-                // Don't cache non-success responses or non-GET requests
-                if (!response || response.status !== 200 || response.type !== 'basic' || event.request.method !== 'GET') {
-                    return response;
-                }
-
-                const responseToCache = response.clone();
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, responseToCache);
-                });
-
-                return response;
-            }).catch(() => {
-                // If fetch fails (offline), and it's not in cache, return a generic offline response
-                // or just let it fail so the browser shows its default offline page
-                if (event.request.mode === 'navigate') {
-                    return caches.match('/index.html') || caches.match('/');
-                }
-                return null; // Let the browser handle the network error
-            });
-        })
-    );
+    event.respondWith(networkFirstWithTimeout(request, CACHE));
 });
+
+// Push event handler
+self.addEventListener('push', (event) => {
+    if (!event.data) return;
+    try {
+        const data = event.data.json();
+        const options = {
+            body: data.body || '',
+            icon: data.icon || '/favicon.ico',
+            badge: data.badge || '/favicon.ico',
+            vibrate: [200, 100, 200],
+            data: { url: data.url || '/' }
+        };
+        event.waitUntil(
+            self.registration.showNotification(data.title || 'Notification', options)
+        );
+    } catch { /* ignore */ }
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const url = event.notification.data?.url || '/';
+    event.waitUntil(clients.openWindow(url));
+});
+
+async function cacheFirst(request, cacheName) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            const cache = await caches.open(cacheName);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        return new Response('Offline', { status: 503 });
+    }
+}
+
+async function networkFirstWithTimeout(request, cacheName, timeout = API_TIMEOUT) {
+    try {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        const response = await fetch(request, { signal: controller.signal });
+        clearTimeout(id);
+        if (response.ok) {
+            const cache = await caches.open(cacheName);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        if (request.mode === 'navigate') return caches.match('/');
+        return new Response(JSON.stringify({ offline: true, message: 'You are offline' }), {
+            status: 503, headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}

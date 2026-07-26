@@ -1,7 +1,7 @@
 const { sanitizeText, sanitizeEmail, sanitizeFileName, sanitizeObject } = require('./sanitize');
 
-const TEXT_FIELDS = ['name', 'title', 'content', 'message', 'department', 'remarks', 'feedback', 'subject', 'description', 'collegeName'];
-const EMAIL_FIELDS = ['email'];
+const TEXT_FIELDS = ['name', 'title', 'content', 'message', 'department', 'remarks', 'feedback', 'subject', 'description', 'collegeName', 'email'];
+const EMAIL_FIELDS = [];
 const FILE_NAME_FIELDS = ['filename', 'fileName', 'originalName', 'originalname'];
 
 function sanitizeBody(request, reply, done) {

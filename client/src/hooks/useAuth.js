@@ -25,7 +25,7 @@ export default function useAuth() {
 
     const handleLogout = useCallback(async () => {
         try {
-            await api.post('/auth/logout');
+            await api.post('/logout');
         } catch (e) {
             // Ignore logout API errors
         }

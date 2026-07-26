@@ -1,17 +1,10 @@
 import axios from 'axios';
 import useAuthStore from '../store/authStore';
-import { getToken as getCsrfToken, fetchToken } from './csrf';
-
-// Pre-fetch CSRF token on first import
-fetchToken();
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
     timeout: 15000,
-    withCredentials: true,
-    headers: {
-        'Content-Type': 'application/json'
-    }
+    withCredentials: true
 });
 
 api.interceptors.request.use(async (config) => {
@@ -23,17 +16,6 @@ api.interceptors.request.use(async (config) => {
             },
             message: 'Network Error'
         });
-    }
-
-    // Attach CSRF token for state-changing requests (method != GET/HEAD/OPTIONS)
-    if (config.method && !['get', 'head', 'options'].includes(config.method)) {
-        let token = getCsrfToken();
-        if (!token) {
-            token = await fetchToken();
-        }
-        if (token) {
-            config.headers['X-CSRF-Token'] = token;
-        }
     }
 
     return config;
@@ -51,13 +33,6 @@ api.interceptors.response.use(
                     window.location.href = '/login';
                 }
             }
-        }
-
-        // Handle CSRF errors — refetch token and reload
-        if (error.response?.status === 403 && error.response?.data?.code === 'CSRF_INVALID_TOKEN') {
-            console.warn('[CSRF] Token rejected — refetching and reloading');
-            fetchToken();
-            window.location.reload();
         }
 
         if (!error.response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK')) {

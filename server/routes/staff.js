@@ -1,9 +1,8 @@
 const staffSchema = require('../schemas/staff.schema');
-const { parseMarksExcel, generateMarksExcel } = require('../services/excelService');
+const { generateMarksExcel } = require('../services/excelService');
 const { calculateInternalMarks } = require('../services/marksCalculator');
 const { logAction } = require('../services/auditService');
-const { sendMarksUpdateEmail, sendSubjectApprovedEmail } = require('../services/emailService');
-const { sendNotification } = require('../services/notificationService');
+const { QUEUES, addJob } = require('../lib/queue');
 
 async function staffRoutes(fastify, opts) {
     const sseClients = new Set();
@@ -30,9 +29,11 @@ async function staffRoutes(fastify, opts) {
 
     // View assigned students and subjects
     fastify.get('/subjects', async (request) => {
-        return prisma.staffSubject.findMany({
-            where: { staffId: request.user.id },
-            include: { subject: true }
+        return fastify.cache.remember(`sndc:staffsubjects:${request.user.id}`, fastify.cache.DEFAULT_TTL, () => {
+            return prisma.staffSubject.findMany({
+                where: { staffId: request.user.id },
+                include: { subject: true }
+            });
         });
     });
 
@@ -91,12 +92,26 @@ async function staffRoutes(fastify, opts) {
 
         if (assignedSubjectIds.length === 0) return [];
 
+        // Optional status filter: 'approved', 'rejected', 'pending'
+        const statusFilter = request.query.status;
+
+        const whereClause = {
+            subjectId: { in: assignedSubjectIds },
+            staffId: request.user.id
+        };
+
+        if (statusFilter === 'approved') {
+            whereClause.staffApproved = true;
+        } else if (statusFilter === 'rejected') {
+            whereClause.staffRejected = true;
+        } else if (statusFilter === 'pending') {
+            whereClause.staffApproved = false;
+            whereClause.staffRejected = false;
+        }
+
         // Now fetch all evaluations for this staff's subjects
         return prisma.evaluation.findMany({
-            where: {
-                subjectId: { in: assignedSubjectIds },
-                staffId: request.user.id
-            },
+            where: whereClause,
             include: {
                 student: {
                     include: {
@@ -106,7 +121,8 @@ async function staffRoutes(fastify, opts) {
                     }
                 },
                 subject: true
-            }
+            },
+            orderBy: { id: 'asc' }
         });
     });
 
@@ -156,14 +172,20 @@ async function staffRoutes(fastify, opts) {
             }
         }
 
+        // Filter out null values — use existing evaluation values instead
+        const cleanData = {};
+        for (const [key, value] of Object.entries(updateData)) {
+            if (value !== null) cleanData[key] = value;
+        }
+
         // Merge current data with update to calculate total
-        const mergedData = { ...evaluation, ...updateData };
+        const mergedData = { ...evaluation, ...cleanData };
         const total = calculateInternalMarks(mergedData, evaluation.subject.type);
 
         const updatedEval = await prisma.evaluation.update({
             where: { id: evalId },
             data: {
-                ...updateData,
+                ...cleanData,
                 internalMarksTotal: total
             },
             include: { subject: true, student: true }
@@ -182,16 +204,17 @@ async function staffRoutes(fastify, opts) {
             collegeId: request.user.collegeId
         });
 
-        // Background processes
-        predictStudentSuccess(updatedEval, updatedEval.subject.name).then(async (prediction) => {
-            await prisma.evaluation.update({
-                where: { id: evalId },
-                data: { aiPrediction: JSON.stringify(prediction) }
-            });
-        }).catch(err => console.error("Async AI Prediction Error:", err));
+        // Background AI prediction via queue
+        addJob(QUEUES.AI, 'predict-success', {
+            type: 'predict-success',
+            data: { evaluation: updatedEval, subjectName: updatedEval.subject.name }
+        }).catch(() => {});
 
-        // Email Notification
-        sendMarksUpdateEmail(updatedEval.student.email, updatedEval.student.name, updatedEval.subject.name);
+        // Email Notification via queue
+        addJob(QUEUES.EMAIL, 'marks-update', {
+            type: 'marks-update',
+            data: { email: updatedEval.student.email, name: updatedEval.student.name, subjectName: updatedEval.subject.name }
+        }).catch(() => {});
 
         return updatedEval;
     });
@@ -207,6 +230,14 @@ async function staffRoutes(fastify, opts) {
 
             if (!evaluation || evaluation.staffId !== request.user.id) {
                 return reply.status(403).send({ message: 'Unauthorized to approve this record' });
+            }
+
+            if (evaluation.staffApproved) {
+                return reply.status(409).send({ message: 'Evaluation has already been approved.' });
+            }
+
+            if (evaluation.staffRejected) {
+                return reply.status(409).send({ message: 'Cannot approve a rejected evaluation. Clear the rejection first.' });
             }
 
             const updatedEval = await prisma.evaluation.update({
@@ -227,26 +258,128 @@ async function staffRoutes(fastify, opts) {
                 collegeId: request.user.collegeId
             });
 
-            // Trigger hall ticket check in the background
-            const { checkAndUnlock } = require('../services/hallTicketService');
-            const { sendNotification } = require('../services/notificationService');
+            // Trigger hall ticket check and notification via queue
+            addJob(QUEUES.NOTIFICATION, 'hall-ticket-check', {
+                type: 'hall-ticket-check',
+                data: { studentId: evaluation.studentId }
+            }).catch(() => {});
 
-            checkAndUnlock(evaluation.studentId, prisma).catch(console.error);
-
-            // Notify Student
-            sendNotification(prisma, {
-                userId: evaluation.studentId,
-                title: 'Subject Cleared',
-                message: `Your internal marks for ${updatedEval.subject.name} have been approved by staff.`,
-                type: 'SUCCESS'
-            }).catch(console.error);
-
-            // Send Subject Approved Email
-            sendSubjectApprovedEmail(updatedEval.student.email, updatedEval.student.name, updatedEval.subject.name);
+            // Send Subject Approved Email via queue
+            addJob(QUEUES.EMAIL, 'subject-approved', {
+                type: 'subject-approved',
+                data: { email: updatedEval.student.email, name: updatedEval.student.name, subjectName: updatedEval.subject.name }
+            }).catch(() => {});
 
             return updatedEval;
         } catch (err) {
-            console.error("Approval error:", err);
+            fastify.log.error(`Approval error: ${err.message}`);
+            return reply.status(500).send({ message: 'Internal server error' });
+        }
+    });
+
+    fastify.post('/reject/:evalId', { schema: staffSchema.rejectEvaluation }, async (request, reply) => {
+        const { evalId } = request.params;
+        const { rejectionReason } = request.body;
+
+        try {
+            const evaluation = await prisma.evaluation.findUnique({
+                where: { id: evalId }
+            });
+
+            if (!evaluation || evaluation.staffId !== request.user.id) {
+                return reply.status(403).send({ message: 'Unauthorized to reject this record' });
+            }
+
+            if (evaluation.staffRejected) {
+                return reply.status(409).send({ message: 'Evaluation has already been rejected.' });
+            }
+
+            if (evaluation.staffApproved) {
+                return reply.status(409).send({ message: 'Cannot reject an already approved evaluation.' });
+            }
+
+            const updatedEval = await prisma.evaluation.update({
+                where: { id: evalId },
+                data: {
+                    staffRejected: true,
+                    rejectedAt: new Date(),
+                    rejectionReason
+                },
+                include: { student: true, subject: true }
+            });
+
+            // Audit Trail
+            logAction(prisma, {
+                action: 'REJECTION',
+                details: {
+                    student: updatedEval.student.name,
+                    subject: updatedEval.subject.name,
+                    reason: rejectionReason
+                },
+                userId: request.user.id,
+                userEmail: request.user.email,
+                collegeId: request.user.collegeId
+            });
+
+            // Email notification via queue
+            addJob(QUEUES.EMAIL, 'marks-rejected', {
+                type: 'marks-rejected',
+                data: {
+                    email: updatedEval.student.email,
+                    name: updatedEval.student.name,
+                    subjectName: updatedEval.subject.name,
+                    reason: rejectionReason
+                }
+            }).catch(() => {});
+
+            return updatedEval;
+        } catch (err) {
+            fastify.log.error(err);
+            return reply.status(500).send({ message: 'Internal server error' });
+        }
+    });
+
+    // Clear rejection (allows staff to un-reject and re-enter marks)
+    fastify.post('/reject/:evalId/clear', async (request, reply) => {
+        const { evalId } = request.params;
+
+        try {
+            const evaluation = await prisma.evaluation.findUnique({
+                where: { id: evalId }
+            });
+
+            if (!evaluation || evaluation.staffId !== request.user.id) {
+                return reply.status(403).send({ message: 'Unauthorized to clear rejection' });
+            }
+
+            if (!evaluation.staffRejected) {
+                return reply.status(400).send({ message: 'Evaluation is not rejected.' });
+            }
+
+            const updatedEval = await prisma.evaluation.update({
+                where: { id: evalId },
+                data: {
+                    staffRejected: false,
+                    rejectedAt: null,
+                    rejectionReason: null
+                },
+                include: { student: true, subject: true }
+            });
+
+            logAction(prisma, {
+                action: 'REJECTION_CLEARED',
+                details: {
+                    student: updatedEval.student.name,
+                    subject: updatedEval.subject.name
+                },
+                userId: request.user.id,
+                userEmail: request.user.email,
+                collegeId: request.user.collegeId
+            });
+
+            return updatedEval;
+        } catch (err) {
+            fastify.log.error(err);
             return reply.status(500).send({ message: 'Internal server error' });
         }
     });
@@ -281,26 +414,81 @@ async function staffRoutes(fastify, opts) {
     });
 
     fastify.get('/analytics', async (request) => {
-        const evaluations = await prisma.evaluation.findMany({
-            where: { staffId: request.user.id }
+        return fastify.cache.remember(`sndc:staffanalytics:${request.user.id}`, fastify.cache.SHORT_TTL, async () => {
+            const evaluations = await prisma.evaluation.findMany({
+                where: { staffId: request.user.id },
+                include: { student: true, subject: true }
+            });
+
+            // Grouping by mark ranges for distribution charts
+            const chartData = [
+                { name: '0-15 (Needs Imp.)', count: evaluations.filter(e => e.internalMarksTotal < 15).length, color: '#ef4444' },
+                { name: '15-25 (Average)', count: evaluations.filter(e => e.internalMarksTotal >= 15 && e.internalMarksTotal < 25).length, color: '#f59e0b' },
+                { name: '25-35 (Good)', count: evaluations.filter(e => e.internalMarksTotal >= 25 && e.internalMarksTotal < 35).length, color: '#3b82f6' },
+                { name: '35-40 (Excellent)', count: evaluations.filter(e => e.internalMarksTotal >= 35).length, color: '#10b981' },
+            ];
+
+            // CAT Progress Data for Line Chart
+            const catTrends = [
+                { name: 'CAT 1', avg: evaluations.length > 0 ? (evaluations.reduce((acc, e) => acc + (e.cat1 || 0), 0) / evaluations.length).toFixed(1) : 0 },
+                { name: 'CAT 2', avg: evaluations.length > 0 ? (evaluations.reduce((acc, e) => acc + (e.cat2 || 0), 0) / evaluations.length).toFixed(1) : 0 },
+                { name: 'CAT 3', avg: evaluations.length > 0 ? (evaluations.reduce((acc, e) => acc + (e.cat3 || 0), 0) / evaluations.length).toFixed(1) : 0 },
+            ];
+
+            // Approval status counts
+            const approvedCount = evaluations.filter(e => e.staffApproved).length;
+            const rejectedCount = evaluations.filter(e => e.staffRejected).length;
+            const pendingCount = evaluations.filter(e => !e.staffApproved && !e.staffRejected).length;
+
+            // At-risk students (marks < 15 or attendance < 75%)
+            const atRiskStudents = evaluations
+                .filter(e => !e.staffApproved && (e.internalMarksTotal < 15 || e.attendancePercent < 75))
+                .slice(0, 5)
+                .map(e => ({
+                    id: e.id,
+                    student: { id: e.student.id, name: e.student.name, email: e.student.email },
+                    subject: e.subject.name,
+                    internalMarksTotal: e.internalMarksTotal,
+                    attendancePercent: e.attendancePercent
+                }));
+
+            // Attendance distribution
+            const attendanceBuckets = [
+                { name: '< 75%', count: evaluations.filter(e => e.attendancePercent < 75).length, color: '#ef4444' },
+                { name: '75-85%', count: evaluations.filter(e => e.attendancePercent >= 75 && e.attendancePercent < 85).length, color: '#f59e0b' },
+                { name: '85-95%', count: evaluations.filter(e => e.attendancePercent >= 85 && e.attendancePercent < 95).length, color: '#3b82f6' },
+                { name: '>= 95%', count: evaluations.filter(e => e.attendancePercent >= 95).length, color: '#10b981' },
+            ];
+
+            // Pass percentage (marks >= 20 out of 40)
+            const passCount = evaluations.filter(e => e.internalMarksTotal >= 20).length;
+            const passPercentage = evaluations.length > 0 ? ((passCount / evaluations.length) * 100).toFixed(1) : 0;
+
+            const subjectPerformance = evaluations.reduce((acc, e) => {
+                const name = e.subject.name;
+                if (!acc[name]) acc[name] = { name, total: 0, count: 0, approved: 0 };
+                acc[name].total += e.internalMarksTotal || 0;
+                acc[name].count += 1;
+                if (e.staffApproved) acc[name].approved += 1;
+                return acc;
+            }, {});
+
+            return {
+                distribution: chartData,
+                trends: catTrends,
+                approvedCount,
+                rejectedCount,
+                pendingCount,
+                totalStudents: evaluations.length,
+                atRiskStudents,
+                attendanceDistribution: attendanceBuckets,
+                passPercentage: parseFloat(passPercentage),
+                subjectPerformance: Object.values(subjectPerformance).map(s => ({
+                    ...s,
+                    avg: s.count > 0 ? (s.total / s.count).toFixed(1) : 0
+                }))
+            };
         });
-
-        // Grouping by mark ranges for distribution charts
-        const chartData = [
-            { name: '0-15 (Needs Imp.)', count: evaluations.filter(e => e.internalMarksTotal < 15).length, color: '#ef4444' },
-            { name: '15-25 (Average)', count: evaluations.filter(e => e.internalMarksTotal >= 15 && e.internalMarksTotal < 25).length, color: '#f59e0b' },
-            { name: '25-35 (Good)', count: evaluations.filter(e => e.internalMarksTotal >= 25 && e.internalMarksTotal < 35).length, color: '#3b82f6' },
-            { name: '35-40 (Excellent)', count: evaluations.filter(e => e.internalMarksTotal >= 35).length, color: '#10b981' },
-        ];
-
-        // NEW: CAT Progress Data for Line Chart
-        const catTrends = [
-            { name: 'CAT 1', avg: evaluations.length > 0 ? (evaluations.reduce((acc, e) => acc + (e.cat1 || 0), 0) / evaluations.length).toFixed(1) : 0 },
-            { name: 'CAT 2', avg: evaluations.length > 0 ? (evaluations.reduce((acc, e) => acc + (e.cat2 || 0), 0) / evaluations.length).toFixed(1) : 0 },
-            { name: 'CAT 3', avg: evaluations.length > 0 ? (evaluations.reduce((acc, e) => acc + (e.cat3 || 0), 0) / evaluations.length).toFixed(1) : 0 },
-        ];
-
-        return { distribution: chartData, trends: catTrends };
     });
 
     // --- EXPORT MARKS ---
@@ -410,13 +598,13 @@ async function staffRoutes(fastify, opts) {
                     const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
                     const session = targetSub.subject.examSession || 'FN';
 
-                    // Check if already logged
-                    const existingAttendance = await prisma.examAttendance.findUnique({
+                    // Check if already logged (compound unique: studentId + subjectId + date + session)
+                    const existingAttendance = await prisma.examAttendance.findFirst({
                         where: {
-                            studentId_subjectId: {
-                                studentId,
-                                subjectId
-                            }
+                            studentId,
+                            subjectId,
+                            date: todayStr,
+                            session
                         }
                     });
 
@@ -507,11 +695,15 @@ async function staffRoutes(fastify, opts) {
             }
         }
 
+        const origin = request.headers.origin;
+        const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',').map(o => o.trim());
+        const allowedOrigin = origin && allowedOrigins.includes(origin) ? origin : (allowedOrigins[0] || 'http://localhost:5173');
+
         const headers = {
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': allowedOrigin
         };
         reply.raw.writeHead(200, headers);
         reply.raw.write(`data: ${JSON.stringify({ type: 'PING', message: 'Connected' })}\n\n`);

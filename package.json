@@ -4,8 +4,12 @@
   "private": true,
   "scripts": {
     "install-all": "npm install && cd client && npm install && cd ../server && npm install",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "dev": "npx concurrently \"cd server && npm run dev\" \"cd client && npm run dev\"",
     "build": "cd client && npm run build",
     "start": "cd server && npm start",
+    "seed": "cd server && npx prisma db seed",
+    "reset": "cd server && npx prisma migrate reset --force",
     "render-build": "cd client && npm install && npm run build && cd ../server && npm install"
   }
 }

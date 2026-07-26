@@ -12,7 +12,7 @@ export default function AnnouncementTicker() {
         const fetchAnnouncements = async () => {
             try {
                 const res = await api.get('/auth/announcements');
-                setAnnouncements(res.data);
+                setAnnouncements(Array.isArray(res.data) ? res.data : (res.data?.data || []));
             } catch (err) { /* ignore */ }
         };
         fetchAnnouncements();
@@ -29,7 +29,7 @@ export default function AnnouncementTicker() {
 
     if (!isVisible || announcements.length === 0) return null;
 
-    const current = announcements[currentIndex];
+    const current = announcements[currentIndex] || {};
 
     return (
         <motion.div
@@ -53,10 +53,10 @@ export default function AnnouncementTicker() {
                             className="flex flex-wrap items-center gap-2"
                         >
                             <span className="text-[9px] md:text-[10px] uppercase font-black px-1.5 md:px-2 py-0.5 rounded bg-primary/20 text-primary shrink-0">
-                                {current.type}
+                                {current.type || 'announcement'}
                             </span>
                             <span className="text-[10px] md:text-xs font-medium tracking-wide leading-tight">
-                                <span className="font-bold">{current.title}:</span> {current.content}
+                                <span className="font-bold">{current.title || 'Notice'}:</span> {current.content || ''}
                             </span>
                         </motion.div>
                     </AnimatePresence>

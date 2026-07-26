@@ -4,6 +4,9 @@ import { LogOut, Clock, Sparkles } from 'lucide-react';
 import useAuth from './hooks/useAuth';
 import useAuthStore from './store/authStore';
 import NotificationBell from './components/NotificationBell';
+import OfflineBanner from './components/OfflineBanner';
+import ThemeToggle from './components/ThemeToggle';
+import PushNotificationManager from './components/PushNotificationManager';
 import AnnouncementTicker from './components/AnnouncementTicker';
 import { Toaster } from 'react-hot-toast';
 import api from './lib/api';
@@ -25,6 +28,7 @@ const DashboardLayout = ({ children }) => {
     return (
         <div className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col">
             <AnnouncementTicker />
+            <OfflineBanner />
             <nav className="border-b border-black/5 bg-white/70 backdrop-blur-xl sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
                     <div className="flex items-center gap-2 md:gap-3">
@@ -42,7 +46,9 @@ const DashboardLayout = ({ children }) => {
                         </h1>
                     </div>
 
-                    <div className="flex items-center gap-2 md:gap-4">
+                    <div className="flex items-center gap-1 md:gap-4">
+                        <ThemeToggle />
+                        <PushNotificationManager />
                         <NotificationBell />
 
                         <div className="hidden xs:block h-6 md:h-8 w-[1px] bg-black/5 mx-1 md:mx-2" />

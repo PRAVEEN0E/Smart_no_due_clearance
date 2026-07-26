@@ -1,0 +1,27 @@
+HTTP/1.1 400 Bad Request
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https://fonts.gstatic.com data:;form-action 'self';frame-ancestors 'self';img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com;object-src 'none';script-src 'self' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com;script-src-attr 'unsafe-inline';style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;connect-src 'self' http://localhost:5173 https://api.emailjs.com https://api.groq.com;frame-src 'none';manifest-src 'self'
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+x-content-type-options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+x-frame-options: DENY
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+vary: Origin
+access-control-allow-credentials: true
+access-control-expose-headers: X-Request-Id, X-Worker-Id
+x-ratelimit-limit: 5
+x-ratelimit-remaining: 4
+x-ratelimit-reset: 60
+connection: close
+content-type: application/json; charset=utf-8
+x-worker-id: 0
+x-worker-pid: 27144
+x-request-id: ae6eedd2-ad5a-4b33-8cac-5cbdb5178e95
+content-length: 816
+Date: Tue, 21 Jul 2026 08:46:17 GMT
+

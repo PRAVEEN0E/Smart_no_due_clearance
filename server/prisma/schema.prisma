@@ -36,12 +36,16 @@ model College {
   principalName   String? @default("P. Velavan")
   workflow     Json?    // Array of requirement objects {id, label, type, required}
   isMaintenanceMode Boolean @default(false)
-  
+  deletedAt DateTime?
+
   users        User[]
   subjects     Subject[]
   announcements Announcement[]
   customRoles  CustomRole[]
   auditLogs    AuditLog[]
+  apiKeys      ApiKey[]
+
+  @@index([deletedAt])
 }
 
 model User {
@@ -77,7 +81,12 @@ model User {
   examAttendances   ExamAttendance[] @relation("StudentAttendance")
   scannedAttendances ExamAttendance[] @relation("StaffAttendanceScans")
   auditLogs       AuditLog[]
+  loginHistory    LoginHistory[]
+  apiKeys         ApiKey[]
   announcements   Announcement[]
+  queries         StudentQuery[] @relation("StudentQueries")
+  preferences     UserPreference?
+  pushSubscriptions PushSubscription[] @relation("PushSubscriptions")
 
   createdById     String?
   createdBy       User?            @relation("UserCreator", fields: [createdById], references: [id])
@@ -87,9 +96,19 @@ model User {
   className      String?          // e.g., 'III Year CSE - A', 'II Year ECE - B'
   customClearance Json?           // Clearance checklist status e.g. { "LIBRARY": { cleared: true, updatedAt: "..." } }
   passwordChangedAt DateTime?     // Track if user has changed their initial password
+  needsPasswordChange Boolean?   @default(false) // Force password change on first login
+  passwordSetupToken String?     @unique // One-time token for initial password setup
+  passwordSetupTokenExpires DateTime? // Token expiry (24h from creation)
+  
+  // Enterprise: Account lifecycle
+  disabled Boolean? @default(false)
+  deletedAt DateTime?
 
   @@index([collegeId])
   @@index([role])
+  @@index([role, collegeId])
+  @@index([email, role])
+  @@index([email, registerNumber])
 }
 
 model AuditLog {
@@ -105,6 +124,48 @@ model AuditLog {
 
   @@index([userId])
   @@index([collegeId])
+}
+
+model LoginHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  role      Role
+  collegeId String?
+  success   Boolean  @default(true)
+  ip        String?
+  userAgent String?
+  browser   String?
+  device    String?
+  os        String?
+  reason    String?  // e.g., "Invalid password", "Disabled account"
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([collegeId])
+  @@index([success])
+  @@index([createdAt])
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  name        String
+  keyPrefix   String    // First 8 chars of the raw key for display
+  keyHash     String    @unique // Hashed full key
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collegeId   String?
+  college     College?  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  permissions String[]  // Array of permission strings
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([keyHash])
+  @@index([active])
 }
 
 model Subject {
@@ -135,6 +196,9 @@ model Subject {
   examSession String?     @default("FN") // FN or AN
 
   // A subject code is only unique WITHIN a specific college
+  queries            StudentQuery[]
+  deletedAt          DateTime?
+
   @@unique([code, collegeId])
 }
 
@@ -191,6 +255,10 @@ model Evaluation {
   staffApproved     Boolean   @default(false)
   approvedAt        DateTime?
 
+  staffRejected     Boolean   @default(false)
+  rejectedAt        DateTime?
+  rejectionReason   String?   @db.Text
+
   // AI Success Link
   aiPrediction      String?   @db.Text  // Success prediction/risk factor
 
@@ -199,6 +267,10 @@ model Evaluation {
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, subjectId])
+  @@index([studentId, staffApproved])
+  @@index([subjectId, staffId])
+  @@index([staffId, staffApproved])
+  @@index([staffId, staffRejected])
 }
 
 model FeeRecord {
@@ -210,6 +282,9 @@ model FeeRecord {
   clearedAt        DateTime?
 
   student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([feeClearedAuto])
+  @@index([feeBalance])
 }
 
 model Assignment {
@@ -225,6 +300,7 @@ model Assignment {
 
   @@index([studentId])
   @@index([subjectId])
+  @@index([studentId, subjectId])
 }
 
 model HallTicket {
@@ -237,6 +313,8 @@ model HallTicket {
   generatedAt DateTime?
 
   student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, isUnlocked])
 }
 
 model Notification {
@@ -250,7 +328,7 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, isRead, createdAt])
 }
 
 model Announcement {
@@ -263,6 +341,7 @@ model Announcement {
   createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   expiresAt   DateTime?
+  deletedAt   DateTime?
   
   // MULTI-TENANT RELATION
   collegeId   String?
@@ -270,6 +349,7 @@ model Announcement {
 
   @@index([collegeId])
   @@index([createdById])
+  @@index([deletedAt])
 }
 
 model Material {
@@ -288,6 +368,7 @@ model Material {
 
   @@index([subjectId])
   @@index([uploadedById])
+  @@index([subjectId, category])
 }
 
 model ExamAttendance {
@@ -321,4 +402,48 @@ model CustomRole {
   users       User[]
 
   @@unique([name, collegeId])
+}
+
+// Student queries / communication with staff per subject
+model StudentQuery {
+  id        String   @id @default(uuid())
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId String
+  student   User     @relation("StudentQueries", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+  message   String   @db.Text
+  response  String?  @db.Text
+  respondedBy String?
+  respondedAt DateTime?
+  isResolved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([subjectId, studentId])
+}
+
+// User preferences (dark mode, dashboard layout, etc.)
+model UserPreference {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme     String   @default("light") // "light" | "dark"
+  settings  Json?    // Dashboard widget order, hidden widgets, etc.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Web push notification subscriptions
+model PushSubscription {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation("PushSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  endpoint     String   @unique
+  p256dh       String
+  auth         String
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
 }

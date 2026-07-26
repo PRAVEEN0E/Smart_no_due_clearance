@@ -47,6 +47,41 @@
       radial-gradient(at 50% 100%, hsla(21, 89%, 95%, 0.4) 0px, transparent 50%);
     background-attachment: fixed;
   }
+
+  .dark {
+    --background: 215 28% 10%;
+    --foreground: 210 40% 96%;
+    --card: 215 28% 14%;
+    --card-foreground: 210 40% 96%;
+    --popover: 215 28% 14%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 214 68% 14%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 21 89% 54%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 28% 18%;
+    --muted-foreground: 215 20% 70%;
+    --accent: 21 89% 54%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 160 84% 39%;
+    --success-foreground: 210 40% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 210 40% 98%;
+    --info: 214 68% 14%;
+    --info-foreground: 210 40% 98%;
+    --border: 215 28% 22%;
+    --input: 215 28% 22%;
+    --ring: 214 68% 14%;
+  }
+
+  .dark body {
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(214, 68%, 20%, 0.3) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(214, 68%, 15%, 0.2) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, hsla(21, 89%, 15%, 0.3) 0px, transparent 50%);
+  }
 }
 
 /* Glassmorphism Refinement */
@@ -56,6 +91,12 @@
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 10px 40px -10px rgba(11, 31, 58, 0.1);
+}
+
+.dark .glass {
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.4);
 }
 
 .premium-gradient {
@@ -107,6 +148,16 @@
 
 .card-hover {
   @apply transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/20 hover:-translate-y-1;
+}
+
+/* Dark mode override for .dark class */
+.dark .glass {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.dark body {
+  background-image: none;
+  background-color: #0f172a;
 }
 
 /* Typography utilities */

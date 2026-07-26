@@ -66,7 +66,7 @@ async function authPlugin(fastify, opts) {
         }
     });
 
-    fastify.decorate('authorize', (...roles) => {
+    fastify.decorate('authorize', (roles) => {
         return async (request, reply) => {
             const { role } = request.user;
             if (!roles.includes(role)) {
@@ -74,6 +74,43 @@ async function authPlugin(fastify, opts) {
                     error: 'Forbidden',
                     message: 'Insufficient permissions to access this resource.',
                     code: 'AUTH_INSUFFICIENT_ROLE'
+                });
+            }
+        };
+    });
+
+    // Check if the authenticated user has a specific permission via their CustomRole.
+    // SUPERADMIN bypasses all permission checks.
+    // Must be used after authenticate (not a replacement for authorize).
+    fastify.decorate('requirePermission', (permission) => {
+        return async (request, reply) => {
+            if (request.user.role === 'SUPERADMIN') return;
+
+            const prisma = fastify.prisma;
+            if (!prisma) return;
+
+            try {
+                const user = await prisma.user.findUnique({
+                    where: { id: request.user.id },
+                    select: {
+                        customRole: {
+                            select: { permissions: true }
+                        }
+                    }
+                });
+
+                if (!user?.customRole?.permissions?.includes(permission)) {
+                    reply.status(403).send({
+                        error: 'Forbidden',
+                        message: `Missing required permission: ${permission}`,
+                        code: 'AUTH_MISSING_PERMISSION'
+                    });
+                }
+            } catch {
+                reply.status(403).send({
+                    error: 'Forbidden',
+                    message: `Missing required permission: ${permission}`,
+                    code: 'AUTH_MISSING_PERMISSION'
                 });
             }
         };

@@ -1,6 +1,5 @@
-const fs = require('fs');
 const path = require('path');
-const pipeline = require('util').promisify(require('stream').pipeline);
+const { uploadStream, deleteFile } = require('../services/cloudinaryService');
 
 async function materialRoutes(fastify, opts) {
     const { prisma } = fastify;
@@ -22,28 +21,31 @@ async function materialRoutes(fastify, opts) {
     fastify.post('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
         if (request.user.role === 'STUDENT') return reply.status(403).send({ message: 'Only staff can upload materials' });
 
+        let raw;
+        try {
+            raw = await request.file();
+        } catch (err) {
+            if (err.message?.includes('not multipart')) {
+                return reply.status(400).send({ message: 'Upload must use multipart/form-data encoding.' });
+            }
+            throw err;
+        }
+
         const { validateUploadedFile } = require('../lib/uploadPlugin');
         const { sanitizeText } = require('../lib/sanitize');
-        const raw = await request.file();
         const uploadInfo = validateUploadedFile(raw, request, reply);
         if (!uploadInfo) return; // reply already sent
 
-        const dirPath = path.join(__dirname, '../uploads/materials');
-        if (!fs.existsSync(dirPath)) {
-            fs.mkdirSync(dirPath, { recursive: true });
-        }
-        const filePath = path.join(dirPath, uploadInfo.filename);
         const fileType = path.extname(uploadInfo.filename).slice(1).toUpperCase() || 'PDF';
 
+        let fileUrl;
         try {
-            const writeStream = fs.createWriteStream(filePath);
-            await pipeline(uploadInfo.file, writeStream);
-        } catch (error) {
-            fastify.log.error(`Local Material Save Error: ${error.message}`);
-            return reply.status(500).send({ message: 'Failed to save material locally' });
+            const result = await uploadStream(uploadInfo.file, 'study-materials', uploadInfo.filename, 'raw');
+            fileUrl = result.secure_url;
+        } catch (err) {
+            fastify.log.error(`Cloudinary Material Upload Error: ${err.message}`);
+            return reply.status(500).send({ message: 'Failed to upload material' });
         }
-
-        const fileUrl = `/uploads/materials/${uploadInfo.filename}`;
         const title = uploadInfo.fields?.title?.value ? sanitizeText(uploadInfo.fields.title.value) : '';
         const category = uploadInfo.fields?.category?.value || 'NOTES';
         const subjectId = uploadInfo.fields?.subjectId?.value || '';
@@ -69,6 +71,13 @@ async function materialRoutes(fastify, opts) {
 
         if (request.user.role !== 'MENTOR' && material.uploadedById !== request.user.id) {
             return reply.status(403).send({ message: 'Unauthorized' });
+        }
+
+        // Delete from Cloudinary first, then DB
+        try {
+            await deleteFile(material.fileUrl);
+        } catch (err) {
+            fastify.log.error(`Cloudinary delete error (non-blocking): ${err.message}`);
         }
 
         await prisma.material.delete({ where: { id: request.params.id } });

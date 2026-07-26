@@ -8,5 +8,11 @@ module.exports = defineConfig({
         globals: true,
         testTimeout: 10000,
         hookTimeout: 10000,
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'lcov', 'html'],
+            reportsDirectory: './coverage',
+            include: ['repositories/**', 'services/**', 'constants/**', 'lib/**', 'controllers/**'],
+        },
     },
 });

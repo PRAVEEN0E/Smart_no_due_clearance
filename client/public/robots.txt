@@ -1,0 +1,7 @@
+# Smart No Due Clearance System
+# https://smart-no-due-clearance.vercel.app
+
+User-agent: *
+Allow: /
+
+Sitemap: https://smart-no-due-clearance.vercel.app/sitemap.xml

@@ -17,11 +17,12 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
 
     const fetchMaterials = async () => {
         if (!subjectId) return;
+        setLoading(true);
         try {
             const res = await api.get(`/materials/subject/${subjectId}`);
             setMaterials(res.data);
         } catch (err) {
-            console.error("Failed to fetch materials");
+            toast.error("Failed to fetch materials");
         } finally {
             setLoading(false);
         }
@@ -158,10 +159,7 @@ export default function CourseMaterials({ subjectId, role = 'STUDENT' }) {
                                             let backendBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : window.location.origin;
                                             if (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1);
 
-                                            if (url.startsWith('https://res.cloudinary.com')) {
-                                                const token = localStorage.getItem('token');
-                                                return `${backendBase}/api/proxy?url=${encodeURIComponent(url)}&token=${token}`;
-                                            }
+                                            if (url.startsWith('https://res.cloudinary.com')) return url;
 
                                             if (url.startsWith('http')) return url;
                                             return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;

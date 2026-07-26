@@ -25,7 +25,8 @@ import {
     CreditCard,
     BookOpen,
     Trophy,
-    Home
+    Home,
+    Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -45,10 +46,23 @@ import { SkeletonStats, SkeletonTable } from '../../components/Skeletons';
 
 export default function SuperAdminDashboard() {
     const { user } = useAuth();
-    const [stats, setStats] = useState({ colleges: 0, users: 0, students: 0, mentors: 0, growthData: [] });
+    const [stats, setStats] = useState({ colleges: 0, users: 0, students: 0, mentors: 0, staff: 0, pendingClearances: 0, completedClearances: 0, growthData: [], collegeStats: [] });
     const [colleges, setColleges] = useState([]);
     const [logs, setLogs] = useState([]);
+    const [logPagination, setLogPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
     const [allUsers, setAllUsers] = useState([]);
+    const [userPagination, setUserPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
+    const [userFilters, setUserFilters] = useState({ search: '', role: '', collegeId: '', sortBy: 'createdAt', sortOrder: 'desc' });
+    const [loginHistory, setLoginHistory] = useState([]);
+    const [loginHistoryPagination, setLoginHistoryPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
+    const [loginHistoryFilters, setLoginHistoryFilters] = useState({ success: '', email: '', dateFrom: '', dateTo: '' });
+    const [loginStats, setLoginStats] = useState(null);
+    const [apiKeys, setApiKeys] = useState([]);
+    const [apiKeyPagination, setApiKeyPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
+    const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+    const [newApiKey, setNewApiKey] = useState({ name: '', collegeId: '', permissions: ['READ'], expiresInDays: '' });
+    const [createdApiKey, setCreatedApiKey] = useState(null);
+    const [settings, setSettings] = useState(null);
     const [loading, setLoading] = useState(true);
     
     // Modal states
@@ -64,13 +78,15 @@ export default function SuperAdminDashboard() {
 
     // Edit branding states
     const [selectedCollegeForEdit, setSelectedCollegeForEdit] = useState(null);
-    const [editCollegeForm, setEditCollegeForm] = useState({ name: '', domain: '', logoUrl: '', primaryColor: '#7c3aed', secondaryColor: '#a855f7', department: '' });
+    const [editCollegeForm, setEditCollegeForm] = useState({ name: '', domain: '', logoUrl: '', primaryColor: '#7c3aed', secondaryColor: '#a855f7', department: '', affiliationText: '', controllerName: '', principalName: '' });
 
     // Global Alert broadcast states
     const [broadcastTitle, setBroadcastTitle] = useState('');
     const [broadcastContent, setBroadcastContent] = useState('');
     const [broadcastPriority, setBroadcastPriority] = useState('1');
     const [broadcasting, setBroadcasting] = useState(false);
+    const [broadcasts, setBroadcasts] = useState([]);
+    const [broadcastPagination, setBroadcastPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
 
     const [searchQuery, setSearchQuery] = useState('');
     const [isDepartmentView, setIsDepartmentView] = useState(true);
@@ -83,9 +99,14 @@ export default function SuperAdminDashboard() {
 
     useEffect(() => {
         fetchData();
-        fetchLogs();
-        fetchUsers();
+        fetchLogs(1);
+        fetchUsers(1);
         fetchRoles();
+        fetchLoginHistory(1);
+        fetchLoginStats();
+        fetchApiKeys(1);
+        fetchSettings();
+        fetchBroadcasts(1);
     }, []);
 
     const fetchData = async () => {
@@ -104,21 +125,64 @@ export default function SuperAdminDashboard() {
         }
     };
 
-    const fetchLogs = async () => {
+    const fetchLogs = async (page = 1) => {
         try {
-            const res = await api.get('/superadmin/logs');
-            setLogs(res.data);
+            const params = { page, limit: logPagination.limit };
+            const res = await api.get('/superadmin/logs', { params });
+            setLogs(res.data.data);
+            setLogPagination(prev => ({ ...prev, page: res.data.page, total: res.data.total, totalPages: res.data.totalPages }));
         } catch (err) {
-            console.error("Failed to fetch logs");
+            toast.error("Failed to fetch activity logs.");
         }
     };
 
-    const fetchUsers = async () => {
+    const fetchUsers = async (page = 1) => {
         try {
-            const res = await api.get('/superadmin/users');
-            setAllUsers(res.data);
+            const params = { ...userFilters, page, limit: userPagination.limit };
+            const res = await api.get('/superadmin/users', { params });
+            setAllUsers(res.data.data);
+            setUserPagination(prev => ({ ...prev, page: res.data.page, total: res.data.total, totalPages: res.data.totalPages }));
         } catch (err) {
-            console.error("Failed to fetch global users");
+            toast.error("Failed to fetch global users.");
+        }
+    };
+
+    const fetchLoginHistory = async (page = 1) => {
+        try {
+            const params = { ...loginHistoryFilters, page, limit: loginHistoryPagination.limit };
+            const res = await api.get('/superadmin/login-history', { params });
+            setLoginHistory(res.data.data);
+            setLoginHistoryPagination(prev => ({ ...prev, page: res.data.page, total: res.data.total, totalPages: res.data.totalPages }));
+        } catch (err) {
+            toast.error("Failed to fetch login history.");
+        }
+    };
+
+    const fetchLoginStats = async () => {
+        try {
+            const res = await api.get('/superadmin/login-stats');
+            setLoginStats(res.data);
+        } catch (err) {
+            toast.error("Failed to fetch login statistics.");
+        }
+    };
+
+    const fetchApiKeys = async (page = 1) => {
+        try {
+            const res = await api.get('/superadmin/api-keys', { params: { page, limit: apiKeyPagination.limit } });
+            setApiKeys(res.data.data);
+            setApiKeyPagination(prev => ({ ...prev, page: res.data.page, total: res.data.total, totalPages: res.data.totalPages }));
+        } catch (err) {
+            toast.error("Failed to fetch API keys.");
+        }
+    };
+
+    const fetchSettings = async () => {
+        try {
+            const res = await api.get('/superadmin/settings');
+            setSettings(res.data);
+        } catch (err) {
+            toast.error("Failed to fetch system settings.");
         }
     };
 
@@ -127,7 +191,28 @@ export default function SuperAdminDashboard() {
             const res = await api.get('/superadmin/roles');
             setRoles(res.data);
         } catch (err) {
-            console.error("Failed to fetch roles");
+            toast.error("Failed to fetch roles.");
+        }
+    };
+
+    const fetchBroadcasts = async (page = 1) => {
+        try {
+            const params = { page, limit: broadcastPagination.limit };
+            const res = await api.get('/superadmin/broadcasts', { params });
+            setBroadcasts(res.data.data);
+            setBroadcastPagination(prev => ({ ...prev, page: res.data.page, total: res.data.total, totalPages: res.data.totalPages }));
+        } catch (err) {
+            toast.error("Failed to fetch broadcast history.");
+        }
+    };
+
+    const handleAssignRole = async (userId, customRoleId) => {
+        try {
+            await api.post(`/superadmin/users/${userId}/assign-role`, { customRoleId: customRoleId || null });
+            toast.success(customRoleId ? 'Custom role assigned' : 'Custom role removed');
+            fetchUsers(userPagination.page);
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to assign role.");
         }
     };
 
@@ -288,12 +373,6 @@ export default function SuperAdminDashboard() {
         c.domain?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const filteredUsers = allUsers.filter(u => 
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.college?.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
     if (loading) return (
         <div className="space-y-8 p-4 bg-slate-950 min-h-screen text-slate-100">
             <SkeletonStats count={3} />
@@ -331,21 +410,21 @@ export default function SuperAdminDashboard() {
                     <h1 className="text-5xl font-black tracking-tighter bg-gradient-to-r from-slate-900 to-slate-500 bg-clip-text text-transparent uppercase italic">
                         Control Center
                     </h1>
-                    <p className="text-muted-foreground font-medium italic mt-2 flex items-center gap-2">
+                    <div className="text-muted-foreground font-medium italic mt-2 flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         System is operational. Multi-tenant node status: Healthy.
-                    </p>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200 shadow-sm">
-                        {['institutions', 'users', 'logs', 'rbac'].map(tab => (
+                    <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200 shadow-sm flex-wrap">
+                        {['institutions', 'users', 'logs', 'login', 'api-keys', 'settings', 'rbac'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                className={`px-3 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             >
-                                {tab === 'rbac' ? 'Access Control' : tab}
+                                {tab === 'rbac' ? 'Access' : tab === 'api-keys' ? 'API Keys' : tab === 'login' ? 'Logins' : tab}
                             </button>
                         ))}
                     </div>
@@ -360,12 +439,14 @@ export default function SuperAdminDashboard() {
             </div>
 
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
                     { label: 'Total Nodes', value: stats.colleges, icon: Globe, color: 'text-blue-600', bg: 'bg-blue-50' },
                     { label: 'Active Users', value: stats.users, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                    { label: 'Total Mentors', value: stats.mentors, icon: GraduationCap, color: 'text-purple-600', bg: 'bg-purple-50' },
-                    { label: 'Total Students', value: stats.students, icon: UserPlus, color: 'text-rose-600', bg: 'bg-rose-50' },
+                    { label: 'Mentors', value: stats.mentors, icon: GraduationCap, color: 'text-purple-600', bg: 'bg-purple-50' },
+                    { label: 'Students', value: stats.students, icon: UserPlus, color: 'text-rose-600', bg: 'bg-rose-50' },
+                    { label: 'Staff', value: stats.staff, icon: Shield, color: 'text-amber-600', bg: 'bg-amber-50' },
+                    { label: 'Cleared', value: stats.completedClearances, icon: CheckCircle2, color: 'text-teal-600', bg: 'bg-teal-50' },
                 ].map((stat, i) => (
                     <motion.div 
                         key={i}
@@ -499,7 +580,10 @@ export default function SuperAdminDashboard() {
                                                             logoUrl: college.logoUrl || '',
                                                             primaryColor: college.primaryColor || '#7c3aed',
                                                             secondaryColor: college.secondaryColor || '#a855f7',
-                                                            department: college.users?.[0]?.department || ''
+                                                            department: college.users?.[0]?.department || '',
+                                                            affiliationText: college.affiliationText || '',
+                                                            controllerName: college.controllerName || '',
+                                                            principalName: college.principalName || ''
                                                         });
                                                     }}
                                                     className="p-2 bg-slate-50 hover:bg-amber-50 rounded-xl border border-slate-200/60 hover:border-amber-200 text-slate-500 hover:text-amber-600 transition-all shadow-sm flex items-center justify-center"
@@ -525,20 +609,50 @@ export default function SuperAdminDashboard() {
 
                     {activeTab === 'users' && (
                         <div className="glass rounded-[2rem] border border-slate-200 overflow-hidden bg-white shadow-sm">
-                            <div className="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <Users className="w-5 h-5 text-primary" />
-                                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">Global User Directory</h3>
+                            <div className="p-6 border-b border-slate-200 bg-slate-50 flex flex-col gap-4">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <Users className="w-5 h-5 text-primary" />
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">Global User Directory</h3>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-slate-400">{userPagination.total} users</span>
                                 </div>
-                                <div className="relative group w-64">
-                                    <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Filter users..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-white border border-slate-200 rounded-xl pl-12 pr-4 py-2 text-xs focus:ring-2 focus:ring-primary/10 outline-none transition-all"
-                                    />
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div className="relative flex-1 min-w-[200px]">
+                                        <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search name or email..."
+                                            value={userFilters.search}
+                                            onChange={(e) => setUserFilters(f => ({ ...f, search: e.target.value }))}
+                                            onKeyDown={(e) => e.key === 'Enter' && fetchUsers(1)}
+                                            className="w-full bg-white border border-slate-200 rounded-xl pl-12 pr-4 py-2 text-xs focus:ring-2 focus:ring-primary/10 outline-none transition-all"
+                                        />
+                                    </div>
+                                    <select
+                                        value={userFilters.role}
+                                        onChange={(e) => { setUserFilters(f => ({ ...f, role: e.target.value })); fetchUsers(1); }}
+                                        className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 outline-none"
+                                    >
+                                        <option value="">All Roles</option>
+                                        <option value="STUDENT">Student</option>
+                                        <option value="STAFF">Staff</option>
+                                        <option value="MENTOR">Mentor</option>
+                                    </select>
+                                    <select
+                                        value={userFilters.collegeId}
+                                        onChange={(e) => { setUserFilters(f => ({ ...f, collegeId: e.target.value })); fetchUsers(1); }}
+                                        className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 outline-none"
+                                    >
+                                        <option value="">All Colleges</option>
+                                        {colleges.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                    <button
+                                        onClick={() => fetchUsers(1)}
+                                        className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-dark transition-all"
+                                    >
+                                        Filter
+                                    </button>
                                 </div>
                             </div>
                             <div className="overflow-x-auto">
@@ -548,13 +662,14 @@ export default function SuperAdminDashboard() {
                                             <th className="px-6 py-4">Identity</th>
                                             <th className="px-6 py-4">Role</th>
                                             <th className="px-6 py-4">Institutional Node</th>
+                                            <th className="px-6 py-4">Custom Role</th>
                                             <th className="px-6 py-4">Status</th>
                                             <th className="px-6 py-4">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {filteredUsers.map((u, i) => (
-                                            <tr key={i} className="hover:bg-slate-50 transition-all group">
+                                        {allUsers.length > 0 ? allUsers.map((u, i) => (
+                                            <tr key={u.id || i} className="hover:bg-slate-50 transition-all group">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
@@ -570,6 +685,7 @@ export default function SuperAdminDashboard() {
                                                     <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
                                                         u.role === 'SUPERADMIN' ? 'bg-slate-900 text-white' :
                                                         u.role === 'MENTOR' ? 'bg-purple-100 text-purple-600' :
+                                                        u.role === 'STAFF' ? 'bg-amber-100 text-amber-600' :
                                                         'bg-blue-100 text-blue-600'
                                                     }`}>
                                                         {u.role}
@@ -579,25 +695,74 @@ export default function SuperAdminDashboard() {
                                                     <div className="text-xs font-bold text-slate-600 italic">@{u.college?.name || 'ROOT'}</div>
                                                 </td>
                                                 <td className="px-6 py-4">
+                                                    <select
+                                                        value={u.customRoleId || ''}
+                                                        onChange={(e) => handleAssignRole(u.id, e.target.value)}
+                                                        className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-[9px] font-bold text-slate-600 outline-none max-w-[130px]"
+                                                    >
+                                                        <option value="">No Role</option>
+                                                        {roles.filter(r => !u.collegeId || r.collegeId === u.collegeId).map(r => (
+                                                            <option key={r.id} value={r.id}>{r.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td className="px-6 py-4">
                                                     <div className="flex items-center gap-1.5">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Active</span>
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${u.disabled ? 'bg-red-500' : 'bg-emerald-500'} shadow-[0_0_8px_rgba(16,185,129,0.5)]`} />
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${u.disabled ? 'text-red-600' : 'text-emerald-600'}`}>{u.disabled ? 'Disabled' : 'Active'}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <button 
-                                                        onClick={() => handleImpersonate(u.id)}
-                                                        className="p-2 hover:bg-emerald-50 rounded-xl text-slate-300 hover:text-emerald-600 transition-all"
-                                                        title="Impersonate"
-                                                    >
-                                                        <ShieldCheck className="w-4 h-4" />
-                                                    </button>
+                                                    <div className="flex items-center gap-1">
+                                                        <button 
+                                                            onClick={() => handleImpersonate(u.id)}
+                                                            className="p-2 hover:bg-emerald-50 rounded-xl text-slate-300 hover:text-emerald-600 transition-all"
+                                                            title="Impersonate"
+                                                        >
+                                                            <ShieldCheck className="w-4 h-4" />
+                                                        </button>
+                                                        <button 
+                                                            onClick={async () => {
+                                                                const newStatus = !u.disabled;
+                                                                try {
+                                                                    await api.patch(`/superadmin/users/${u.id}/status`, { disabled: newStatus });
+                                                                    toast.success(newStatus ? 'User disabled' : 'User enabled');
+                                                                    fetchUsers(userPagination.page);
+                                                                } catch (err) {
+                                                                    toast.error(err.response?.data?.message || 'Failed to update status');
+                                                                }
+                                                            }}
+                                                            className={`p-2 rounded-xl transition-all ${u.disabled ? 'hover:bg-emerald-50 text-slate-300 hover:text-emerald-600' : 'hover:bg-red-50 text-slate-300 hover:text-red-600'}`}
+                                                            title={u.disabled ? 'Enable' : 'Disable'}
+                                                        >
+                                                            {u.disabled ? <CheckCircle2 className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
-                                        ))}
+                                        )) : (
+                                            <tr><td colSpan={6} className="px-6 py-16 text-center text-slate-400 italic">No users found.</td></tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
+                            {userPagination.totalPages > 1 && (
+                                <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+                                    <span className="text-[10px] text-slate-400 font-medium">Page {userPagination.page} of {userPagination.totalPages}</span>
+                                    <div className="flex items-center gap-2">
+                                        <button disabled={userPagination.page <= 1} onClick={() => fetchUsers(userPagination.page - 1)} className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 transition-all">Prev</button>
+                                        {Array.from({ length: Math.min(5, userPagination.totalPages) }, (_, i) => {
+                                            const start = Math.max(1, userPagination.page - 2);
+                                            const p = start + i;
+                                            if (p > userPagination.totalPages) return null;
+                                            return (
+                                                <button key={p} onClick={() => fetchUsers(p)} className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${p === userPagination.page ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{p}</button>
+                                            );
+                                        })}
+                                        <button disabled={userPagination.page >= userPagination.totalPages} onClick={() => fetchUsers(userPagination.page + 1)} className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 transition-all">Next</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -605,11 +770,11 @@ export default function SuperAdminDashboard() {
                         <div className="glass rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm bg-white">
                             <div className="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">System Activity Ledger</h3>
-                                <button onClick={fetchLogs} className="text-[10px] font-black text-primary hover:underline">Refresh Logs</button>
+                                <button onClick={() => fetchLogs(logPagination.page)} className="text-[10px] font-black text-primary hover:underline">Refresh</button>
                             </div>
                             <div className="divide-y divide-slate-100 max-h-[700px] overflow-y-auto">
                                 {logs.length > 0 ? logs.map((log, i) => (
-                                    <div key={i} className="p-5 hover:bg-slate-50 transition-all group flex items-start justify-between gap-4">
+                                    <div key={log.id || i} className="p-5 hover:bg-slate-50 transition-all group flex items-start justify-between gap-4">
                                         <div className="flex gap-4">
                                             <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
                                                 <TrendingUp className="w-4 h-4 text-slate-400" />
@@ -637,6 +802,319 @@ export default function SuperAdminDashboard() {
                                     <div className="p-20 text-center text-slate-400 italic text-sm">No activity logs recorded yet.</div>
                                 )}
                             </div>
+                            {logPagination.totalPages > 1 && (
+                                <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+                                    <span className="text-[10px] text-slate-400 font-medium">Page {logPagination.page} of {logPagination.totalPages}</span>
+                                    <div className="flex items-center gap-2">
+                                        <button disabled={logPagination.page <= 1} onClick={() => fetchLogs(logPagination.page - 1)} className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 transition-all">Prev</button>
+                                        {Array.from({ length: Math.min(5, logPagination.totalPages) }, (_, i) => {
+                                            const start = Math.max(1, logPagination.page - 2);
+                                            const p = start + i;
+                                            if (p > logPagination.totalPages) return null;
+                                            return (
+                                                <button key={p} onClick={() => fetchLogs(p)} className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${p === logPagination.page ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{p}</button>
+                                            );
+                                        })}
+                                        <button disabled={logPagination.page >= logPagination.totalPages} onClick={() => fetchLogs(logPagination.page + 1)} className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 transition-all">Next</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'login' && (
+                        <div className="space-y-6">
+                            {/* Login Stats Cards */}
+                            {loginStats && (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {[
+                                        { label: 'Total Attempts', value: loginStats.totalAttempts, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50' },
+                                        { label: 'Today Success', value: loginStats.successToday, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                                        { label: 'Today Failed', value: loginStats.failedToday, icon: Trash2, color: 'text-red-600', bg: 'bg-red-50' },
+                                        { label: '24h Volume', value: loginStats.last24h, icon: Activity, color: 'text-purple-600', bg: 'bg-purple-50' },
+                                    ].map((stat, i) => (
+                                        <div key={i} className="glass p-5 rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+                                            <stat.icon className={`w-6 h-6 ${stat.color} mb-3`} />
+                                            <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black">{stat.label}</p>
+                                            <h3 className="text-2xl font-black mt-1 tabular-nums">{stat.value}</h3>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Login History Table */}
+                            <div className="glass rounded-[2rem] border border-slate-200 overflow-hidden bg-white shadow-sm">
+                                <div className="p-6 border-b border-slate-200 bg-slate-50 flex flex-col gap-3">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">Login Activity</h3>
+                                        <span className="text-[10px] font-bold text-slate-400">{loginHistoryPagination.total} events</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <select
+                                            value={loginHistoryFilters.success}
+                                            onChange={(e) => { setLoginHistoryFilters(f => ({ ...f, success: e.target.value })); fetchLoginHistory(1); }}
+                                            className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 outline-none"
+                                        >
+                                            <option value="">All Status</option>
+                                            <option value="true">Success</option>
+                                            <option value="false">Failed</option>
+                                        </select>
+                                        <input type="date" value={loginHistoryFilters.dateFrom} onChange={(e) => { setLoginHistoryFilters(f => ({ ...f, dateFrom: e.target.value })); fetchLoginHistory(1); }} className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none" title="From date" />
+                                        <input type="date" value={loginHistoryFilters.dateTo} onChange={(e) => { setLoginHistoryFilters(f => ({ ...f, dateTo: e.target.value })); fetchLoginHistory(1); }} className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none" title="To date" />
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                                <th className="px-6 py-4">User</th>
+                                                <th className="px-6 py-4">Email</th>
+                                                <th className="px-6 py-4">Role</th>
+                                                <th className="px-6 py-4">Status</th>
+                                                <th className="px-6 py-4">IP / Browser</th>
+                                                <th className="px-6 py-4">Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {loginHistory.length > 0 ? loginHistory.map((lh, i) => (
+                                                <tr key={lh.id || i} className="hover:bg-slate-50 transition-all">
+                                                    <td className="px-6 py-4 font-bold text-sm text-slate-800">{lh.user?.name || 'Unknown'}</td>
+                                                    <td className="px-6 py-4 text-xs text-slate-500">{lh.email}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter ${lh.role === 'SUPERADMIN' ? 'bg-slate-900 text-white' : lh.role === 'MENTOR' ? 'bg-purple-100 text-purple-600' : lh.role === 'STAFF' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>{lh.role || 'N/A'}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${lh.success ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>{lh.success ? 'Success' : 'Failed'}</span>
+                                                        {lh.reason && <span className="ml-1.5 text-[9px] text-slate-400 italic">{lh.reason}</span>}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-[10px] text-slate-500 font-mono">
+                                                        {lh.ip || '-'} {lh.browser && <span className="text-slate-300">| {lh.browser}</span>}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-[10px] text-slate-400 font-mono whitespace-nowrap">{new Date(lh.createdAt).toLocaleString()}</td>
+                                                </tr>
+                                            )) : (
+                                                <tr><td colSpan={6} className="px-6 py-16 text-center text-slate-400 italic">No login events recorded yet.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {loginHistoryPagination.totalPages > 1 && (
+                                    <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+                                        <span className="text-[10px] text-slate-400 font-medium">Page {loginHistoryPagination.page} of {loginHistoryPagination.totalPages}</span>
+                                        <div className="flex items-center gap-2">
+                                            <button disabled={loginHistoryPagination.page <= 1} onClick={() => fetchLoginHistory(loginHistoryPagination.page - 1)} className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 transition-all">Prev</button>
+                                            {Array.from({ length: Math.min(5, loginHistoryPagination.totalPages) }, (_, i) => {
+                                                const start = Math.max(1, loginHistoryPagination.page - 2);
+                                                const p = start + i;
+                                                if (p > loginHistoryPagination.totalPages) return null;
+                                                return (
+                                                    <button key={p} onClick={() => fetchLoginHistory(p)} className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${p === loginHistoryPagination.page ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{p}</button>
+                                                );
+                                            })}
+                                            <button disabled={loginHistoryPagination.page >= loginHistoryPagination.totalPages} onClick={() => fetchLoginHistory(loginHistoryPagination.page + 1)} className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 transition-all">Next</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'api-keys' && (
+                        <div className="space-y-6">
+                            <div className="glass rounded-[2rem] border border-slate-200 overflow-hidden bg-white shadow-sm">
+                                <div className="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <Shield className="w-5 h-5 text-primary" />
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">API Key Management</h3>
+                                    </div>
+                                    <button onClick={() => { setCreatedApiKey(null); setShowApiKeyModal(true); }} className="bg-primary text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-dark transition-all flex items-center gap-2">
+                                        <Plus className="w-4 h-4" /> Generate Key
+                                    </button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                                <th className="px-6 py-4">Name</th>
+                                                <th className="px-6 py-4">Key Prefix</th>
+                                                <th className="px-6 py-4">Created By</th>
+                                                <th className="px-6 py-4">College</th>
+                                                <th className="px-6 py-4">Status</th>
+                                                <th className="px-6 py-4">Last Used</th>
+                                                <th className="px-6 py-4">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {apiKeys.length > 0 ? apiKeys.map((k, i) => (
+                                                <tr key={k.id || i} className="hover:bg-slate-50 transition-all">
+                                                    <td className="px-6 py-4 font-bold text-sm text-slate-800">{k.name}</td>
+                                                    <td className="px-6 py-4"><code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono">{k.keyPrefix}...</code></td>
+                                                    <td className="px-6 py-4 text-xs text-slate-500">{k.user?.name || 'Unknown'}</td>
+                                                    <td className="px-6 py-4 text-xs text-slate-500">{k.college?.name || 'Global'}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${k.active ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>{k.active ? 'Active' : 'Revoked'}</span>
+                                                        {k.expiresAt && new Date(k.expiresAt) < new Date() && <span className="ml-1 text-[9px] text-red-400">Expired</span>}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-[10px] text-slate-400 font-mono">{k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleDateString() : 'Never'}</td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-1">
+                                                            <button onClick={async () => { try { await api.patch(`/superadmin/api-keys/${k.id}/status`, { active: !k.active }); toast.success(k.active ? 'Key revoked' : 'Key activated'); fetchApiKeys(apiKeyPagination.page); } catch (e) { toast.error('Failed'); } }} className={`p-2 rounded-xl transition-all ${k.active ? 'hover:bg-red-50 text-slate-300 hover:text-red-600' : 'hover:bg-emerald-50 text-slate-300 hover:text-emerald-600'}`} title={k.active ? 'Revoke' : 'Activate'}>
+                                                                {k.active ? <Trash2 className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )) : (
+                                                <tr><td colSpan={7} className="px-6 py-16 text-center text-slate-400 italic">No API keys generated yet.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {apiKeyPagination.totalPages > 1 && (
+                                    <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+                                        <span className="text-[10px] text-slate-400 font-medium">Page {apiKeyPagination.page} of {apiKeyPagination.totalPages}</span>
+                                        <div className="flex items-center gap-2">
+                                            <button disabled={apiKeyPagination.page <= 1} onClick={() => fetchApiKeys(apiKeyPagination.page - 1)} className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 transition-all">Prev</button>
+                                            <button disabled={apiKeyPagination.page >= apiKeyPagination.totalPages} onClick={() => fetchApiKeys(apiKeyPagination.page + 1)} className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 transition-all">Next</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* API Key Creation Modal */}
+                            <AnimatePresence>
+                                {showApiKeyModal && (
+                                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { if (!createdApiKey) setShowApiKeyModal(false); }} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+                                        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="bg-white rounded-[3rem] p-8 md:p-10 w-full max-w-lg relative z-10 shadow-2xl border border-slate-200/50">
+                                            {createdApiKey ? (
+                                                <div className="text-center">
+                                                    <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                                        <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                                                    </div>
+                                                    <h2 className="text-2xl font-black tracking-tight text-slate-900 mb-2">API Key Generated</h2>
+                                                    <p className="text-sm text-slate-500 mb-6">Copy this key now. It will not be shown again.</p>
+                                                    <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 mb-6">
+                                                        <code className="text-xs font-mono break-all text-slate-800 select-all">{createdApiKey.fullKey}</code>
+                                                    </div>
+                                                    <button onClick={() => { navigator.clipboard.writeText(createdApiKey.fullKey); toast.success('Copied!'); }} className="w-full py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-dark transition-all mb-3">
+                                                        Copy to Clipboard
+                                                    </button>
+                                                    <button onClick={() => { setShowApiKeyModal(false); setCreatedApiKey(null); fetchApiKeys(1); }} className="w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all">
+                                                        Done
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="flex items-center gap-5 mb-8">
+                                                        <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
+                                                            <Shield className="w-7 h-7 text-primary" />
+                                                        </div>
+                                                        <div>
+                                                            <h2 className="text-2xl font-black tracking-tight text-slate-900">Generate API Key</h2>
+                                                            <p className="text-slate-500 text-sm italic">Create a secure API access credential.</p>
+                                                        </div>
+                                                    </div>
+                                                    <form onSubmit={async (e) => {
+                                                        e.preventDefault();
+                                                        try {
+                                                            const payload = { name: newApiKey.name, permissions: newApiKey.permissions };
+                                                            if (newApiKey.collegeId) payload.collegeId = newApiKey.collegeId;
+                                                            if (newApiKey.expiresInDays) payload.expiresInDays = parseInt(newApiKey.expiresInDays);
+                                                            const res = await api.post('/superadmin/api-keys', payload);
+                                                            setCreatedApiKey(res.data);
+                                                            toast.success('API key generated!');
+                                                        } catch (err) {
+                                                            toast.error(err.response?.data?.message || 'Failed');
+                                                        }
+                                                    }} className="space-y-5">
+                                                        <div className="space-y-2">
+                                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Key Name</label>
+                                                            <input required type="text" placeholder="e.g. CI/CD Pipeline" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/30 transition-all font-bold" value={newApiKey.name} onChange={e => setNewApiKey({ ...newApiKey, name: e.target.value })} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Scope (College)</label>
+                                                            <select className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/30 transition-all font-bold text-slate-700" value={newApiKey.collegeId} onChange={e => setNewApiKey({ ...newApiKey, collegeId: e.target.value })}>
+                                                                <option value="">Global Access</option>
+                                                                {colleges.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Expires In (Days)</label>
+                                                            <input type="number" min="1" max="365" placeholder="Leave empty for no expiry" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/30 transition-all font-bold" value={newApiKey.expiresInDays} onChange={e => setNewApiKey({ ...newApiKey, expiresInDays: e.target.value })} />
+                                                        </div>
+                                                        <div className="flex gap-4 pt-4">
+                                                            <button type="button" onClick={() => setShowApiKeyModal(false)} className="flex-1 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all">Cancel</button>
+                                                            <button type="submit" className="flex-[2] py-4 bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Generate</button>
+                                                        </div>
+                                                    </form>
+                                                </>
+                                            )}
+                                        </motion.div>
+                                    </div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    )}
+
+                    {activeTab === 'settings' && (
+                        <div className="space-y-6">
+                            {settings && (
+                                <>
+                                    <div className="glass rounded-[2rem] border border-slate-200 overflow-hidden bg-white shadow-sm">
+                                        <div className="p-6 border-b border-slate-200 bg-slate-50">
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">Rate Limiting</h3>
+                                        </div>
+                                        <div className="divide-y divide-slate-50">
+                                            {settings.rateLimits.map((rl, i) => (
+                                                <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50">
+                                                    <div>
+                                                        <span className="text-sm font-bold text-slate-800">{rl.name}</span>
+                                                        <span className="ml-3 text-[9px] text-slate-400 font-mono">{rl.key}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-xs font-bold text-slate-500">{rl.max} req / {rl.timeWindow}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="glass rounded-[2rem] border border-slate-200 overflow-hidden bg-white shadow-sm">
+                                        <div className="p-6 border-b border-slate-200 bg-slate-50">
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">System Configuration</h3>
+                                        </div>
+                                        <div className="divide-y divide-slate-50">
+                                            {[
+                                                { label: 'Environment', value: settings.system.nodeEnv },
+                                                { label: 'JWT Expiry', value: settings.system.jwtExpiry },
+                                                { label: 'Bcrypt Rounds', value: settings.system.bcryptRounds },
+                                                { label: 'Max Upload', value: `${(settings.system.maxUploadBytes / 1048576).toFixed(0)} MB` },
+                                            ].map((s, i) => (
+                                                <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50">
+                                                    <span className="text-sm font-bold text-slate-800">{s.label}</span>
+                                                    <span className="text-xs font-mono text-slate-500">{s.value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="glass rounded-[2rem] border border-slate-200 overflow-hidden bg-white shadow-sm">
+                                        <div className="p-6 border-b border-slate-200 bg-slate-50">
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">Feature Flags</h3>
+                                        </div>
+                                        <div className="divide-y divide-slate-50">
+                                            {Object.entries(settings.features).map(([key, val]) => (
+                                                <div key={key} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50">
+                                                    <span className="text-sm font-bold capitalize text-slate-800">{key.replace(/([A-Z])/g, ' $1')}</span>
+                                                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${val ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>{val ? 'Enabled' : 'Disabled'}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                            {!settings && <div className="text-center py-16 text-slate-400 italic">Loading settings...</div>}
                         </div>
                     )}
 
@@ -723,7 +1201,7 @@ export default function SuperAdminDashboard() {
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
-                        <p className="text-[11px] text-muted-foreground italic mt-6 text-center">System-wide registration velocity over the last 30 days.</p>
+                        <p className="text-[11px] text-muted-foreground italic mt-6 text-center">System-wide registration velocity over the last 6 months.</p>
                     </div>
 
                     <div className="glass p-8 rounded-[2.5rem] border border-slate-800 bg-slate-950 text-white shadow-2xl relative overflow-hidden">
@@ -777,6 +1255,38 @@ export default function SuperAdminDashboard() {
                         >
                             {broadcasting ? 'Transmitting Alert...' : 'Deploy Global Alert'}
                         </button>
+
+                        {broadcasts.length > 0 && (
+                            <div className="mt-6 pt-6 border-t border-white/10">
+                                <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-2">
+                                    <Activity className="w-3.5 h-3.5" />
+                                    Recent Broadcasts
+                                </h4>
+                                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                                    {broadcasts.slice(0, 5).map((b, i) => (
+                                        <div key={b.id || i} className="p-3 bg-white/5 rounded-xl border border-white/5">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-xs font-bold text-white/90 truncate">{b.title}</span>
+                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter ${
+                                                    b.priority >= 3 ? 'bg-red-500/20 text-red-400' :
+                                                    b.priority >= 2 ? 'bg-amber-500/20 text-amber-400' :
+                                                    'bg-slate-500/20 text-slate-400'
+                                                }`}>
+                                                    P{b.priority}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 truncate">{b.content}</p>
+                                            <p className="text-[8px] text-slate-600 mt-1">{new Date(b.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                {broadcastPagination.totalPages > 1 && (
+                                    <button onClick={() => fetchBroadcasts(1)} className="w-full mt-2 text-[9px] font-black text-emerald-400/70 hover:text-emerald-400 transition-colors uppercase tracking-widest">
+                                        View All ({broadcastPagination.total})
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1203,6 +1713,41 @@ export default function SuperAdminDashboard() {
                                             />
                                             <span className="text-slate-600 font-mono font-bold text-xs uppercase">{editCollegeForm.secondaryColor}</span>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Affiliation Text</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="e.g. (An Autonomous Institution, affiliated to Anna University)"
+                                        value={editCollegeForm.affiliationText}
+                                        onChange={e => setEditCollegeForm({...editCollegeForm, affiliationText: e.target.value})}
+                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/20 transition-all font-bold text-slate-800"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Controller Name</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="e.g. M. Arulselvan"
+                                            value={editCollegeForm.controllerName}
+                                            onChange={e => setEditCollegeForm({...editCollegeForm, controllerName: e.target.value})}
+                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/20 transition-all font-bold text-slate-800"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Principal Name</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="e.g. P. Velavan"
+                                            value={editCollegeForm.principalName}
+                                            onChange={e => setEditCollegeForm({...editCollegeForm, principalName: e.target.value})}
+                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/20 transition-all font-bold text-slate-800"
+                                        />
                                     </div>
                                 </div>
 

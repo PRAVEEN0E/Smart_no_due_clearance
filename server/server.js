@@ -15,7 +15,8 @@ const fastify = require('fastify')({
         level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
         transport: process.env.NODE_ENV !== 'production'
             ? { target: 'pino-pretty', options: { colorize: true } }
-            : undefined
+            : undefined,
+        requestIdLogLabel: 'req_id'
     },
     routerOptions: {
         ignoreTrailingSlash: true
@@ -23,7 +24,6 @@ const fastify = require('fastify')({
     bodyLimit: 10485760,
     connectionTimeout: 30000,
     requestIdHeader: 'x-request-id',
-    requestIdLogLabel: 'req_id',
     genReqId: () => crypto.randomUUID()
 });
 
@@ -105,7 +105,7 @@ fastify.register(require('@fastify/cors'), {
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'x-request-id'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
     exposedHeaders: ['X-Request-Id', 'X-Worker-Id'],
     maxAge: 86400
 });
@@ -126,17 +126,11 @@ fastify.register(require('@fastify/rate-limit'), {
     enableAsync: true
 });
 
-// 4. CSRF Protection
-fastify.register(require('@fastify/csrf-protection'), {
-    cookieOpts: {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/'
-    },
-    csrfOpts: {
-        getToken: (request) => request.headers['x-csrf-token']
-    }
+// 4. Swagger / OpenAPI Documentation
+fastify.register(require('@fastify/swagger'), require('./config/swagger'));
+fastify.register(require('@fastify/swagger-ui'), {
+    routePrefix: '/docs',
+    uiConfig: { docExpansion: 'list', deepLinking: true },
 });
 
 // 5. Multipart - File upload limits
@@ -159,6 +153,28 @@ subDirs.forEach(dir => {
     }
 });
 
+// 6. Compression — reduces response size
+fastify.register(require('@fastify/compress'), {
+    global: true,
+    threshold: 1024, // 1KB minimum
+    zlib: { level: 6 },
+    brotli: process.env.NODE_ENV === 'production' ? { enabled: true, quality: 4 } : false,
+});
+
+// 7. Redis connection check (non-blocking)
+const cache = require('./lib/cache');
+cache.status().then(s => {
+    if (s.connected) fastify.log.info('Redis connected');
+    else fastify.log.warn('Redis not available — cache disabled');
+}).catch(() => fastify.log.warn('Redis not available — cache disabled'));
+
+// Attach cache to fastify instance
+fastify.decorate('cache', cache);
+
+// Register BullMQ workers
+const { registerWorkers, closeWorkers } = require('./workers');
+registerWorkers();
+
 // Add .gitkeep to each upload directory to track them in git
 subDirs.forEach(dir => {
     const gitkeepPath = path.join(uploadsDir, dir, '.gitkeep');
@@ -173,7 +189,8 @@ fastify.register(require('@fastify/static'), {
     prefix: '/uploads/',
     decorateReply: false,
     cacheControl: true,
-    maxAge: '1h'
+    maxAge: '1h',
+    wildcard: true
 });
 
 // Serve frontend static files
@@ -285,15 +302,6 @@ fastify.setErrorHandler(async (error, request, reply) => {
         });
     }
 
-    // CSRF Error
-    if (error.code === 'FST_CSRF_INVALID_TOKEN') {
-        return reply.status(403).send({
-            error: 'Forbidden',
-            message: 'Invalid or missing CSRF token.',
-            code: 'CSRF_INVALID_TOKEN'
-        });
-    }
-
     // Generic safe error for production
     const isProd = process.env.NODE_ENV === 'production';
     const statusCode = error.statusCode || 500;
@@ -313,7 +321,7 @@ fastify.setErrorHandler(async (error, request, reply) => {
 // PLUGINS
 // ═══════════════════════════════════════════════════════════════════════════════
 fastify.register(require('./plugins/prisma'));
-fastify.register(require('./plugins/auth'));
+fastify.register(require('./plugins/auth'));     // registers @fastify/cookie + @fastify/jwt
 fastify.register(require('./plugins/healthDashboard'));
 
 // Auth Decorator helper for multi-plugin guards
@@ -321,6 +329,7 @@ fastify.decorate('auth', (guards) => {
     return async (request, reply) => {
         for (const guard of guards) {
             await guard(request, reply);
+            if (reply.sent) return;
         }
     };
 });
@@ -374,6 +383,12 @@ fastify.register(async (instance) => {
     // Enhanced health endpoint with worker-level metrics
     instance.get('/health', async (request) => {
         const memUsage = process.memoryUsage();
+        const cacheStatus = require('./lib/cache').status().catch(() => ({ connected: false }));
+        const qStatus = {};
+        const queueModule = require('./lib/queue');
+        for (const [key, name] of Object.entries(queueModule.QUEUES || {})) {
+            try { qStatus[key.toLowerCase()] = await queueModule.getQueueStatus(name); } catch { /* skip */ }
+        }
         return {
             status: 'ok',
             worker: {
@@ -387,17 +402,14 @@ fastify.register(async (instance) => {
                     heap_total_mb: Math.round(memUsage.heapTotal / 1024 / 1024 * 100) / 100
                 }
             },
+            cache: await cacheStatus,
+            queue: qStatus,
             uptime: process.uptime(),
             node_version: process.version,
             environment: process.env.NODE_ENV || 'development',
             is_clustered: cluster.isWorker,
             timestamp: new Date().toISOString()
         };
-    });
-
-    // CSRF token endpoint — returns a fresh token for the current session
-    instance.get('/csrf-token', async (request) => {
-        return { csrfToken: request.csrfToken() };
     });
 
     // Logout endpoint - clears auth cookie
@@ -407,12 +419,117 @@ fastify.register(async (instance) => {
     });
 }, { prefix: '/api' });
 
+const queueModule = require('./lib/queue');
+const prisma = require('./lib/prisma');
+
+// Readiness probe — checks DB, Redis, Queue
+fastify.get('/api/ready', async (request, reply) => {
+    const errors = [];
+    let dbOk = false;
+    let redisOk = false;
+    let queueOk = false;
+
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        dbOk = true;
+    } catch (e) {
+        errors.push({ component: 'database', error: e.message });
+    }
+
+    try {
+        const s = await require('./lib/cache').status();
+        redisOk = s.connected;
+    } catch (e) {
+        errors.push({ component: 'redis', error: e.message });
+    }
+
+    try {
+        const s = await queueModule.getQueueStatus(queueModule.QUEUES.EMAIL);
+        queueOk = !!s;
+    } catch {
+        queueOk = false;
+    }
+
+    const ready = dbOk && redisOk;
+    if (!ready) {
+        reply.status(503);
+    }
+    return { ready, dbOk, redisOk, queueOk, errors: errors.length > 0 ? errors : undefined, timestamp: new Date().toISOString() };
+});
+
+// Liveness probe
+fastify.get('/api/live', async (request, reply) => {
+    return { alive: true, pid: process.pid, uptime: process.uptime(), timestamp: new Date().toISOString() };
+});
+
+// Prometheus metrics
+const promClient = require('prom-client');
+const collectDefaultMetrics = promClient.collectDefaultMetrics;
+collectDefaultMetrics({ prefix: 'sndc_', gcDurationBuckets: [0.001, 0.01, 0.1, 1, 2, 5] });
+
+const httpRequestDuration = new promClient.Histogram({
+    name: 'http_request_duration_seconds',
+    help: 'Duration of HTTP requests in seconds',
+    labelNames: ['method', 'route', 'status'],
+    buckets: [0.005, 0.01, 0.05, 0.1, 0.3, 0.5, 1, 2, 5],
+});
+
+const httpRequestsTotal = new promClient.Counter({
+    name: 'http_requests_total',
+    help: 'Total number of HTTP requests',
+    labelNames: ['method', 'route', 'status'],
+});
+
+const cacheHitsTotal = new promClient.Counter({
+    name: 'sndc_cache_hits_total',
+    help: 'Total number of cache hits',
+});
+const cacheMissesTotal = new promClient.Counter({
+    name: 'sndc_cache_misses_total',
+    help: 'Total number of cache misses',
+});
+const bullmqQueueWaitingCount = new promClient.Gauge({
+    name: 'bullmq_queue_waiting_count',
+    help: 'Number of waiting jobs in BullMQ queues',
+    labelNames: ['queue'],
+});
+
+fastify.addHook('onResponse', async (request, reply) => {
+    const route = request.routeOptions?.url || request.url || 'unknown';
+    const labels = { method: request.method, route, status: reply.statusCode };
+    httpRequestDuration.observe(labels, reply.elapsedTime / 1000);
+    httpRequestsTotal.inc(labels);
+});
+
+fastify.decorate('metrics', { cacheHitsTotal, cacheMissesTotal, bullmqQueueWaitingCount });
+require('./lib/cache').setMetrics(fastify.metrics);
+
+// Track queue depths periodically
+setInterval(async () => {
+    try {
+        const { QUEUES, getQueueStatus } = require('./lib/queue');
+        for (const name of Object.values(QUEUES)) {
+            const status = await getQueueStatus(name);
+            bullmqQueueWaitingCount.set({ queue: name }, status.waiting);
+        }
+    } catch {} // Graceful if Redis is down
+}, 15000);
+
+fastify.get('/api/metrics', async (request, reply) => {
+    reply.type('text/plain');
+    return promClient.register.metrics();
+});
+
 fastify.register(require('./routes/mentor'), { prefix: '/api/mentor' });
 fastify.register(require('./routes/staff'), { prefix: '/api/staff' });
 fastify.register(require('./routes/student'), { prefix: '/api/student' });
-fastify.register(require('./routes/auth'), { prefix: '/api/auth' });
+// Refactored layered-architecture auth route
+fastify.register(require('./routes/auth.v2'), { prefix: '/api/auth' });
 fastify.register(require('./routes/materials'), { prefix: '/api/materials' });
 fastify.register(require('./routes/notifications'), { prefix: '/api/notifications' });
+fastify.register(require('./routes/pushSubscriptions'), { prefix: '/api/push' });
+fastify.register(require('./routes/studentQueries'), { prefix: '/api/queries' });
+fastify.register(require('./routes/userPreferences'), { prefix: '/api/preferences' });
 fastify.register(require('./routes/superadmin'), { prefix: '/api/superadmin' });
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, CheckCircle2, User, Mail, Lock, Building2, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
@@ -10,10 +10,33 @@ export default function Register() {
     const [password, setPassword] = useState('');
     const [collegeName, setCollegeName] = useState('');
     const [department, setDepartment] = useState('');
+    const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const { setAuth, logout, navigate } = useAuth();
+
+    useEffect(() => {
+        api.get('/auth/departments').then(res => {
+            setDepartments(res.data.departments || []);
+        }).catch(() => {
+            // Fallback if API fails
+            setDepartments([
+                { value: 'CSE', label: 'CSE - Computer Science' },
+                { value: 'ECE', label: 'ECE - Electronics & Communication' },
+                { value: 'EEE', label: 'EEE - Electrical & Electronics' },
+                { value: 'MECH', label: 'MECH - Mechanical' },
+                { value: 'CIVIL', label: 'CIVIL - Civil Engineering' },
+                { value: 'IT', label: 'IT - Information Technology' },
+                { value: 'AIDS', label: 'AIDS - AI & Data Science' },
+                { value: 'AIML', label: 'AIML - AI & Machine Learning' },
+                { value: 'BME', label: 'BME - Biomedical' },
+                { value: 'MBA', label: 'MBA - Business Administration' },
+                { value: 'MCA', label: 'MCA - Computer Applications' },
+                { value: 'OTHER', label: 'Other' }
+            ]);
+        });
+    }, []);
 
     const handleRegister = async (e) => {
         e.preventDefault();
@@ -31,7 +54,7 @@ export default function Register() {
             logout();
 
             const { data } = await api.post('/auth/login', { email, password });
-            setAuth(data.user);
+            setAuth(data.data?.user || data.user);
 
             setSuccess(true);
             setTimeout(() => navigate('/mentor'), 1500);
@@ -173,6 +196,7 @@ export default function Register() {
                                                 <input
                                                     required
                                                     type="text"
+                                                    autoComplete="name"
                                                     value={name}
                                                     onChange={(e) => setName(e.target.value)}
                                                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-white transition-all text-slate-800 text-sm font-medium"
@@ -187,6 +211,7 @@ export default function Register() {
                                                 <input
                                                     required
                                                     type="text"
+                                                    autoComplete="organization"
                                                     value={collegeName}
                                                     onChange={(e) => setCollegeName(e.target.value)}
                                                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-white transition-all text-slate-800 text-sm font-medium"
@@ -207,18 +232,9 @@ export default function Register() {
                                                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-white transition-all text-slate-800 text-sm font-medium appearance-none cursor-pointer"
                                             >
                                                 <option value="">Select Your Department</option>
-                                                <option value="CSE">CSE - Computer Science</option>
-                                                <option value="ECE">ECE - Electronics & Communication</option>
-                                                <option value="EEE">EEE - Electrical & Electronics</option>
-                                                <option value="MECH">MECH - Mechanical</option>
-                                                <option value="CIVIL">CIVIL - Civil Engineering</option>
-                                                <option value="IT">IT - Information Technology</option>
-                                                <option value="AIDS">AIDS - AI & Data Science</option>
-                                                <option value="AIML">AIML - AI & Machine Learning</option>
-                                                <option value="BME">BME - Biomedical</option>
-                                                <option value="MBA">MBA - Business Administration</option>
-                                                <option value="MCA">MCA - Computer Applications</option>
-                                                <option value="OTHER">Other</option>
+                                                {departments.map(d => (
+                                                    <option key={d.value} value={d.value}>{d.label}</option>
+                                                ))}
                                             </select>
                                         </div>
                                     </div>
@@ -227,14 +243,15 @@ export default function Register() {
                                         <label className="text-xs font-bold text-slate-700 ml-1">Department Email</label>
                                         <div className="relative group">
                                             <Mail className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
-                                            <input
-                                                required
-                                                type="email"
-                                                value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-white transition-all text-slate-800 text-sm font-medium"
-                                                placeholder="mentor@department.edu"
-                                            />
+                                                <input
+                                                    required
+                                                    type="email"
+                                                    autoComplete="email"
+                                                    value={email}
+                                                    onChange={(e) => setEmail(e.target.value)}
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-white transition-all text-slate-800 text-sm font-medium"
+                                                    placeholder="mentor@department.edu"
+                                                />
                                         </div>
                                     </div>
 
@@ -245,6 +262,7 @@ export default function Register() {
                                             <input
                                                 required
                                                 type="password"
+                                                autoComplete="new-password"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
                                                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-white transition-all text-slate-800 text-sm font-medium"

@@ -1,0 +1,83 @@
+{
+  "title": "SNDC API Dashboard",
+  "tags": ["sndc", "api", "backend"],
+  "schemaVersion": 36,
+  "panels": [
+    {
+      "title": "API Latency (p50/p95/p99)",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "histogram_quantile(0.5, rate(http_request_duration_seconds_bucket[5m]))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))", "legendFormat": "p99" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "title": "Requests per Second",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(http_requests_total[1m])", "legendFormat": "rps" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "title": "Error Rate (5xx)",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m])", "legendFormat": "error rate" }
+      ],
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 }
+    },
+    {
+      "title": "Memory Usage (MB)",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sndc_process_resident_memory_bytes / 1024 / 1024", "legendFormat": "RSS" }
+      ],
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 }
+    },
+    {
+      "title": "Active Redis Connections",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sndc_redis_connected_clients" }
+      ],
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 8 }
+    },
+    {
+      "title": "Queue Depth",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "bullmq_queue_waiting_count", "legendFormat": "{{queue}}" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+    },
+    {
+      "title": "Database Connections",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sndc_prisma_client_connections_active" }
+      ],
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 16 }
+    },
+    {
+      "title": "Cache Hit Ratio",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(sndc_cache_hits_total[5m]) / (rate(sndc_cache_hits_total[5m]) + rate(sndc_cache_misses_total[5m]))" }
+      ],
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 16 }
+    }
+  ],
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "10s"
+}

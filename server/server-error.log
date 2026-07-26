@@ -1,0 +1,5 @@
+[Sentry] DSN not configured — skipping initialization
+❌ EmailJS Error 412: Gmail OAuth token expired. Go to https://dashboard.emailjs.com/admin/services and click "Reconnect Account".
+⚠️ Email could not be sent. Check EmailJS connection and EMAIL_USER/EMAIL_PASS in .env
+❌ EmailJS Error 412: Gmail OAuth token expired. Go to https://dashboard.emailjs.com/admin/services and click "Reconnect Account".
+⚠️ Email could not be sent. Check EmailJS connection and EMAIL_USER/EMAIL_PASS in .env

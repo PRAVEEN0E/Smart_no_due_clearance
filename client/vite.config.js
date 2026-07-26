@@ -1,8 +1,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const plugins = [react()]
+
+if (process.env.ANALYZE === 'true') {
+    const { visualizer } = await import('rollup-plugin-visualizer')
+    plugins.push(visualizer({ open: true, filename: 'dist/stats.html', gzipSize: true, brotliSize: true }))
+}
+
 export default defineConfig({
-    plugins: [react()],
+    plugins,
     build: {
         minify: 'terser',
         cssMinify: true,

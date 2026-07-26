@@ -67,7 +67,8 @@ export default function AIChatBubble() {
         setLoading(true);
 
         try {
-            const res = await api.post('/student/chat', { message: userMsg, subjectId: selectedSubject?.subjectId });
+            const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
+            const res = await api.post('/student/chat', { message: userMsg, subjectId: selectedSubject?.subjectId, history });
             setMessages(prev => [...prev, { role: 'assistant', content: res.data.response }]);
         } catch (err) {
             setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm experiencing some connectivity issues." }]);

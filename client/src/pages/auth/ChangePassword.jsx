@@ -68,6 +68,7 @@ export default function ChangePassword() {
                         <input
                             type="password"
                             required
+                            autoComplete="current-password"
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
@@ -79,6 +80,7 @@ export default function ChangePassword() {
                         <input
                             type="password"
                             required
+                            autoComplete="new-password"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
@@ -90,6 +92,7 @@ export default function ChangePassword() {
                         <input
                             type="password"
                             required
+                            autoComplete="new-password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"

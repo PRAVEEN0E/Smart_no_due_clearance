@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, GraduationCap, Users, Sparkles, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Shield, GraduationCap, Users, Mail, Lock, ArrowRight } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import api from '../../lib/api';
+import toast from 'react-hot-toast';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -17,11 +18,12 @@ export default function Login() {
         setError('');
         try {
             const { data } = await api.post('/auth/login', { email, password });
-            setAuth(data.user);
+            const user = data.data?.user || data.user;
+            setAuth(user);
 
-            if (data.user.role === 'SUPERADMIN') navigate('/superadmin');
-            else if (data.user.role === 'MENTOR') navigate('/mentor');
-            else if (data.user.role === 'STAFF') navigate('/staff');
+            if (user.role === 'SUPERADMIN') navigate('/superadmin');
+            else if (user.role === 'MENTOR') navigate('/mentor');
+            else if (user.role === 'STAFF') navigate('/staff');
             else navigate('/student');
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed. Please check credentials.');
@@ -88,6 +90,7 @@ export default function Login() {
                                 <input
                                     type="text"
                                     required
+                                    autoComplete="username"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full bg-white/50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all text-foreground placeholder:text-muted-foreground font-medium"
@@ -99,7 +102,7 @@ export default function Login() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between ml-1">
                                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Password</label>
-                                <button type="button" onClick={() => alert('Please contact your mentor or staff to reset your password.')} className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">Forgot Password?</button>
+                                <button type="button" onClick={() => toast.error('Please contact your mentor or staff to reset your password.')} className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">Forgot Password?</button>
                             </div>
                             <div className="relative group">
                                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
@@ -108,6 +111,7 @@ export default function Login() {
                                 <input
                                     type="password"
                                     required
+                                    autoComplete="current-password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full bg-white/50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all text-foreground placeholder:text-muted-foreground font-medium"
