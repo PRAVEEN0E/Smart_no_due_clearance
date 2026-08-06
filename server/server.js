@@ -239,6 +239,13 @@ if (fs.existsSync(distPath)) {
     ];
     const KNOWN_SPA_PREFIXES = ['/verify/hallticket/', '/student', '/staff', '/mentor', '/superadmin'];
     const indexHtml = fs.readFileSync(path.join(distPath, 'index.html'));
+    // Directory that holds user-downloaded domain-verification HTML files
+    // (e.g. Google Search Console's google<token>.html). Checked in the
+    // not-found handler so verification works even without a rebuild/restart.
+    const verificationDirs = [
+        path.join(__dirname, '../client/public'),
+        distPath,
+    ];
     fastify.setNotFoundHandler(async (request, reply) => {
         if (request.method !== 'GET' && request.method !== 'HEAD') {
             return reply.status(404).send({
@@ -248,6 +255,27 @@ if (fs.existsSync(distPath)) {
             });
         }
         if (!request.url.startsWith('/api') && !request.url.startsWith('/uploads')) {
+            // Serve downloaded verification HTML files (googleXXX.html) with
+            // EXACT bytes + 200. Without this, the catch-all below returns
+            // index.html for any missing file, which verification services
+            // (Google Search Console) report as "wrong content".
+            const cleanPath = request.url.split('?')[0].replace(/^\/+/, '');
+            if (/^[A-Za-z0-9._-]+\.html$/i.test(cleanPath)) {
+                for (const dir of verificationDirs) {
+                    const filePath = path.join(dir, cleanPath);
+                    try {
+                        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+                            return reply
+                                .type('text/html')
+                                .header('Cache-Control', 'no-cache')
+                                .header('X-Content-Type-Options', 'nosniff')
+                                .send(fs.readFileSync(filePath));
+                        }
+                    } catch (err) {
+                        fastify.log.warn({ err }, `verification file read failed: ${cleanPath}`);
+                    }
+                }
+            }
             const url = request.url.split('?')[0].replace(/\/+$/, '') || '/';
             const isKnown = KNOWN_SPA_ROUTES.includes(url) || KNOWN_SPA_PREFIXES.some((p) => url.startsWith(p));
             if (isKnown) {
