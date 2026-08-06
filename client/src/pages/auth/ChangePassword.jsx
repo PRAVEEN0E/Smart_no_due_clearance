@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, ArrowRight } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import api from '../../lib/api';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
+import { getPageTitle, getCanonical } from '../../lib/seo';
 
 export default function ChangePassword() {
     const [currentPassword, setCurrentPassword] = useState('');
@@ -45,7 +47,16 @@ export default function ChangePassword() {
     };
 
     return (
-        <div className="min-h-[80vh] flex items-center justify-center">
+        <>
+            <Helmet>
+                <title>{getPageTitle('Change Password')}</title>
+                <meta name="description" content="Update your NoDueNest account password securely." />
+                <meta property="og:title" content={getPageTitle('Change Password')} />
+                <meta name="twitter:title" content={getPageTitle('Change Password')} />
+                <link rel="canonical" href={getCanonical('/change-password')} />
+                <meta name="robots" content="noindex" />
+            </Helmet>
+            <div className="min-h-[80vh] flex items-center justify-center">
             <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -111,5 +122,6 @@ export default function ChangePassword() {
                 </form>
             </motion.div>
         </div>
+        </>
     );
 }

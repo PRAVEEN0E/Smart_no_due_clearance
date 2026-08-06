@@ -1,4 +1,6 @@
-# 🚀 Smart No-Due Clearance System
+# 🚀 NoDueNest
+
+Smart Student Clearance & Hall Ticket Management Platform
 
 A next-generation, **Multi-Tenant SaaS platform** designed to automate institutional clearance workflows. This system eliminates traditional paperwork, allowing students, mentors, and administrators to manage dues and hall tickets with surgical precision.
 

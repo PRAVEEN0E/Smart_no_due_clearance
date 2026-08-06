@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ShieldCheck, ShieldAlert, Clock, User, BookOpen, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import api from '../lib/api';
+import { getPageTitle, getCanonical } from '../lib/seo';
 
 export default function VerificationPage() {
     const { studentId } = useParams();
@@ -26,7 +28,18 @@ export default function VerificationPage() {
 
 
     return (
-        <div className="min-h-screen bg-[#020c0c] flex items-center justify-center p-6">
+        <>
+            <Helmet>
+                <title>{getPageTitle('Clearance Verification')}</title>
+                <meta name="description" content="Verify a student's clearance status on NoDueNest. Check no-dues, library, department, and hostel clearance." />
+                <meta name="robots" content="noindex, nofollow" />
+                <meta property="og:title" content={getPageTitle('Clearance Verification')} />
+                <meta property="og:description" content="Verify a student's clearance status on NoDueNest." />
+                <meta name="twitter:title" content={getPageTitle('Clearance Verification')} />
+                <meta name="twitter:description" content="Verify a student's clearance status on NoDueNest." />
+                <link rel="canonical" href={getCanonical(`/verify/hallticket/${studentId}`)} />
+            </Helmet>
+            <div className="min-h-screen bg-[#020c0c] flex items-center justify-center p-6">
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -102,5 +115,6 @@ export default function VerificationPage() {
                 )}
             </motion.div>
         </div>
+        </>
     );
 }

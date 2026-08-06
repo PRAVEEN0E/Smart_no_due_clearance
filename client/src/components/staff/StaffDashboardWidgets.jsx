@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Clock, CheckCircle2, Users, GraduationCap, Brain, AlertCircle, Flame } from 'lucide-react';
 
-export default function StaffDashboardWidgets({ analytics, evaluations }) {
+function StaffDashboardWidgets({ analytics, evaluations }) {
     const { atRiskStudents = [], totalStudents = 0, passPercentage = 0, pendingCount = 0, approvedCount = 0, rejectedCount = 0 } = analytics;
 
     const atRiskFromMarks = evaluations.filter(e => !e.staffApproved && !e.staffRejected && e.internalMarksTotal < 15);
@@ -122,3 +123,5 @@ export default function StaffDashboardWidgets({ analytics, evaluations }) {
         </div>
     );
 }
+
+export default StaffDashboardWidgets;

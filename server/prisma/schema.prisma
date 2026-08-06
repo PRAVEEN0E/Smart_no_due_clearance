@@ -357,6 +357,8 @@ model Material {
   title        String
   description  String?  @db.Text
   fileUrl      String
+  originalName String?
+  mimeType     String?
   fileType     String   // 'PDF', 'DOC', 'IMAGE'
   category     String   // 'NOTES', 'SYLLABUS', 'QUESTION_PAPER'
   subjectId    String

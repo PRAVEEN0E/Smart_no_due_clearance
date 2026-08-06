@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, LineChart as LineChartIcon, Trophy, BarChart3, PieChart } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RePieChart, Pie, Sector } from 'recharts';
@@ -16,7 +17,7 @@ function renderActiveShape(props) {
     );
 }
 
-export default function StaffCharts({ analytics, selectedSubject, evaluations }) {
+function StaffCharts({ analytics, selectedSubject, evaluations }) {
     const top5 = [...evaluations].sort((a, b) => b.internalMarksTotal - a.internalMarksTotal).slice(0, 5);
     const { distribution = [], attendanceDistribution = [] } = analytics;
 
@@ -142,3 +143,5 @@ export default function StaffCharts({ analytics, selectedSubject, evaluations })
         </div>
     );
 }
+
+export default StaffCharts;

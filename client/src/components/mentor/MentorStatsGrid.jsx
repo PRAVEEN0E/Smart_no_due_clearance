@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { GraduationCap, Users, BookOpen, CheckCircle2, TicketCheck, TicketX, Receipt, AlertTriangle } from 'lucide-react';
 
@@ -12,7 +13,7 @@ const STATS = [
     { key: 'pendingClearance', label: 'Pending Clearance', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50' },
 ];
 
-export default function MentorStatsGrid({ stats = {} }) {
+function MentorStatsGrid({ stats = {} }) {
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 md:gap-4">
             {STATS.map((stat, i) => (
@@ -32,3 +33,5 @@ export default function MentorStatsGrid({ stats = {} }) {
         </div>
     );
 }
+
+export default MentorStatsGrid;

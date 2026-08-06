@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 
-export default function StatCard({ icon: Icon, label, value, color = 'indigo', onClick }) {
+function StatCard({ icon: Icon, label, value, color = 'indigo', onClick }) {
     const colorMap = {
         indigo: 'from-indigo-500/10 to-indigo-600/5 border-indigo-200/50 text-indigo-600',
         emerald: 'from-emerald-500/10 to-emerald-600/5 border-emerald-200/50 text-emerald-600',
@@ -29,3 +30,5 @@ export default function StatCard({ icon: Icon, label, value, color = 'indigo', o
         </motion.div>
     );
 }
+
+export default StatCard;

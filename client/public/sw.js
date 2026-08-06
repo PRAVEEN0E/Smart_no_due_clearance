@@ -19,6 +19,10 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(networkFirstWithTimeout(request, API_CACHE));
         return;
     }
+    if (request.method !== 'GET') {
+        event.respondWith(fetch(request));
+        return;
+    }
     if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?)$/)) {
         event.respondWith(cacheFirst(request, CACHE));
         return;
@@ -76,7 +80,7 @@ async function networkFirstWithTimeout(request, cacheName, timeout = API_TIMEOUT
         const id = setTimeout(() => controller.abort(), timeout);
         const response = await fetch(request, { signal: controller.signal });
         clearTimeout(id);
-        if (response.ok) {
+        if (response.ok && request.method === 'GET' && cacheName) {
             const cache = await caches.open(cacheName);
             cache.put(request, response.clone());
         }

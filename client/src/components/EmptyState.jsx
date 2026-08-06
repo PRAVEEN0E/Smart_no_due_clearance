@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Inbox, Search, UserX, FileX, BookOpen } from 'lucide-react';
 
@@ -9,7 +10,7 @@ const icons = {
     subjects: BookOpen,
 };
 
-export default function EmptyState({ 
+function EmptyState({ 
     icon = 'default', 
     title = 'No data found', 
     description = 'There are no items to display at this time.',
@@ -40,3 +41,5 @@ export default function EmptyState({
         </motion.div>
     );
 }
+
+export default EmptyState;

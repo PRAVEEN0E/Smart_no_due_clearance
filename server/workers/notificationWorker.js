@@ -1,4 +1,4 @@
-const { prisma } = require('../lib/prisma');
+const prisma = require('../lib/prisma');
 
 async function processNotificationJob(job) {
     const { type, data } = job.data;

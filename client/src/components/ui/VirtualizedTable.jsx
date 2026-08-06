@@ -1,8 +1,8 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, memo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { motion } from 'framer-motion';
 
-export default function VirtualizedTable({
+const VirtualizedTable = memo(function VirtualizedTable({
     columns,
     data,
     loading = false,
@@ -114,4 +114,6 @@ export default function VirtualizedTable({
             />
         </div>
     );
-}
+});
+
+export default VirtualizedTable;

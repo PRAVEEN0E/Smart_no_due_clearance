@@ -1,8 +1,9 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { SkeletonTable } from '../Skeletons';
 import EmptyState from '../EmptyState';
 
-export default function DataTable({
+function DataTable({
     columns,
     data,
     loading = false,
@@ -55,3 +56,5 @@ export default function DataTable({
         </div>
     );
 }
+
+export default DataTable;

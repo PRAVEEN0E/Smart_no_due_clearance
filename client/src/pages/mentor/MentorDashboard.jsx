@@ -1,3 +1,5 @@
+import { Helmet } from 'react-helmet-async';
+import { getPageTitle, getCanonical } from '../../lib/seo';
 import { SkeletonStats, SkeletonTable } from '../../components/Skeletons';
 import MentorHeader from '../../components/mentor/MentorHeader';
 import MentorStatsGrid from '../../components/mentor/MentorStatsGrid';
@@ -11,14 +13,29 @@ export default function MentorDashboard() {
     const d = useMentorData();
 
     if (d.loading) return (
-        <div className="space-y-8 p-4">
-            <SkeletonStats count={4} />
-            <SkeletonTable rows={6} cols={4} />
-        </div>
+        <>
+            <Helmet>
+                <title>{getPageTitle('Mentor Dashboard')}</title>
+                <meta name="robots" content="noindex" />
+            </Helmet>
+            <div className="space-y-8 p-4">
+                <SkeletonStats count={4} />
+                <SkeletonTable rows={6} cols={4} />
+            </div>
+        </>
     );
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
+        <>
+            <Helmet>
+                <title>{getPageTitle('Mentor Dashboard')}</title>
+                <meta name="description" content="Mentor portal for managing student batches, tracking clearances, and monitoring progress on NoDueNest." />
+                <meta property="og:title" content={getPageTitle('Mentor Dashboard')} />
+                <meta name="twitter:title" content={getPageTitle('Mentor Dashboard')} />
+                <link rel="canonical" href={getCanonical('/mentor')} />
+                <meta name="robots" content="noindex" />
+            </Helmet>
+            <div className="space-y-8 animate-in fade-in duration-700">
             <MentorHeader
                 onAnnounce={() => { d.setModalMode('announcement'); d.setShowAddModal(true); }}
                 onBulkUpload={d.handleBulkUpload}
@@ -78,5 +95,6 @@ export default function MentorDashboard() {
                 addingCommonFee={d.addingCommonFee}
             />
         </div>
+        </>
     );
 }

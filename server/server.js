@@ -117,6 +117,13 @@ fastify.register(require('@fastify/rate-limit'), {
     keyGenerator: (request) => {
         return request.ip || request.connection.remoteAddress;
     },
+    // Static assets & the SPA shell are served straight from disk (CDN-like) —
+    // rate-limiting them only causes false 429s (e.g. page loads tripping the
+    // budget). The API surface stays protected at 100 req/min per IP.
+    allowList: (request) => {
+        const url = request.url || '';
+        return !url.startsWith('/api');
+    },
     errorResponseBuilder: (request, context) => ({
         statusCode: 429,
         error: 'Too Many Requests',
@@ -200,14 +207,54 @@ if (fs.existsSync(distPath)) {
         root: distPath,
         prefix: '/',
         decorateReply: false,
-        cacheControl: true,
-        maxAge: '1h'
+        // v9 applies computed headers AFTER setHeaders — disable plugin-generated
+        // Cache-Control so the setHeaders values below are not overridden.
+        cacheControl: false,
+        // Hashed build assets are immutable — cache them for a year.
+        // index.html stays no-cache so new deploys propagate instantly.
+        setHeaders(res, filePath) {
+            const rel = path.relative(distPath, filePath).replace(/\\/g, '/');
+            if (rel.startsWith('assets/')) {
+                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            } else if (rel === 'index.html' || rel === 'sw.js') {
+                res.setHeader('Cache-Control', 'no-cache');
+            }
+        }
     });
 
-    // SPA Catch-all
+    // SPA Catch-all — serve index.html only for known client routes;
+    // unknown paths return a real 404 (soft-404 avoidance) while still
+    // delivering index.html so the client-side 404 page renders.
+    const KNOWN_SPA_ROUTES = [
+        '/',
+        '/about',
+        '/features',
+        '/contact',
+        '/privacy',
+        '/terms',
+        '/verify',
+        '/login',
+        '/register',
+        '/change-password',
+    ];
+    const KNOWN_SPA_PREFIXES = ['/verify/hallticket/', '/student', '/staff', '/mentor', '/superadmin'];
+    const indexHtml = fs.readFileSync(path.join(distPath, 'index.html'));
     fastify.setNotFoundHandler(async (request, reply) => {
+        if (request.method !== 'GET' && request.method !== 'HEAD') {
+            return reply.status(404).send({
+                error: 'Not Found',
+                message: `Route ${request.url} not found`,
+                code: 'ROUTE_NOT_FOUND'
+            });
+        }
         if (!request.url.startsWith('/api') && !request.url.startsWith('/uploads')) {
-            return reply.sendFile('index.html', distPath);
+            const url = request.url.split('?')[0].replace(/\/+$/, '') || '/';
+            const isKnown = KNOWN_SPA_ROUTES.includes(url) || KNOWN_SPA_PREFIXES.some((p) => url.startsWith(p));
+            if (isKnown) {
+                return reply.type('text/html').header('Cache-Control', 'no-cache').send(indexHtml);
+            }
+            // Unknown route: correct 404 status, client renders the 404 page
+            return reply.status(404).type('text/html').header('X-Robots-Tag', 'noindex').header('Cache-Control', 'no-cache').send(indexHtml);
         }
         reply.status(404).send({
             error: 'Not Found',

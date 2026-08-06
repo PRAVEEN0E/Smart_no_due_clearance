@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Smart No Due Clearance System are documented in this file.
+All notable changes to the NoDueNest project are documented in this file.
 
 ## [1.0.0] - 2026-07-20
 

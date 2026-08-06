@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, X, FileText, Eye, ExternalLink, Sparkles, Clock, CheckCircle2, AlertTriangle, BarChart3, Calendar, Target } from 'lucide-react';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
+import MarkdownRenderer from '../ui/MarkdownRenderer';
 
 const isImage = (url) => {
     if (!url) return false;
@@ -269,7 +270,9 @@ export default function StaffStudentModal({ activeStudent, previewUrl, onClose, 
                                                                 <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                                                 <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">AI Academic Review</span>
                                                             </div>
-                                                            <div className="text-xs md:text-sm leading-relaxed text-slate-700 whitespace-pre-wrap font-medium">{asgn.aiFeedback}</div>
+                                                            <div className="bg-white rounded-xl border border-blue-100 p-4 md:p-6 shadow-sm">
+                                                                <MarkdownRenderer content={asgn.aiFeedback} />
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </motion.div>

@@ -12,8 +12,8 @@
 ### 1. Clone & Configure
 
 ```bash
-git clone https://github.com/your-org/smart-no-dues.git
-cd smart-no-dues
+git clone https://github.com/PRAVEEN0E/NoDueNest.git
+cd NoDueNest
 cp .env.example .env
 # Edit .env with production values
 ```

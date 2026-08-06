@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 
-export default function TabNav({ tabs, activeTab, onChange, className = '' }) {
+function TabNav({ tabs, activeTab, onChange, className = '' }) {
     return (
         <div role="tablist" aria-label="Tab navigation" className={`flex gap-1 p-1 bg-slate-100/80 rounded-xl overflow-x-auto ${className}`}>
             {tabs.map((tab) => {
@@ -32,3 +33,5 @@ export default function TabNav({ tabs, activeTab, onChange, className = '' }) {
         </div>
     );
 }
+
+export default TabNav;

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, CheckCircle2, User, Mail, Lock, Building2, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import useAuth from '../../hooks/useAuth';
 import api from '../../lib/api';
+import { getPageTitle, getCanonical } from '../../lib/seo';
 
 export default function Register() {
     const [name, setName] = useState('');
@@ -66,7 +68,18 @@ export default function Register() {
     };
 
     return (
-        <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-4 lg:p-8 font-['Inter'] selection:bg-primary/20">
+        <>
+            <Helmet>
+                <title>{getPageTitle('Register')}</title>
+                <meta name="description" content="Register your college or institution on NoDueNest to start managing student clearances online." />
+                <meta property="og:title" content={getPageTitle('Register')} />
+                <meta property="og:description" content="Register your college or institution on NoDueNest to start managing student clearances online." />
+                <meta name="twitter:title" content={getPageTitle('Register')} />
+                <meta name="twitter:description" content="Register your college or institution on NoDueNest to start managing student clearances online." />
+                <link rel="canonical" href={getCanonical('/register')} />
+                <meta name="robots" content="noindex" />
+            </Helmet>
+            <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-4 lg:p-8 font-['Inter'] selection:bg-primary/20">
              {/* Dynamic Mesh Background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <motion.div 
@@ -94,12 +107,7 @@ export default function Register() {
                 {/* Left Section: Visual & Marketing */}
                 <div className="hidden lg:flex flex-col justify-between p-12 bg-[#0a0a0b] relative overflow-hidden group">
                     <div className="absolute inset-0 opacity-40">
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-transparent mix-blend-overlay" />
-                        <img 
-                            src="/login_abstract_background_1778942746051.png" 
-                            alt="Abstract" 
-                            className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-[10s]"
-                        />
+                        <div className="absolute inset-0 premium-gradient" />
                     </div>
 
                     <div className="relative z-20">
@@ -112,7 +120,7 @@ export default function Register() {
                             <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
                                 <Shield className="w-6 h-6 text-white" />
                             </div>
-                            <span className="text-white font-bold tracking-tight text-xl font-['Outfit']">Smart No Due</span>
+                            <span className="text-white font-bold tracking-tight text-xl font-['Outfit']">NoDueNest</span>
                         </motion.div>
                     </div>
 
@@ -146,7 +154,7 @@ export default function Register() {
                                         <item.icon className="w-4 h-4 text-primary" />
                                     </div>
                                     <div>
-                                        <h4 className="text-white font-semibold text-sm">{item.title}</h4>
+                                        <p className="text-white font-semibold text-sm">{item.title}</p>
                                         <p className="text-slate-500 text-xs">{item.desc}</p>
                                     </div>
                                 </motion.div>
@@ -157,7 +165,7 @@ export default function Register() {
                     <div className="relative z-20">
                          <div className="flex -space-x-2">
                             {[1, 2, 3].map(i => (
-                                <img key={i} src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i + 20}`} className="w-8 h-8 rounded-full border-2 border-[#0a0a0b]" alt="user" />
+                                <img key={i} src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i + 20}`} className="w-8 h-8 rounded-full border-2 border-[#0a0a0b]" alt="" loading="lazy" />
                             ))}
                             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-[10px] text-white font-bold border-2 border-[#0a0a0b]">+50</div>
                         </div>
@@ -184,16 +192,17 @@ export default function Register() {
                             <>
                                 <div className="mb-8 text-center lg:text-left">
                                     <h2 className="text-3xl font-bold text-slate-900 font-['Outfit'] tracking-tight">Create Mentor Account</h2>
-                                    <p className="text-slate-500 mt-2">Get started with Smart No Due platform.</p>
+                                    <p className="text-slate-500 mt-2">Get started with NoDueNest platform.</p>
                                 </div>
 
                                 <form onSubmit={handleRegister} className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-xs font-bold text-slate-700 ml-1">Full Name</label>
+                                            <label htmlFor="reg-name" className="text-xs font-bold text-slate-700 ml-1">Full Name</label>
                                             <div className="relative group">
                                                 <User className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
                                                 <input
+                                                    id="reg-name"
                                                     required
                                                     type="text"
                                                     autoComplete="name"
@@ -205,10 +214,11 @@ export default function Register() {
                                             </div>
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-xs font-bold text-slate-700 ml-1">Department Name</label>
+                                            <label htmlFor="reg-college" className="text-xs font-bold text-slate-700 ml-1">Department Name</label>
                                             <div className="relative group">
                                                 <Building2 className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
                                                 <input
+                                                    id="reg-college"
                                                     required
                                                     type="text"
                                                     autoComplete="organization"
@@ -222,10 +232,11 @@ export default function Register() {
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-slate-700 ml-1">Your Department</label>
+                                        <label htmlFor="reg-dept" className="text-xs font-bold text-slate-700 ml-1">Your Department</label>
                                         <div className="relative group">
                                             <BookOpen className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" />
                                             <select
+                                                id="reg-dept"
                                                 required
                                                 value={department}
                                                 onChange={(e) => setDepartment(e.target.value)}
@@ -240,10 +251,11 @@ export default function Register() {
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-slate-700 ml-1">Department Email</label>
+                                        <label htmlFor="reg-email" className="text-xs font-bold text-slate-700 ml-1">Department Email</label>
                                         <div className="relative group">
                                             <Mail className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
                                                 <input
+                                                    id="reg-email"
                                                     required
                                                     type="email"
                                                     autoComplete="email"
@@ -256,10 +268,11 @@ export default function Register() {
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-slate-700 ml-1">Password</label>
+                                        <label htmlFor="reg-password" className="text-xs font-bold text-slate-700 ml-1">Password</label>
                                         <div className="relative group">
                                             <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
                                             <input
+                                                id="reg-password"
                                                 required
                                                 type="password"
                                                 autoComplete="new-password"
@@ -315,6 +328,7 @@ export default function Register() {
                 </div>
             </main>
         </div>
+        </>
     );
 }
 

@@ -1,3 +1,5 @@
+import { Helmet } from 'react-helmet-async';
+import { getPageTitle, getCanonical } from '../../lib/seo';
 import { SkeletonStats, SkeletonTable } from '../../components/Skeletons';
 import StaffHeader from '../../components/staff/StaffHeader';
 import StaffAnalyticsCards from '../../components/staff/StaffAnalyticsCards';
@@ -13,14 +15,29 @@ export default function StaffDashboard() {
     const d = useStaffData();
 
     if (d.loading) return (
-        <div className="space-y-8 p-4">
-            <SkeletonStats count={4} />
-            <SkeletonTable rows={6} cols={4} />
-        </div>
+        <>
+            <Helmet>
+                <title>{getPageTitle('Staff Dashboard')}</title>
+                <meta name="robots" content="noindex" />
+            </Helmet>
+            <div className="space-y-8 p-4">
+                <SkeletonStats count={4} />
+                <SkeletonTable rows={6} cols={4} />
+            </div>
+        </>
     );
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700 max-w-7xl mx-auto pb-20">
+        <>
+            <Helmet>
+                <title>{getPageTitle('Staff Dashboard')}</title>
+                <meta name="description" content="Staff portal for evaluating student assignments, managing course materials, and tracking clearances on NoDueNest." />
+                <meta property="og:title" content={getPageTitle('Staff Dashboard')} />
+                <meta name="twitter:title" content={getPageTitle('Staff Dashboard')} />
+                <link rel="canonical" href={getCanonical('/staff')} />
+                <meta name="robots" content="noindex" />
+            </Helmet>
+            <div className="space-y-8 animate-in fade-in duration-700 max-w-7xl mx-auto pb-20">
             <StaffHeader activeTab={d.activeTab} setActiveTab={d.setActiveTab}
                 onExportExcel={d.handleExportExcel} onExportPDF={d.handleExportPDF} />
 
@@ -82,5 +99,6 @@ export default function StaffDashboard() {
                 evaluations={d.evaluations} selectedSubject={d.selectedSubject}
                 getFullUrl={d.getFullUrl} />
         </div>
+        </>
     );
 }

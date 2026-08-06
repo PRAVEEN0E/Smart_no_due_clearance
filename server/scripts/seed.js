@@ -14,7 +14,7 @@ async function main() {
   // 1. Create College
   const college = await prisma.college.create({
     data: {
-      name: 'Smart No Due College',
+      name: 'NoDueNest College',
     },
   });
   console.log(`✓ College created: ${college.name} (${college.id})`);

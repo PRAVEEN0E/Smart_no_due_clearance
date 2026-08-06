@@ -1,6 +1,6 @@
 # Super Admin Module — Enterprise SaaS Product Audit
 
-> Analysis of the Smart No Due Clearance System's Super Admin module.
+> Analysis of the NoDueNest Super Admin module.
 > Scope: Routes (`server/routes/superadmin.js`), Frontend (`client/src/pages/superadmin/SuperAdminDashboard.jsx`), related DB models (`College`, `User`, `AuditLog`, `Announcement`, `CustomRole`), and backend config.
 
 ---

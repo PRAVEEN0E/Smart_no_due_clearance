@@ -1,6 +1,6 @@
 # Production Readiness Checklist
 
-A comprehensive checklist to ensure the Smart No Due Clearance system is production-ready. Each item includes rationale to guide the deployment process.
+A comprehensive checklist to ensure the NoDueNest system is production-ready. Each item includes rationale to guide the deployment process.
 
 ---
 
@@ -118,4 +118,4 @@ The final checklist executed immediately before and during the production launch
 
 ---
 
-*Generated for the Smart No Due Clearance System. Review and update this checklist before every production release.*
+*Generated for the NoDueNest project. Review and update this checklist before every production release.*

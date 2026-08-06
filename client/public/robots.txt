@@ -1,7 +1,30 @@
-# Smart No Due Clearance System
+# NoDueNest — Smart Student Clearance & Hall Ticket Management Platform
 # https://smart-no-due-clearance.vercel.app
+#
+# Only public marketing/verification pages are indexable.
+# Authenticated areas (dashboards, login, register) are intentionally excluded.
 
 User-agent: *
 Allow: /
+Allow: /about
+Allow: /features
+Allow: /contact
+Allow: /privacy
+Allow: /terms
+Allow: /verify
+
+Disallow: /login
+Disallow: /register
+Disallow: /change-password
+Disallow: /student/
+Disallow: /staff/
+Disallow: /mentor/
+Disallow: /superadmin/
+Disallow: /verify/hallticket/
+Disallow: /api/
+Disallow: /uploads/
+Disallow: /sw.js
+Disallow: /manifest.json
 
 Sitemap: https://smart-no-due-clearance.vercel.app/sitemap.xml
+Host: https://smart-no-due-clearance.vercel.app

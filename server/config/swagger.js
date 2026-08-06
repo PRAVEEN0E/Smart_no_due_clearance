@@ -2,7 +2,7 @@ const swaggerConfig = {
     openapi: {
         openapi: '3.0.3',
         info: {
-            title: 'Smart No-Due Clearance API',
+            title: 'NoDueNest API',
             description: 'Multi-tenant institutional clearance workflow automation API',
             version: '2.0.0',
         },

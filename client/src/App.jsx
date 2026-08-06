@@ -1,87 +1,35 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { LogOut, Clock, Sparkles } from 'lucide-react';
+import { Clock } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import useAuth from './hooks/useAuth';
 import useAuthStore from './store/authStore';
-import NotificationBell from './components/NotificationBell';
-import OfflineBanner from './components/OfflineBanner';
-import ThemeToggle from './components/ThemeToggle';
-import PushNotificationManager from './components/PushNotificationManager';
-import AnnouncementTicker from './components/AnnouncementTicker';
 import { Toaster } from 'react-hot-toast';
-import api from './lib/api';
+import ErrorBoundary from './components/ErrorBoundary';
+import PublicLayout from './components/public/PublicLayout';
+import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESC, SITE_KEYWORDS, OG_IMAGE, LOCALE } from './lib/seo';
 
 // Lazy load pages for performance
+// LandingPage is imported EAGERLY (it's the home route): a dynamic chunk would
+// add a network round-trip after the entry executes, delaying FCP/LCP on the
+// public marketing site. It's small (5KB gzip) and framer-motion-free.
+import LandingPage from './components/public/LandingPage';
 const Login = lazy(() => import('./pages/auth/Login'));
 const Register = lazy(() => import('./pages/auth/Register'));
+const DashboardLayout = lazy(() => import('./components/DashboardLayout'));
 const MentorDashboard = lazy(() => import('./pages/mentor/MentorDashboard'));
 const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard'));
 const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard'));
 const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
 const Verification = lazy(() => import('./pages/Verification'));
-const AIChatBubble = lazy(() => import('./components/AIChatBubble'));
-import ErrorBoundary from './components/ErrorBoundary';
 const ChangePassword = lazy(() => import('./pages/auth/ChangePassword'));
-
-const DashboardLayout = ({ children }) => {
-    const { logout, user } = useAuth();
-    return (
-        <div className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col">
-            <AnnouncementTicker />
-            <OfflineBanner />
-            <nav className="border-b border-black/5 bg-white/70 backdrop-blur-xl sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-2 md:gap-3">
-                        {user?.branding?.logoUrl ? (
-                            <div className="w-10 h-10 rounded-xl overflow-hidden border border-black/5 bg-white flex items-center justify-center p-1">
-                                <img src={user.branding.logoUrl} alt={user.collegeName} className="w-full h-full object-contain" />
-                            </div>
-                        ) : (
-                            <div className="w-8 h-8 md:w-10 md:h-10 bg-primary/10 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-primary border border-primary/30 text-xs md:text-base shrink-0">
-                                {user?.collegeName ? user.collegeName[0] : 'N'}
-                            </div>
-                        )}
-                        <h1 className="text-lg md:text-xl font-black italic tracking-tighter truncate text-slate-800 uppercase">
-                            {user?.collegeName || 'NO DUE SYSTEM'}
-                        </h1>
-                    </div>
-
-                    <div className="flex items-center gap-1 md:gap-4">
-                        <ThemeToggle />
-                        <PushNotificationManager />
-                        <NotificationBell />
-
-                        <div className="hidden xs:block h-6 md:h-8 w-[1px] bg-black/5 mx-1 md:mx-2" />
-
-                        <div className="hidden lg:flex flex-col items-end text-right">
-                            <span className="text-sm font-bold text-slate-700 leading-none">{user?.name}</span>
-                            <span className="text-[10px] uppercase tracking-[0.2em] text-primary font-black mt-1">{user?.role}</span>
-                        </div>
-
-                        <button
-                            onClick={logout}
-                            aria-label="Logout"
-                            className="p-2 md:p-2.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg md:rounded-xl border border-black/5 transition-all group"
-                        >
-                            <LogOut className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
-                        </button>
-                    </div>
-                </div>
-            </nav>
-            <main className="max-w-7xl w-full mx-auto p-4 md:p-8 flex-1">{children}</main>
-
-            <footer className="mt-auto py-6 text-center border-t border-black/5 bg-white/30 backdrop-blur-sm">
-                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary/60" />
-                    Made by TalentNest
-                    <Sparkles className="w-4 h-4 text-primary/60" />
-                </p>
-            </footer>
-
-            {user?.role === 'STUDENT' && <AIChatBubble />}
-        </div>
-    );
-};
+const AboutPage = lazy(() => import('./components/public/AboutPage'));
+const FeaturesPage = lazy(() => import('./components/public/FeaturesPage'));
+const ContactPage = lazy(() => import('./components/public/ContactPage'));
+const PrivacyPage = lazy(() => import('./components/public/PrivacyPage'));
+const TermsPage = lazy(() => import('./components/public/TermsPage'));
+const VerifyLandingPage = lazy(() => import('./components/public/VerifyLandingPage'));
+const NotFoundPage = lazy(() => import('./components/public/NotFoundPage'));
 
 const MaintenanceScreen = () => (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-8 text-center animate-in fade-in duration-700">
@@ -128,15 +76,30 @@ function App() {
 
     if (!isReady) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
-                <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+            <section aria-label="Loading" className="min-h-screen flex flex-col items-center justify-center bg-slate-50" role="status">
+                <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" aria-hidden="true" />
                 <p className="text-sm font-black text-primary animate-pulse tracking-widest uppercase italic">Initializing System Core...</p>
-            </div>
+            </section>
         );
     }
 
     return (
         <ErrorBoundary>
+            <Helmet>
+                <html lang="en" />
+                <title>{`${SITE_NAME} — ${SITE_TAGLINE}`}</title>
+                <meta name="description" content={SITE_DESC} />
+                <meta name="keywords" content={SITE_KEYWORDS} />
+                <meta property="og:title" content={`${SITE_NAME} — ${SITE_TAGLINE}`} />
+                <meta property="og:description" content={SITE_DESC} />
+                <meta property="og:url" content={SITE_URL} />
+                <meta property="og:image" content={OG_IMAGE} />
+                <meta property="og:locale" content={LOCALE} />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={`${SITE_NAME} — ${SITE_TAGLINE}`} />
+                <meta name="twitter:description" content={SITE_DESC} />
+                <meta name="twitter:image" content={OG_IMAGE} />
+            </Helmet>
             <Toaster
                 position="top-center"
                 reverseOrder={false}
@@ -160,21 +123,28 @@ function App() {
                 }}
             />
             <Suspense fallback={
-                <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
-                    <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
-                    <p className="text-sm font-black text-primary animate-pulse tracking-widest uppercase italic">Initializing System Core...</p>
-                </div>
+                <section aria-label="Loading page" className="min-h-screen flex flex-col items-center justify-center bg-slate-50" role="status">
+                    <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" aria-hidden="true" />
+                    <p className="text-sm font-black text-primary animate-pulse tracking-widest uppercase italic">Loading...</p>
+                </section>
             }>
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/verify/hallticket/:studentId" element={<Verification />} />
+                    <Route path="/verify" element={<PublicLayout><VerifyLandingPage /></PublicLayout>} />
+                    <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
+                    <Route path="/features" element={<PublicLayout><FeaturesPage /></PublicLayout>} />
+                    <Route path="/contact" element={<PublicLayout><ContactPage /></PublicLayout>} />
+                    <Route path="/privacy" element={<PublicLayout><PrivacyPage /></PublicLayout>} />
+                    <Route path="/terms" element={<PublicLayout><TermsPage /></PublicLayout>} />
+                    <Route path="/" element={<PublicLayout><LandingPage /></PublicLayout>} />
                     <Route path="/change-password" element={<ProtectedRoute isPasswordRoute={true}><ChangePassword /></ProtectedRoute>} />
                     <Route path="/mentor/*" element={<ProtectedRoute roles={['MENTOR', 'SUPERADMIN']}><MentorDashboard /></ProtectedRoute>} />
                     <Route path="/staff/*" element={<ProtectedRoute roles={['STAFF']}><StaffDashboard /></ProtectedRoute>} />
                     <Route path="/student/*" element={<ProtectedRoute roles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
                     <Route path="/superadmin/*" element={<ProtectedRoute roles={['SUPERADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />
-                    <Route path="/" element={<Navigate to="/login" replace />} />
+                    <Route path="*" element={<NotFoundPage />} />
                 </Routes>
             </Suspense>
         </ErrorBoundary>

@@ -28,6 +28,8 @@ import {
     Home,
     Activity
 } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
+import { getPageTitle, getCanonical } from '../../lib/seo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     AreaChart,
@@ -381,7 +383,16 @@ export default function SuperAdminDashboard() {
     );
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
+        <>
+            <Helmet>
+                <title>{getPageTitle('Super Admin Dashboard')}</title>
+                <meta name="description" content="Super admin panel for managing institutions, users, system settings, broadcasts, API keys, and monitoring NoDueNest." />
+                <meta property="og:title" content={getPageTitle('Super Admin Dashboard')} />
+                <meta name="twitter:title" content={getPageTitle('Super Admin Dashboard')} />
+                <link rel="canonical" href={getCanonical('/superadmin')} />
+                <meta name="robots" content="noindex" />
+            </Helmet>
+            <div className="space-y-8 animate-in fade-in duration-700">
             {/* Impersonation Banner */}
             {user?.isImpersonated && (
                 <div className="bg-slate-900 text-white px-6 py-3 rounded-2xl flex items-center justify-between shadow-2xl animate-bounce border border-emerald-500/30">
@@ -1772,5 +1783,6 @@ export default function SuperAdminDashboard() {
                 )}
             </AnimatePresence>
         </div>
+        </>
     );
 }

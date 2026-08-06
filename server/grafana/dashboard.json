@@ -1,6 +1,6 @@
 {
-  "title": "SNDC API Dashboard",
-  "tags": ["sndc", "api", "backend"],
+  "title": "NoDueNest API Dashboard",
+  "tags": ["nodunest", "api", "backend"],
   "schemaVersion": 36,
   "panels": [
     {

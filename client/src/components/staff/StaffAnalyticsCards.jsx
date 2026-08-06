@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, CheckCircle2, GraduationCap, AlertTriangle, Clock } from 'lucide-react';
 
-export default function StaffAnalyticsCards({ avgMarks, approvedCount, evaluations, topScore, rejectedCount, pendingCount }) {
+function StaffAnalyticsCards({ avgMarks, approvedCount, evaluations, topScore, rejectedCount, pendingCount }) {
     return (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -57,3 +58,5 @@ export default function StaffAnalyticsCards({ avgMarks, approvedCount, evaluatio
         </div>
     );
 }
+
+export default StaffAnalyticsCards;

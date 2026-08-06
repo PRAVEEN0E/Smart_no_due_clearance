@@ -1,7 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
+  "description": "NoDueNest — Backend API server for digital student clearance & hall ticket management",
   "main": "index.js",
   "scripts": {
     "start": "node server.js",

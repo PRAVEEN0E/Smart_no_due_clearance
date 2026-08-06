@@ -1,5 +1,5 @@
 const { generateFeedback, predictStudentSuccess } = require('../services/aiService');
-const { prisma } = require('../lib/prisma');
+const prisma = require('../lib/prisma');
 
 async function processAiJob(job) {
     const { type, data } = job.data;

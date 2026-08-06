@@ -7,8 +7,11 @@ import {
     Mail, Hash, Phone, MapPin, Camera, Search, Filter, ArrowUpDown, Eye, ThumbsDown, MessageSquare
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import MarkdownRenderer from '../../components/ui/MarkdownRenderer';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { SkeletonStats, SkeletonTable } from '../../components/Skeletons';
+import { Helmet } from 'react-helmet-async';
+import { SITE_NAME, getPageTitle, getCanonical } from '../../lib/seo';
 import EmptyState from '../../components/EmptyState';
 import CourseMaterials from '../../components/CourseMaterials';
 import AIChatBubble from '../../components/AIChatBubble';
@@ -42,14 +45,29 @@ export default function StudentDashboard() {
     }, [activeTab, d.data, d.handleUpdateProfile, d.handleUploadSignature, d.profileSaving, d.hallTicketStatus, d.assignments, d.examSchedule]);
 
     if (d.loading) return (
-        <div className="space-y-8 p-4 max-w-6xl mx-auto">
-            <SkeletonStats count={3} />
-            <SkeletonTable rows={4} cols={4} />
-        </div>
+        <>
+            <Helmet>
+                <title>{getPageTitle('Student Dashboard')}</title>
+                <meta name="robots" content="noindex" />
+            </Helmet>
+            <div className="space-y-8 p-4 max-w-6xl mx-auto">
+                <SkeletonStats count={3} />
+                <SkeletonTable rows={4} cols={4} />
+            </div>
+        </>
     );
 
     return (
-        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+        <>
+            <Helmet>
+                <title>{getPageTitle('Student Dashboard')}</title>
+                <meta name="description" content="Manage your clearance, assignments, hall tickets, and exams on NoDueNest." />
+                <meta property="og:title" content={getPageTitle('Student Dashboard')} />
+                <meta name="twitter:title" content={getPageTitle('Student Dashboard')} />
+                <link rel="canonical" href={getCanonical('/student')} />
+                <meta name="robots" content="noindex" />
+            </Helmet>
+            <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
             {/* Tab Navigation */}
             <div role="tablist" aria-label="Student portal sections" className="flex items-center gap-1 sm:gap-2 border-b border-white/10 pb-2 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
                 {TABS.map(tab => (
@@ -73,6 +91,7 @@ export default function StudentDashboard() {
             <StudyPlanModal d={d} />
             <AIChatBubble />
         </div>
+        </>
     );
 }
 
@@ -506,8 +525,8 @@ function AssignmentsView({ d }) {
                                         {a.aiFeedback ? (
                                             <div className="group relative">
                                                 <span className="text-xs text-emerald-600 font-bold cursor-help border-b border-dashed border-emerald-300">View</span>
-                                                <div className="absolute bottom-full left-0 mb-2 w-72 p-3 bg-slate-900 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                                                    {a.aiFeedback}
+                                                <div className="absolute bottom-full left-0 mb-2 w-72 p-3 bg-slate-900 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 max-h-64 overflow-y-auto custom-scrollbar">
+                                                    <MarkdownRenderer content={a.aiFeedback} compact dark />
                                                 </div>
                                             </div>
                                         ) : (

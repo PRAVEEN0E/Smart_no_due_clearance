@@ -1,25 +1,31 @@
 {
-    "short_name": "NoDue",
-    "name": "Digital No-Due & Academic Portal",
-    "icons": [
-        {
-            "src": "favicon.ico",
-            "sizes": "64x64 32x32 24x24 16x16",
-            "type": "image/x-icon"
-        },
-        {
-            "src": "logo192.png",
-            "type": "image/png",
-            "sizes": "192x192"
-        },
-        {
-            "src": "logo512.png",
-            "type": "image/png",
-            "sizes": "512x512"
-        }
-    ],
-    "start_url": ".",
-    "display": "standalone",
-    "theme_color": "#7c3aed",
-    "background_color": "#fcfcfc"
+  "short_name": "NoDueNest",
+  "name": "NoDueNest — Smart Student Clearance & Hall Ticket Management Platform",
+  "description": "AI-powered student clearance management platform that automates department approvals, digital no due verification, assignment evaluation, and hall ticket generation for engineering colleges and higher educational institutions.",
+  "icons": [
+    {
+      "src": "favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0B1F3A",
+  "background_color": "#F8FAFC",
+  "categories": ["education", "productivity", "utilities"],
+  "lang": "en-US"
 }
